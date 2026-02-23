@@ -287,6 +287,7 @@ export function mapGenerateResponse(response: AnthropicMessage): GenerateResult 
         usage: {
             inputTokens: response.usage.input_tokens,
             outputTokens: response.usage.output_tokens,
+            reasoningTokens: 0,
             totalTokens: response.usage.input_tokens + response.usage.output_tokens,
         },
     };
@@ -299,6 +300,7 @@ export async function* transformStream(
     let usage = {
         inputTokens: 0,
         outputTokens: 0,
+        reasoningTokens: 0,
         totalTokens: 0,
     };
 
@@ -313,6 +315,7 @@ export async function* transformStream(
             usage = {
                 inputTokens: event.message.usage.input_tokens,
                 outputTokens: event.message.usage.output_tokens,
+                reasoningTokens: 0,
                 totalTokens:
                     event.message.usage.input_tokens + event.message.usage.output_tokens,
             };
@@ -390,6 +393,7 @@ export async function* transformStream(
             usage = {
                 inputTokens: event.usage.input_tokens ?? usage.inputTokens,
                 outputTokens: event.usage.output_tokens,
+                reasoningTokens: 0,
                 totalTokens:
                     (event.usage.input_tokens ?? usage.inputTokens) +
                     event.usage.output_tokens,

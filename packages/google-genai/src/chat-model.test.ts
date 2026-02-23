@@ -51,6 +51,7 @@ describe('generate', () => {
         expect(result.usage).toEqual({
             inputTokens: 10,
             outputTokens: 5,
+            reasoningTokens: 0,
             totalTokens: 15,
         });
 
@@ -162,6 +163,7 @@ describe('stream', () => {
         expect(response.usage).toEqual({
             inputTokens: 10,
             outputTokens: 2,
+            reasoningTokens: 0,
             totalTokens: 12,
         });
     });

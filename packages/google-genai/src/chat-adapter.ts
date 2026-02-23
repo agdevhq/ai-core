@@ -355,6 +355,7 @@ export async function* transformStream(
     let usage: GenerateResult['usage'] = {
         inputTokens: 0,
         outputTokens: 0,
+        reasoningTokens: 0,
         totalTokens: 0,
     };
 
@@ -438,8 +439,11 @@ function mapUsage(
 ): GenerateResult['usage'] {
     const inputTokens =
         response.usageMetadata?.promptTokenCount ?? fallback?.inputTokens ?? 0;
-    const outputTokens =
-        response.usageMetadata?.candidatesTokenCount ?? fallback?.outputTokens ?? 0;
+    const textTokens =
+        response.usageMetadata?.candidatesTokenCount ?? 0;
+    const reasoningTokens =
+        response.usageMetadata?.thoughtsTokenCount ?? fallback?.reasoningTokens ?? 0;
+    const outputTokens = textTokens + reasoningTokens;
     const totalTokens =
         response.usageMetadata?.totalTokenCount ??
         fallback?.totalTokens ??
@@ -448,6 +452,7 @@ function mapUsage(
     return {
         inputTokens,
         outputTokens,
+        reasoningTokens,
         totalTokens,
     };
 }
