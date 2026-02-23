@@ -1,25 +1,37 @@
 {
     "name": "@core-ai/core-ai",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Type-safe LLM abstraction layer over native provider SDKs",
-    "private": true,
+    "license": "MIT",
+    "author": "Omnifact (https://omnifact.ai)",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/agdevhq/ai-core.git",
+        "directory": "packages/core-ai"
+    },
+    "keywords": ["llm", "ai", "sdk", "openai", "anthropic", "google-genai"],
     "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
-        ".": "./src/index.ts",
-        "./openai": "./src/providers/openai.ts",
-        "./anthropic": "./src/providers/anthropic.ts",
-        "./google-genai": "./src/providers/google-genai.ts"
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": ["dist", "README.md", "LICENSE"],
+    "publishConfig": {
+        "access": "public"
     },
     "scripts": {
+        "build": "tsup",
         "lint": "eslint src/ --max-warnings 0",
         "check-types": "tsc --noEmit",
+        "prepublishOnly": "npm run build",
         "test": "vitest run",
         "test:watch": "vitest"
     },
     "dependencies": {
-        "@core-ai/anthropic": "*",
-        "@core-ai/google-genai": "*",
-        "@core-ai/openai": "*",
         "zod": "^3.25.76",
         "zod-to-json-schema": "^3.24.5"
     },

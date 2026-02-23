@@ -1,27 +1,48 @@
 {
     "name": "@core-ai/openai",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "OpenAI provider package for @core-ai/core-ai",
-    "private": true,
+    "license": "MIT",
+    "author": "Omnifact (https://omnifact.ai)",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/agdevhq/ai-core.git",
+        "directory": "packages/openai"
+    },
+    "keywords": ["llm", "ai", "openai", "provider", "sdk"],
     "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
-        ".": "./src/index.ts"
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": ["dist", "README.md", "LICENSE"],
+    "publishConfig": {
+        "access": "public"
     },
     "scripts": {
+        "build": "tsup",
         "lint": "eslint src/ --max-warnings 0",
         "check-types": "tsc --noEmit",
+        "prepublishOnly": "npm run build",
         "test": "vitest run",
         "test:watch": "vitest"
     },
     "dependencies": {
-        "@core-ai/core-ai": "*",
+        "@core-ai/core-ai": "^0.1.0",
         "openai": "^6.1.0",
         "zod-to-json-schema": "^3.24.5"
     },
-    "devDependencies": {
-        "@core-ai/eslint-config": "*",
-        "@core-ai/typescript-config": "*",
-        "typescript": "^5.7.3",
+    "peerDependencies": {
         "zod": "^3.25.76"
+    },
+    "devDependencies": {
+        "@core-ai/eslint-config": "^0.0.0",
+        "@core-ai/typescript-config": "^0.0.0",
+        "typescript": "^5.7.3",
+        "vitest": "^3.2.4"
     }
 }

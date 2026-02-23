@@ -4,16 +4,22 @@
     "license": "MIT",
     "scripts": {
         "build": "turbo build",
-        "package": "turbo package",
-        "publish": "turbo publish",
+        "package": "changeset version",
+        "publish": "changeset publish",
         "deploy": "turbo deploy",
         "dev": "turbo dev --continue=always",
         "lint": "turbo lint",
         "check-types": "turbo check-types",
-        "format": "prettier --write \"**/*.{ts,tsx,md,json,js,mjs}\""
+        "format": "prettier --write \"**/*.{ts,tsx,md,json,js,mjs}\"",
+        "changeset": "changeset",
+        "release:check": "npm run build && turbo lint check-types",
+        "release:version": "changeset version",
+        "release:publish": "changeset publish"
     },
     "devDependencies": {
+        "@changesets/cli": "^2.29.8",
         "prettier": "^3.4.2",
+        "tsup": "^8.5.1",
         "tsx": "^4.21.0",
         "turbo": "^2.4.0",
         "typescript": "5.7.3",
