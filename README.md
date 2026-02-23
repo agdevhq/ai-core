@@ -28,14 +28,24 @@ A type-safe abstraction layer over LLM provider SDKs for TypeScript. Write provi
 npm install @core-ai/core-ai
 ```
 
+### Examples
+
+For runnable, end-to-end scripts, see [`examples/README.md`](examples/README.md).
+
+Run any example from the repository root:
+
+```bash
+npx tsx examples/01-chat-completion.ts
+```
+
 ### Chat Completion
 
 ```typescript
 import { generate } from '@core-ai/core-ai';
-import { createOpenAI } from '@core-ai/core-ai/openai';
+import { createOpenAI } from '@core-ai/openai';
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const model = openai.chatModel('gpt-4o');
+const model = openai.chatModel('gpt-5-mini');
 
 const result = await generate({
     model,
@@ -141,7 +151,7 @@ for (const image of result.images) {
 
 ```typescript
 import { generate } from '@core-ai/core-ai';
-import { createAnthropic } from '@core-ai/core-ai/anthropic';
+import { createAnthropic } from '@core-ai/anthropic';
 
 const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const model = anthropic.chatModel('claude-sonnet-4-20250514');

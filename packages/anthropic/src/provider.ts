@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { ChatModel } from '@core-ai/ai';
+import type { ChatModel } from '@core-ai/core-ai';
 import { createAnthropicChatModel } from './chat-model.js';
 
 export type AnthropicProviderOptions = {

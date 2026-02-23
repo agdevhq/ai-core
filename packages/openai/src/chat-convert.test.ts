@@ -5,7 +5,7 @@ import {
     convertToolChoice,
     convertTools,
 } from './chat-convert.js';
-import { defineTool, type Message, type ToolSet } from '@core-ai/ai';
+import { defineTool, type Message, type ToolSet } from '@core-ai/core-ai';
 
 describe('convertMessages', () => {
     it('should convert a system message', () => {

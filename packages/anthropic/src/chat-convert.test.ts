@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { defineTool, type Message, type ToolSet } from '@core-ai/ai';
+import { defineTool, type Message, type ToolSet } from '@core-ai/core-ai';
 import {
     convertMessages,
     convertToolChoice,

@@ -3,7 +3,7 @@ import type {
     StreamEvent,
     StreamResult,
     ToolCall,
-} from '@core-ai/ai';
+} from '@core-ai/core-ai';
 
 export function createStreamResult(
     source: AsyncIterable<StreamEvent>

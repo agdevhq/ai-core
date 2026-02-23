@@ -10,7 +10,7 @@ import type {
     ToolChoice,
     ToolSet,
     UserContentPart,
-} from '@core-ai/ai';
+} from '@core-ai/core-ai';
 
 export function convertMessages(
     messages: Message[]

@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { ChatModel, EmbeddingModel, ImageModel } from '@core-ai/ai';
+import type { ChatModel, EmbeddingModel, ImageModel } from '@core-ai/core-ai';
 import { createOpenAIChatModel } from './chat-model.js';
 import { createOpenAIEmbeddingModel } from './embedding-model.js';
 import { createOpenAIImageModel } from './image-model.js';

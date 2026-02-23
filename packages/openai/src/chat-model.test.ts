@@ -4,15 +4,15 @@ import type {
     ChatCompletion,
     ChatCompletionChunk,
 } from 'openai/resources/chat/completions/completions';
-import { ProviderError } from '@core-ai/ai';
+import { ProviderError } from '@core-ai/core-ai';
 import { createOpenAIChatModel } from './chat-model.js';
 
 describe('createOpenAIChatModel', () => {
     it('should create model metadata', () => {
-        const model = createOpenAIChatModel(createMockClient(), 'gpt-4o');
+        const model = createOpenAIChatModel(createMockClient(), 'gpt-5-mini');
 
         expect(model.provider).toBe('openai');
-        expect(model.modelId).toBe('gpt-4o');
+        expect(model.modelId).toBe('gpt-5-mini');
     });
 });
 
@@ -39,7 +39,10 @@ describe('generate', () => {
                 },
             });
         });
-        const model = createOpenAIChatModel(createMockClient(create), 'gpt-4o');
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
 
         const result = await model.generate({
             messages: [{ role: 'user', content: 'Hi' }],
@@ -56,7 +59,7 @@ describe('generate', () => {
 
         expect(create).toHaveBeenCalledWith(
             expect.objectContaining({
-                model: 'gpt-4o',
+                model: 'gpt-5-mini',
                 messages: [{ role: 'user', content: 'Hi' }],
             })
         );
@@ -94,7 +97,10 @@ describe('generate', () => {
                 },
             });
         });
-        const model = createOpenAIChatModel(createMockClient(create), 'gpt-4o');
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
 
         const result = await model.generate({
             messages: [{ role: 'user', content: 'weather?' }],
@@ -114,7 +120,10 @@ describe('generate', () => {
         const create = vi.fn(async () => {
             throw new Error('network failed');
         });
-        const model = createOpenAIChatModel(createMockClient(create), 'gpt-4o');
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
 
         await expect(
             model.generate({
@@ -154,7 +163,10 @@ describe('stream', () => {
                 }),
             ]);
         });
-        const model = createOpenAIChatModel(createMockClient(create), 'gpt-4o');
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
 
         const streamResult = await model.stream({
             messages: [{ role: 'user', content: 'hello' }],
@@ -195,7 +207,7 @@ function asChatCompletion(value: Partial<ChatCompletion>): ChatCompletion {
         id: 'chatcmpl-1',
         object: 'chat.completion',
         created: Date.now(),
-        model: 'gpt-4o',
+        model: 'gpt-5-mini',
         choices: [],
         ...value,
     };
@@ -206,7 +218,7 @@ function asChunk(value: Partial<ChatCompletionChunk>): ChatCompletionChunk {
         id: 'chunk-1',
         object: 'chat.completion.chunk',
         created: Date.now(),
-        model: 'gpt-4o',
+        model: 'gpt-5-mini',
         choices: [],
         ...value,
     };

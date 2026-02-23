@@ -6,7 +6,7 @@ import type {
     StopReason,
     ToolUseBlock,
 } from '@anthropic-ai/sdk/resources/messages/messages';
-import { ProviderError } from '@core-ai/ai';
+import { ProviderError } from '@core-ai/core-ai';
 import type {
     ChatModel,
     FinishReason,
@@ -15,7 +15,7 @@ import type {
     StreamEvent,
     StreamResult,
     ToolCall,
-} from '@core-ai/ai';
+} from '@core-ai/core-ai';
 import { createStreamResult } from './stream-result.js';
 import {
     convertMessages,

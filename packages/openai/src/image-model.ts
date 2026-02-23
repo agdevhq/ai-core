@@ -1,12 +1,12 @@
 import { APIError } from 'openai';
 import type OpenAI from 'openai';
 import type { ImagesResponse } from 'openai/resources/images';
-import { ProviderError } from '@core-ai/ai';
+import { ProviderError } from '@core-ai/core-ai';
 import type {
     ImageGenerateOptions,
     ImageGenerateResult,
     ImageModel,
-} from '@core-ai/ai';
+} from '@core-ai/core-ai';
 
 type OpenAIImageClient = {
     images: OpenAI['images'];

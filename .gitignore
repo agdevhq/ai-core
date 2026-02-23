@@ -7,10 +7,6 @@ node_modules
 
 # Local env files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Deploy environment files (explicitly ignored)
 deploy/.env*
@@ -20,9 +16,6 @@ coverage
 
 # Turbo
 .turbo
-
-# Vercel
-.vercel
 
 # Build Outputs
 .next/
@@ -39,6 +32,3 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
-
-# Local Netlify folder
-.netlify

@@ -11,7 +11,7 @@ import type {
     ToolSet,
     UserContentPart,
     ToolChoice as AgToolChoice,
-} from '@core-ai/ai';
+} from '@core-ai/core-ai';
 
 export type ConvertedAnthropicMessages = {
     system: string | undefined;

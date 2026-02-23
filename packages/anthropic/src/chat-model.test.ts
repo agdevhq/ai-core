@@ -4,7 +4,7 @@ import type {
     Message,
     RawMessageStreamEvent,
 } from '@anthropic-ai/sdk/resources/messages/messages';
-import { ProviderError } from '@core-ai/ai';
+import { ProviderError } from '@core-ai/core-ai';
 import { createAnthropicChatModel } from './chat-model.js';
 
 describe('createAnthropicChatModel', () => {

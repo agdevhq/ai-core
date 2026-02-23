@@ -8,14 +8,14 @@ describe('createOpenAI', () => {
             client: createMockClient(),
         });
 
-        const chatModel = provider.chatModel('gpt-4o');
+        const chatModel = provider.chatModel('gpt-5-mini');
         const embeddingModel = provider.embeddingModel(
             'text-embedding-3-small'
         );
         const imageModel = provider.imageModel('gpt-image-1');
 
         expect(chatModel.provider).toBe('openai');
-        expect(chatModel.modelId).toBe('gpt-4o');
+        expect(chatModel.modelId).toBe('gpt-5-mini');
 
         expect(embeddingModel.provider).toBe('openai');
         expect(embeddingModel.modelId).toBe('text-embedding-3-small');
@@ -29,7 +29,7 @@ describe('createOpenAI', () => {
             id: 'chatcmpl-1',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'gpt-4o',
+            model: 'gpt-5-mini',
             choices: [
                 {
                     index: 0,
@@ -65,7 +65,7 @@ describe('createOpenAI', () => {
         });
 
         await provider
-            .chatModel('gpt-4o')
+            .chatModel('gpt-5-mini')
             .generate({ messages: [{ role: 'user', content: 'hello' }] });
         await provider
             .embeddingModel('text-embedding-3-small')

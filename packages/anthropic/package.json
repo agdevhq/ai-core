@@ -14,7 +14,7 @@
         "test:watch": "vitest"
     },
     "dependencies": {
-        "@core-ai/ai": "*",
+        "@core-ai/core-ai": "*",
         "@anthropic-ai/sdk": "^0.78.0",
         "zod-to-json-schema": "^3.24.5"
     },

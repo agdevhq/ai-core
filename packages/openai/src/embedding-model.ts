@@ -1,7 +1,11 @@
 import { APIError } from 'openai';
 import type OpenAI from 'openai';
-import { ProviderError } from '@core-ai/ai';
-import type { EmbedOptions, EmbedResult, EmbeddingModel } from '@core-ai/ai';
+import { ProviderError } from '@core-ai/core-ai';
+import type {
+    EmbedOptions,
+    EmbedResult,
+    EmbeddingModel,
+} from '@core-ai/core-ai';
 
 type OpenAIEmbeddingClient = {
     embeddings: OpenAI['embeddings'];
