@@ -5,7 +5,7 @@ import {
     convertMessages,
     convertToolChoice,
     convertTools,
-} from './chat-convert.js';
+} from './chat-adapter.js';
 import { defineTool, type Message, type ToolSet } from '@core-ai/core-ai';
 
 describe('convertMessages', () => {
