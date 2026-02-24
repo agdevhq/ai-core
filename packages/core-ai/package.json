@@ -6,7 +6,7 @@
     "author": "Omnifact (https://omnifact.ai)",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/agdevhq/ai-core.git",
+        "url": "git+https://github.com/agdevhq/core-ai.git",
         "directory": "packages/core-ai"
     },
     "keywords": [
