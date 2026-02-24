@@ -21,7 +21,8 @@
     },
     "files": ["dist", "README.md", "LICENSE"],
     "publishConfig": {
-        "access": "public"
+        "access": "public",
+        "provenance": true
     },
     "scripts": {
         "build": "tsup",
