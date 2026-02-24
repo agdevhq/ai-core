@@ -25,14 +25,14 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
       - name: Install Dependencies
         run: npm ci
 
       - name: Build Packages
         run: npm run build
-
-      - name: Configure npm for OIDC trusted publishing
-        run: echo "registry=https://registry.npmjs.org/" > "$HOME/.npmrc"
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
