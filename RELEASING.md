@@ -8,6 +8,7 @@ This repository uses Turborepo for build/test tasks and Changesets for versionin
 - `@core-ai/openai`
 - `@core-ai/anthropic`
 - `@core-ai/google-genai`
+- `@core-ai/mistral`
 
 These packages are configured as a fixed group in `.changeset/config.json`, so they always share the same version.
 
