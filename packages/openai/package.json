@@ -1,6 +1,6 @@
 {
     "name": "@core-ai/openai",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "OpenAI provider package for @core-ai/core-ai",
     "license": "MIT",
     "author": "Omnifact (https://omnifact.ai)",
@@ -9,7 +9,13 @@
         "url": "git+https://github.com/agdevhq/ai-core.git",
         "directory": "packages/openai"
     },
-    "keywords": ["llm", "ai", "openai", "provider", "sdk"],
+    "keywords": [
+        "llm",
+        "ai",
+        "openai",
+        "provider",
+        "sdk"
+    ],
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -19,7 +25,11 @@
             "import": "./dist/index.js"
         }
     },
-    "files": ["dist", "README.md", "LICENSE"],
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
     "publishConfig": {
         "access": "public",
         "provenance": true
@@ -33,7 +43,7 @@
         "test:watch": "vitest"
     },
     "dependencies": {
-        "@core-ai/core-ai": "^0.1.0",
+        "@core-ai/core-ai": "^0.2.0",
         "openai": "^6.1.0",
         "zod-to-json-schema": "^3.24.5"
     },

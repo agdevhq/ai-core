@@ -1,6 +1,6 @@
 {
     "name": "@core-ai/core-ai",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Type-safe LLM abstraction layer over native provider SDKs",
     "license": "MIT",
     "author": "Omnifact (https://omnifact.ai)",
@@ -9,7 +9,14 @@
         "url": "git+https://github.com/agdevhq/ai-core.git",
         "directory": "packages/core-ai"
     },
-    "keywords": ["llm", "ai", "sdk", "openai", "anthropic", "google-genai"],
+    "keywords": [
+        "llm",
+        "ai",
+        "sdk",
+        "openai",
+        "anthropic",
+        "google-genai"
+    ],
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -19,7 +26,11 @@
             "import": "./dist/index.js"
         }
     },
-    "files": ["dist", "README.md", "LICENSE"],
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
     "publishConfig": {
         "access": "public",
         "provenance": true
