@@ -9,6 +9,7 @@ A type-safe abstraction layer over LLM provider SDKs for TypeScript. Write provi
 - **Unified API** across providers — switch between OpenAI, Anthropic, Mistral, and others without changing application code
 - **Full type safety** — strict TypeScript types, Zod-based tool definitions, no `any`
 - **Streaming** — async iterable-based streaming with optional aggregation via `toResponse()`
+- **Structured output** — `generateObject()` / `streamObject()` with runtime Zod validation
 - **Tool / function calling** — define tools with Zod schemas, automatically converted to JSON Schema
 - **Multi-modal** — text, images (base64 and URL), and file inputs
 - **Embeddings & image generation** — first-class support, not just chat
@@ -84,6 +85,41 @@ for await (const event of result) {
 // Or aggregate the full response
 const response = await result.toResponse();
 console.log(response.content);
+```
+
+### Structured Output
+
+```typescript
+import { generateObject, streamObject } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const profileSchema = z.object({
+    name: z.string(),
+    age: z.number().int(),
+});
+
+const objectResult = await generateObject({
+    model,
+    messages: [{ role: 'user', content: 'Return a profile for Ada Lovelace.' }],
+    schema: profileSchema,
+});
+
+console.log(objectResult.object.name); // typed as string
+
+const objectStream = await streamObject({
+    model,
+    messages: [{ role: 'user', content: 'Stream a profile object.' }],
+    schema: profileSchema,
+});
+
+for await (const event of objectStream) {
+    if (event.type === 'json-delta') {
+        process.stdout.write(event.text);
+    }
+}
+
+const finalObject = await objectStream.toResponse();
+console.log(finalObject.object);
 ```
 
 ### Tool Calling

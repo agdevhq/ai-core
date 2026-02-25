@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { LLMError, ProviderError } from './errors.ts';
+import {
+    LLMError,
+    ProviderError,
+    StructuredOutputValidationError,
+} from './errors.ts';
 
 describe('LLMError', () => {
     it('should create an error with message', () => {
@@ -26,5 +30,22 @@ describe('ProviderError', () => {
         expect(error.statusCode).toBe(429);
         expect(error).toBeInstanceOf(LLMError);
         expect(error).toBeInstanceOf(Error);
+    });
+});
+
+describe('StructuredOutputValidationError', () => {
+    it('should include schema issues and provider metadata', () => {
+        const error = new StructuredOutputValidationError('invalid schema output', {
+            issues: [],
+            provider: 'openai',
+            modelId: 'gpt-5-mini',
+            rawText: '{"name": 1}',
+        });
+
+        expect(error.provider).toBe('openai');
+        expect(error.modelId).toBe('gpt-5-mini');
+        expect(error.rawText).toBe('{"name": 1}');
+        expect(error.issues).toEqual([]);
+        expect(error).toBeInstanceOf(LLMError);
     });
 });

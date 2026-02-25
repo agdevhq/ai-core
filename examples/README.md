@@ -46,3 +46,5 @@ npx tsx examples/01-chat-completion.ts
 - `08-anthropic-provider.ts`: Using Anthropic with the same `generate()` API
 - `09-google-genai-provider.ts`: Using Google GenAI (Gemini) with the same `generate()` API
 - `10-mistral-provider.ts`: Using Mistral with the same `generate()` API
+- `11-structured-output.ts`: Typed object generation with `generateObject()`
+- `12-structured-output-streaming.ts`: Streaming typed JSON/object deltas with `streamObject()`

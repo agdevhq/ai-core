@@ -4,7 +4,12 @@ import type {
     Message,
     RawMessageStreamEvent,
 } from '@anthropic-ai/sdk/resources/messages/messages';
-import { ProviderError } from '@core-ai/core-ai';
+import {
+    generateObject,
+    ProviderError,
+    StructuredOutputValidationError,
+} from '@core-ai/core-ai';
+import { z } from 'zod';
 import { createAnthropicChatModel } from './chat-model.js';
 
 describe('createAnthropicChatModel', () => {
@@ -107,6 +112,88 @@ describe('generate', () => {
                 messages: [{ role: 'user', content: 'hello' }],
             })
         ).rejects.toBeInstanceOf(ProviderError);
+    });
+});
+
+describe('generateObject', () => {
+    it('should generate structured objects in auto mode', async () => {
+        const create = vi.fn(async () =>
+            asMessage({
+                content: [
+                    {
+                        type: 'tool_use',
+                        id: 'toolu_1',
+                        name: 'return_response',
+                        input: { name: 'Ada' },
+                        caller: { type: 'direct' },
+                    },
+                ],
+                stop_reason: 'tool_use',
+                usage: {
+                    input_tokens: 8,
+                    output_tokens: 5,
+                },
+            })
+        );
+        const model = createAnthropicChatModel(
+            createMockClient(create),
+            'claude-sonnet-4',
+            4096
+        );
+
+        const result = await generateObject({
+            model,
+            messages: [{ role: 'user', content: 'Return profile JSON' }],
+            schema: z.object({
+                name: z.string(),
+            }),
+        });
+
+        expect(result.object).toEqual({ name: 'Ada' });
+        expect(create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tool_choice: {
+                    type: 'tool',
+                    name: 'return_response',
+                },
+            })
+        );
+    });
+
+    it('should throw validation errors for invalid schema outputs', async () => {
+        const create = vi.fn(async () =>
+            asMessage({
+                content: [
+                    {
+                        type: 'tool_use',
+                        id: 'toolu_1',
+                        name: 'return_response',
+                        input: { name: 123 },
+                        caller: { type: 'direct' },
+                    },
+                ],
+                stop_reason: 'tool_use',
+                usage: {
+                    input_tokens: 8,
+                    output_tokens: 5,
+                },
+            })
+        );
+        const model = createAnthropicChatModel(
+            createMockClient(create),
+            'claude-sonnet-4',
+            4096
+        );
+
+        await expect(
+            generateObject({
+                model,
+                messages: [{ role: 'user', content: 'Return profile JSON' }],
+                schema: z.object({
+                    name: z.string(),
+                }),
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputValidationError);
     });
 });
 

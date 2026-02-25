@@ -32,3 +32,23 @@ const result = await generate({
 
 console.log(result.content);
 ```
+
+Structured outputs:
+
+```ts
+import { generateObject } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const schema = z.object({
+    name: z.string(),
+    age: z.number(),
+});
+
+const result = await generateObject({
+    model,
+    messages: [{ role: 'user', content: 'Return a profile as JSON' }],
+    schema,
+});
+
+console.log(result.object.name); // typed
+```

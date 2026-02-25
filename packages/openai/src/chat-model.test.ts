@@ -4,7 +4,12 @@ import type {
     ChatCompletion,
     ChatCompletionChunk,
 } from 'openai/resources/chat/completions/completions';
-import { ProviderError } from '@core-ai/core-ai';
+import {
+    generateObject,
+    ProviderError,
+    StructuredOutputValidationError,
+} from '@core-ai/core-ai';
+import { z } from 'zod';
 import { createOpenAIChatModel } from './chat-model.js';
 
 describe('createOpenAIChatModel', () => {
@@ -131,6 +136,86 @@ describe('generate', () => {
                 messages: [{ role: 'user', content: 'hello' }],
             })
         ).rejects.toBeInstanceOf(ProviderError);
+    });
+});
+
+describe('generateObject', () => {
+    it('should generate structured objects in auto mode', async () => {
+        const create = vi.fn(async () =>
+            asChatCompletion({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: 'stop',
+                        logprobs: null,
+                        message: {
+                            role: 'assistant',
+                            content: '{"name":"Ada"}',
+                            refusal: null,
+                        },
+                    },
+                ],
+                usage: {
+                    prompt_tokens: 6,
+                    completion_tokens: 4,
+                    total_tokens: 10,
+                },
+            })
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+
+        const result = await generateObject({
+            model,
+            messages: [{ role: 'user', content: 'Return profile JSON' }],
+            schema: z.object({
+                name: z.string(),
+            }),
+        });
+
+        expect(result.object).toEqual({ name: 'Ada' });
+        expect(create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                response_format: expect.objectContaining({
+                    type: 'json_schema',
+                }),
+            })
+        );
+    });
+
+    it('should throw validation errors for invalid schema outputs', async () => {
+        const create = vi.fn(async () =>
+            asChatCompletion({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: 'stop',
+                        logprobs: null,
+                        message: {
+                            role: 'assistant',
+                            content: '{"name":123}',
+                            refusal: null,
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+
+        await expect(
+            generateObject({
+                model,
+                messages: [{ role: 'user', content: 'Return profile JSON' }],
+                schema: z.object({
+                    name: z.string(),
+                }),
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputValidationError);
     });
 });
 

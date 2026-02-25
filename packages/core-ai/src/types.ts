@@ -147,6 +147,44 @@ export type StreamResult = AsyncIterable<StreamEvent> & {
     toResponse(): Promise<GenerateResult>;
 };
 
+export type StructuredMode = 'auto' | 'native' | 'tool' | 'json';
+
+export type GenerateObjectOptions<TSchema extends z.ZodTypeAny> =
+    GenerateOptions & {
+        schema: TSchema;
+        mode?: StructuredMode;
+        schemaName?: string;
+        schemaDescription?: string;
+    };
+
+export type GenerateObjectParams<TSchema extends z.ZodTypeAny> =
+    GenerateObjectOptions<TSchema> & {
+        model: ChatModel;
+    };
+
+export type GenerateObjectResult<TSchema extends z.ZodTypeAny> = {
+    object: z.infer<TSchema>;
+    finishReason: FinishReason;
+    usage: ChatUsage;
+    raw: GenerateResult;
+};
+
+export type DeepPartial<T> = T extends Array<infer U>
+    ? Array<DeepPartial<U>>
+    : T extends object
+      ? { [K in keyof T]?: DeepPartial<T[K]> }
+      : T;
+
+export type ObjectStreamEvent<TSchema extends z.ZodTypeAny> =
+    | { type: 'json-delta'; text: string }
+    | { type: 'object-delta'; partial: DeepPartial<z.infer<TSchema>> }
+    | { type: 'finish'; finishReason: FinishReason; usage: ChatUsage };
+
+export type ObjectStreamResult<TSchema extends z.ZodTypeAny> =
+    AsyncIterable<ObjectStreamEvent<TSchema>> & {
+        toResponse(): Promise<GenerateObjectResult<TSchema>>;
+    };
+
 export type EmbeddingModel = {
     readonly provider: string;
     readonly modelId: string;

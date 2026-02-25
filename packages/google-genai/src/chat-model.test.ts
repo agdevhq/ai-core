@@ -4,7 +4,12 @@ import {
     type GenerateContentResponse,
     type GoogleGenAI,
 } from '@google/genai';
-import { ProviderError } from '@core-ai/core-ai';
+import {
+    generateObject,
+    ProviderError,
+    StructuredOutputValidationError,
+} from '@core-ai/core-ai';
+import { z } from 'zod';
 import { createGoogleGenAIChatModel } from './chat-model.js';
 
 describe('createGoogleGenAIChatModel', () => {
@@ -118,6 +123,62 @@ describe('generate', () => {
                 messages: [{ role: 'user', content: 'hello' }],
             })
         ).rejects.toBeInstanceOf(ProviderError);
+    });
+});
+
+describe('generateObject', () => {
+    it('should generate structured objects in auto mode', async () => {
+        const generateContent = vi.fn(async () =>
+            asGenerateContentResponse({
+                text: '{"name":"Ada"}',
+                candidates: [{ finishReason: GoogleFinishReason.STOP }],
+            })
+        );
+        const model = createGoogleGenAIChatModel(
+            createMockClient({ generateContent }),
+            'gemini-2.5-flash'
+        );
+
+        const result = await generateObject({
+            model,
+            messages: [{ role: 'user', content: 'Return profile JSON' }],
+            schema: z.object({
+                name: z.string(),
+            }),
+        });
+
+        expect(result.object).toEqual({ name: 'Ada' });
+        expect(generateContent).toHaveBeenCalledWith(
+            expect.objectContaining({
+                config: expect.objectContaining({
+                    responseMimeType: 'application/json',
+                    responseSchema: expect.any(Object),
+                }),
+            })
+        );
+    });
+
+    it('should throw validation errors for invalid schema outputs', async () => {
+        const generateContent = vi.fn(async () =>
+            asGenerateContentResponse({
+                text: '{"name":123}',
+                candidates: [{ finishReason: GoogleFinishReason.STOP }],
+            })
+        );
+        const model = createGoogleGenAIChatModel(
+            createMockClient({ generateContent }),
+            'gemini-2.5-flash'
+        );
+
+        await expect(
+            generateObject({
+                model,
+                messages: [{ role: 'user', content: 'Return profile JSON' }],
+                schema: z.object({
+                    name: z.string(),
+                }),
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputValidationError);
     });
 });
 

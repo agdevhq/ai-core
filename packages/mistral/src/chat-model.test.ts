@@ -4,7 +4,12 @@ import type {
     ChatCompletionResponse,
     CompletionEvent,
 } from '@mistralai/mistralai/models/components';
-import { ProviderError } from '@core-ai/core-ai';
+import {
+    generateObject,
+    ProviderError,
+    StructuredOutputValidationError,
+} from '@core-ai/core-ai';
+import { z } from 'zod';
 import { createMistralChatModel } from './chat-model.js';
 
 describe('createMistralChatModel', () => {
@@ -130,6 +135,77 @@ describe('generate', () => {
                 messages: [{ role: 'user', content: 'hello' }],
             })
         ).rejects.toBeInstanceOf(ProviderError);
+    });
+});
+
+describe('generateObject', () => {
+    it('should generate structured objects in auto mode', async () => {
+        const complete = vi.fn(async () =>
+            asChatCompletionResponse({
+                choices: [
+                    {
+                        index: 0,
+                        finishReason: 'stop',
+                        message: {
+                            role: 'assistant',
+                            content: '{"name":"Ada"}',
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createMistralChatModel(
+            createMockClient({ complete }),
+            'mistral-large-latest'
+        );
+
+        const result = await generateObject({
+            model,
+            messages: [{ role: 'user', content: 'Return profile JSON' }],
+            schema: z.object({
+                name: z.string(),
+            }),
+        });
+
+        expect(result.object).toEqual({ name: 'Ada' });
+        expect(complete).toHaveBeenCalledWith(
+            expect.objectContaining({
+                responseFormat: {
+                    type: 'json_object',
+                },
+            })
+        );
+    });
+
+    it('should throw validation errors for invalid schema outputs', async () => {
+        const complete = vi.fn(async () =>
+            asChatCompletionResponse({
+                choices: [
+                    {
+                        index: 0,
+                        finishReason: 'stop',
+                        message: {
+                            role: 'assistant',
+                            content: 'not-json',
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createMistralChatModel(
+            createMockClient({ complete }),
+            'mistral-large-latest'
+        );
+
+        await expect(
+            generateObject({
+                model,
+                messages: [{ role: 'user', content: 'Return profile JSON' }],
+                schema: z.object({
+                    name: z.string(),
+                }),
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputValidationError);
     });
 });
 
