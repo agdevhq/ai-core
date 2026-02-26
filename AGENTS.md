@@ -27,6 +27,10 @@ Turborepo tasks: `build`, `dev`, `lint`, `package`, `publish`.
 
 Deployment configurations in `deploy/` (Docker Compose).
 
+## Contributing
+
+Before contributing changes, first read the `contributing` skill.
+
 ## Code Style
 
 ### General Conventions
