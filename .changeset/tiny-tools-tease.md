@@ -1,5 +1,5 @@
 ---
-'@core-ai/google-genai': major
+'@core-ai/google-genai': minor
 ---
 
 Update Google GenAI usage mapping to the new nested `ChatUsage` structure.

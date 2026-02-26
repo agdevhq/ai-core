@@ -1,5 +1,5 @@
 ---
-'@core-ai/mistral': major
+'@core-ai/mistral': minor
 ---
 
 Update Mistral usage mapping to the new nested `ChatUsage` structure.

@@ -1,5 +1,5 @@
 ---
-'@core-ai/anthropic': major
+'@core-ai/anthropic': minor
 ---
 
 Update Anthropic usage mapping to the new nested `ChatUsage` structure and

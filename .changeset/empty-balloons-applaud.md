@@ -1,5 +1,5 @@
 ---
-'@core-ai/core-ai': major
+'@core-ai/core-ai': minor
 ---
 
 Refactor the core `ChatUsage` contract to nested detail objects for input and

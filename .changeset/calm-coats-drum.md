@@ -1,5 +1,5 @@
 ---
-'@core-ai/openai': major
+'@core-ai/openai': minor
 ---
 
 Update OpenAI usage mapping to the new nested `ChatUsage` structure.
