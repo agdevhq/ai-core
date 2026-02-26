@@ -6,7 +6,6 @@ import {
     convertMessages,
     convertToolChoice,
     convertTools,
-    getStructuredOutputToolName,
 } from './chat-adapter.js';
 
 describe('convertMessages', () => {
@@ -199,8 +198,10 @@ describe('convertTools', () => {
 
         expect(result[0]?.name).toBe('search');
         expect(result[0]?.description).toBe('Search the web');
+        expect(result[0]?.strict).toBe(true);
         expect(result[0]?.input_schema).toMatchObject({
             type: 'object',
+            additionalProperties: false,
             properties: {
                 query: { type: 'string' },
             },
@@ -232,7 +233,7 @@ describe('convertToolChoice', () => {
 });
 
 describe('structured output helpers', () => {
-    it('should create tool-based generate options for structured output', () => {
+    it('should create output_config-based options for structured output', () => {
         const schema = z.object({
             city: z.string(),
             temperatureC: z.number(),
@@ -248,28 +249,18 @@ describe('structured output helpers', () => {
             },
         });
 
-        expect(result.toolChoice).toEqual({
-            type: 'tool',
-            toolName: 'weather_schema',
-        });
-        expect(result.tools).toMatchObject({
-            structured_output: {
-                name: 'weather_schema',
-                description: 'Structured weather output',
+        expect(result.toolChoice).toBeUndefined();
+        expect(result.tools).toBeUndefined();
+        expect(result.providerOptions).toMatchObject({
+            output_config: {
+                format: {
+                    type: 'json_schema',
+                    schema: {
+                        type: 'object',
+                        additionalProperties: false,
+                    },
+                },
             },
         });
-    });
-
-    it('should derive default structured output tool name', () => {
-        const schema = z.object({
-            ok: z.boolean(),
-        });
-
-        expect(
-            getStructuredOutputToolName({
-                messages: [{ role: 'user', content: 'json' }],
-                schema,
-            })
-        ).toBe('core_ai_generate_object');
     });
 });

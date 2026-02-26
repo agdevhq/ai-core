@@ -23,7 +23,6 @@ import {
     createStructuredOutputOptions,
     createGenerateRequest,
     createStreamRequest,
-    getStructuredOutputToolName,
     mapGenerateResponse,
     transformStream,
     wrapError,
@@ -40,37 +39,30 @@ export function createAnthropicChatModel(
 ): ChatModel {
     const provider = 'anthropic';
 
-    async function generateChat(
-        options: GenerateOptions
-    ): Promise<GenerateResult> {
+    async function callAnthropicMessagesApi<T>(request: unknown): Promise<T> {
         try {
-            const request = createGenerateRequest(
-                modelId,
-                defaultMaxTokens,
-                options
-            );
-            const response = await client.messages.create(request as never);
-
-            return mapGenerateResponse(response);
+            return (await client.messages.create(request as never)) as T;
         } catch (error) {
             throw wrapError(error);
         }
     }
 
+    async function generateChat(
+        options: GenerateOptions
+    ): Promise<GenerateResult> {
+        const request = createGenerateRequest(modelId, defaultMaxTokens, options);
+        const response = await callAnthropicMessagesApi<
+            Parameters<typeof mapGenerateResponse>[0]
+        >(request);
+        return mapGenerateResponse(response);
+    }
+
     async function streamChat(options: GenerateOptions): Promise<StreamResult> {
-        try {
-            const request = createStreamRequest(
-                modelId,
-                defaultMaxTokens,
-                options
-            );
-            const stream = (await client.messages.create(
-                request as never
-            )) as unknown as AsyncIterable<RawMessageStreamEvent>;
-            return createStreamResult(transformStream(stream));
-        } catch (error) {
-            throw wrapError(error);
-        }
+        const request = createStreamRequest(modelId, defaultMaxTokens, options);
+        const stream = await callAnthropicMessagesApi<
+            AsyncIterable<RawMessageStreamEvent>
+        >(request);
+        return createStreamResult(transformStream(stream));
     }
 
     return {
@@ -83,13 +75,7 @@ export function createAnthropicChatModel(
         ): Promise<GenerateObjectResult<TSchema>> {
             const structuredOptions = createStructuredOutputOptions(options);
             const result = await generateChat(structuredOptions);
-            const toolName = getStructuredOutputToolName(options);
-            const object = extractStructuredObject(
-                result,
-                options.schema,
-                provider,
-                toolName
-            );
+            const object = extractStructuredObject(result, options.schema, provider);
 
             return {
                 object,
@@ -102,14 +88,12 @@ export function createAnthropicChatModel(
         ): Promise<StreamObjectResult<TSchema>> {
             const structuredOptions = createStructuredOutputOptions(options);
             const stream = await streamChat(structuredOptions);
-            const toolName = getStructuredOutputToolName(options);
 
             return createObjectStreamResult(
                 transformStructuredOutputStream(
                     stream,
                     options.schema,
-                    provider,
-                    toolName
+                    provider
                 )
             );
         },
@@ -119,47 +103,23 @@ export function createAnthropicChatModel(
 function extractStructuredObject<TSchema extends z.ZodType>(
     result: GenerateResult,
     schema: TSchema,
-    provider: string,
-    toolName: string
+    provider: string
 ): z.infer<TSchema> {
-    const structuredToolCall = result.toolCalls.find(
-        (toolCall) => toolCall.name === toolName
+    const rawOutput = requireStructuredOutputPayload(
+        result.finishReason,
+        result.content?.trim(),
+        provider,
+        'model did not emit a structured object payload'
     );
-    if (structuredToolCall) {
-        return validateStructuredObject(
-            schema,
-            structuredToolCall.arguments,
-            provider,
-            JSON.stringify(structuredToolCall.arguments)
-        );
-    }
-
-    const rawOutput = result.content?.trim();
-    if (rawOutput && rawOutput.length > 0) {
-        const parsedOutput = parseJson(rawOutput, provider);
-        return validateStructuredObject(
-            schema,
-            parsedOutput,
-            provider,
-            rawOutput
-        );
-    }
-
-    throw new StructuredOutputNoObjectGeneratedError(
-        'model did not emit a structured object payload',
-        provider
-    );
+    return parseAndValidateStructuredObject(schema, rawOutput, provider);
 }
 
 async function* transformStructuredOutputStream<TSchema extends z.ZodType>(
     stream: StreamResult,
     schema: TSchema,
-    provider: string,
-    toolName: string
+    provider: string
 ): AsyncIterable<ObjectStreamEvent<TSchema>> {
-    let validatedObject: z.infer<TSchema> | undefined;
     let contentBuffer = '';
-    const toolArgumentDeltas = new Map<string, string>();
 
     for await (const event of stream) {
         if (event.type === 'content-delta') {
@@ -172,12 +132,7 @@ async function* transformStructuredOutputStream<TSchema extends z.ZodType>(
         }
 
         if (event.type === 'tool-call-delta') {
-            const previous = toolArgumentDeltas.get(event.toolCallId) ?? '';
-            toolArgumentDeltas.set(
-                event.toolCallId,
-                `${previous}${event.argumentsDelta}`
-            );
-
+            contentBuffer += event.argumentsDelta;
             yield {
                 type: 'object-delta',
                 text: event.argumentsDelta,
@@ -185,49 +140,22 @@ async function* transformStructuredOutputStream<TSchema extends z.ZodType>(
             continue;
         }
 
-        if (
-            event.type === 'tool-call-end' &&
-            event.toolCall.name === toolName
-        ) {
-            validatedObject = validateStructuredObject(
-                schema,
-                event.toolCall.arguments,
+        if (event.type === 'finish') {
+            const rawOutput = requireStructuredOutputPayload(
+                event.finishReason,
+                contentBuffer.trim(),
                 provider,
-                JSON.stringify(event.toolCall.arguments)
+                'structured output stream ended without an object payload'
+            );
+            const validatedObject = parseAndValidateStructuredObject(
+                schema,
+                rawOutput,
+                provider
             );
             yield {
                 type: 'object',
                 object: validatedObject,
             };
-            continue;
-        }
-
-        if (event.type === 'finish') {
-            if (validatedObject === undefined) {
-                const fallbackPayload = getFallbackStructuredPayload(
-                    contentBuffer,
-                    toolArgumentDeltas
-                );
-
-                if (!fallbackPayload) {
-                    throw new StructuredOutputNoObjectGeneratedError(
-                        'structured output stream ended without an object payload',
-                        provider
-                    );
-                }
-
-                const parsedFallback = parseJson(fallbackPayload, provider);
-                validatedObject = validateStructuredObject(
-                    schema,
-                    parsedFallback,
-                    provider,
-                    fallbackPayload
-                );
-                yield {
-                    type: 'object',
-                    object: validatedObject,
-                };
-            }
 
             yield {
                 type: 'finish',
@@ -238,23 +166,46 @@ async function* transformStructuredOutputStream<TSchema extends z.ZodType>(
     }
 }
 
-function getFallbackStructuredPayload(
-    contentBuffer: string,
-    toolArgumentDeltas: Map<string, string>
-): string | undefined {
-    for (const delta of toolArgumentDeltas.values()) {
-        const trimmed = delta.trim();
-        if (trimmed.length > 0) {
-            return trimmed;
-        }
+function requireStructuredOutputPayload(
+    finishReason: GenerateResult['finishReason'],
+    rawOutput: string | undefined,
+    provider: string,
+    noPayloadMessage: string
+): string {
+    if (finishReason === 'content-filter') {
+        throw new StructuredOutputNoObjectGeneratedError(
+            'model refused to produce a structured output',
+            provider,
+            {
+                rawOutput,
+            }
+        );
     }
 
-    const trimmedContent = contentBuffer.trim();
-    if (trimmedContent.length > 0) {
-        return trimmedContent;
+    if (finishReason === 'length') {
+        throw new StructuredOutputNoObjectGeneratedError(
+            'structured output was truncated because max tokens were reached',
+            provider,
+            {
+                rawOutput,
+            }
+        );
     }
 
-    return undefined;
+    if (!rawOutput || rawOutput.length === 0) {
+        throw new StructuredOutputNoObjectGeneratedError(noPayloadMessage, provider);
+    }
+
+    return rawOutput;
+}
+
+function parseAndValidateStructuredObject<TSchema extends z.ZodType>(
+    schema: TSchema,
+    rawOutput: string,
+    provider: string
+): z.infer<TSchema> {
+    const parsedOutput = parseJson(rawOutput, provider);
+    return validateStructuredObject(schema, parsedOutput, provider, rawOutput);
 }
 
 function parseJson(rawOutput: string, provider: string): unknown {

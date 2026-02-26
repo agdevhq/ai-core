@@ -26,9 +26,16 @@ import type {
     ToolChoice as AgToolChoice,
 } from '@core-ai/core-ai';
 
-export const DEFAULT_STRUCTURED_OUTPUT_TOOL_NAME = 'core_ai_generate_object';
-export const DEFAULT_STRUCTURED_OUTPUT_TOOL_DESCRIPTION =
-    'Return a JSON object that matches the requested schema.';
+const UNSUPPORTED_ANTHROPIC_SCHEMA_KEYWORDS = new Set([
+    'minimum',
+    'maximum',
+    'exclusiveMinimum',
+    'exclusiveMaximum',
+    'multipleOf',
+    'minLength',
+    'maxLength',
+    'maxItems',
+]);
 
 export type ConvertedAnthropicMessages = {
     system: string | undefined;
@@ -177,16 +184,13 @@ function convertUserContentPart(part: UserContentPart): ContentBlockParam {
 
 export function convertTools(tools: ToolSet): Tool[] {
     return Object.values(tools).map((tool) => {
-        const schema = zodToJsonSchema(tool.parameters) as Record<
-            string,
-            unknown
-        >;
-        const { $schema: _schema, ...inputSchema } = schema;
+        const schema = toAnthropicJsonSchema(tool.parameters);
 
         return {
             name: tool.name,
             description: tool.description,
-            input_schema: inputSchema as Tool['input_schema'],
+            input_schema: schema as Tool['input_schema'],
+            strict: true,
         };
     });
 }
@@ -207,40 +211,80 @@ export function convertToolChoice(choice: AgToolChoice): ToolChoice {
     };
 }
 
-export function getStructuredOutputToolName<TSchema extends z.ZodType>(
-    options: GenerateObjectOptions<TSchema>
-): string {
-    const trimmedName = options.schemaName?.trim();
-    if (trimmedName && trimmedName.length > 0) {
-        return trimmedName;
-    }
-    return DEFAULT_STRUCTURED_OUTPUT_TOOL_NAME;
-}
-
 export function createStructuredOutputOptions<TSchema extends z.ZodType>(
     options: GenerateObjectOptions<TSchema>
 ): GenerateOptions {
-    const toolName = getStructuredOutputToolName(options);
+    const schema = toAnthropicJsonSchema(options.schema);
+    const schemaDescription = options.schemaDescription?.trim();
+    if (schemaDescription && schemaDescription.length > 0) {
+        schema.description = schemaDescription;
+    }
 
     return {
         messages: options.messages,
-        tools: {
-            structured_output: {
-                name: toolName,
-                description:
-                    options.schemaDescription ??
-                    DEFAULT_STRUCTURED_OUTPUT_TOOL_DESCRIPTION,
-                parameters: options.schema,
+        config: options.config,
+        providerOptions: {
+            ...(options.providerOptions ?? {}),
+            output_config: {
+                format: {
+                    type: 'json_schema',
+                    schema,
+                },
             },
         },
-        toolChoice: {
-            type: 'tool',
-            toolName,
-        },
-        config: options.config,
-        providerOptions: options.providerOptions,
         signal: options.signal,
     };
+}
+
+function toAnthropicJsonSchema(schema: z.ZodType): Record<string, unknown> {
+    const rawSchema = zodToJsonSchema(schema) as Record<string, unknown>;
+    return normalizeAnthropicJsonSchema(rawSchema);
+}
+
+function normalizeAnthropicJsonSchema(value: unknown): Record<string, unknown> {
+    const normalized = normalizeAnthropicJsonValue(value);
+    return isJsonObject(normalized) ? normalized : {};
+}
+
+function normalizeAnthropicJsonValue(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map(normalizeAnthropicJsonValue);
+    }
+
+    if (!isJsonObject(value)) {
+        return value;
+    }
+
+    const normalized: Record<string, unknown> = {};
+
+    for (const [key, child] of Object.entries(value)) {
+        if (
+            key === '$schema' ||
+            UNSUPPORTED_ANTHROPIC_SCHEMA_KEYWORDS.has(key) ||
+            (key === 'minItems' && typeof child === 'number' && child > 1)
+        ) {
+            continue;
+        }
+        normalized[key] = normalizeAnthropicJsonValue(child);
+    }
+
+    if (isObjectSchema(normalized)) {
+        normalized.additionalProperties = false;
+    }
+
+    return normalized;
+}
+
+function isObjectSchema(value: Record<string, unknown>): boolean {
+    return (
+        value.type === 'object' ||
+        Object.hasOwn(value, 'properties') ||
+        Object.hasOwn(value, 'required')
+    );
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 export function createGenerateRequest(
@@ -248,27 +292,8 @@ export function createGenerateRequest(
     defaultMaxTokens: number,
     options: GenerateOptions
 ) {
-    const converted = convertMessages(options.messages);
     return {
-        model: modelId,
-        messages: converted.messages,
-        max_tokens: options.config?.maxTokens ?? defaultMaxTokens,
-        ...(converted.system ? { system: converted.system } : {}),
-        ...(options.tools && Object.keys(options.tools).length > 0
-            ? { tools: convertTools(options.tools) }
-            : {}),
-        ...(options.toolChoice
-            ? { tool_choice: convertToolChoice(options.toolChoice) }
-            : {}),
-        ...(options.config?.temperature !== undefined
-            ? { temperature: options.config.temperature }
-            : {}),
-        ...(options.config?.topP !== undefined
-            ? { top_p: options.config.topP }
-            : {}),
-        ...(options.config?.stopSequences
-            ? { stop_sequences: options.config.stopSequences }
-            : {}),
+        ...createRequestBase(modelId, defaultMaxTokens, options),
         ...options.providerOptions,
     };
 }
@@ -278,11 +303,23 @@ export function createStreamRequest(
     defaultMaxTokens: number,
     options: GenerateOptions
 ) {
+    return {
+        ...createRequestBase(modelId, defaultMaxTokens, options),
+        stream: true as const,
+        ...options.providerOptions,
+    };
+}
+
+function createRequestBase(
+    modelId: string,
+    defaultMaxTokens: number,
+    options: GenerateOptions
+) {
     const converted = convertMessages(options.messages);
+
     return {
         model: modelId,
         messages: converted.messages,
-        stream: true as const,
         max_tokens: options.config?.maxTokens ?? defaultMaxTokens,
         ...(converted.system ? { system: converted.system } : {}),
         ...(options.tools && Object.keys(options.tools).length > 0
@@ -291,16 +328,19 @@ export function createStreamRequest(
         ...(options.toolChoice
             ? { tool_choice: convertToolChoice(options.toolChoice) }
             : {}),
-        ...(options.config?.temperature !== undefined
-            ? { temperature: options.config.temperature }
+        ...mapConfigToRequestFields(options.config),
+    };
+}
+
+function mapConfigToRequestFields(config: GenerateOptions['config']) {
+    return {
+        ...(config?.temperature !== undefined
+            ? { temperature: config.temperature }
             : {}),
-        ...(options.config?.topP !== undefined
-            ? { top_p: options.config.topP }
+        ...(config?.topP !== undefined ? { top_p: config.topP } : {}),
+        ...(config?.stopSequences
+            ? { stop_sequences: config.stopSequences }
             : {}),
-        ...(options.config?.stopSequences
-            ? { stop_sequences: options.config.stopSequences }
-            : {}),
-        ...options.providerOptions,
     };
 }
 

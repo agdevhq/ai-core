@@ -7,6 +7,7 @@ import type {
 } from '@anthropic-ai/sdk/resources/messages/messages';
 import {
     ProviderError,
+    StructuredOutputNoObjectGeneratedError,
     StructuredOutputValidationError,
 } from '@core-ai/core-ai';
 import { createAnthropicChatModel } from './chat-model.js';
@@ -101,17 +102,12 @@ describe('generate', () => {
             asMessage({
                 content: [
                     {
-                        type: 'tool_use',
-                        id: 'toolu_1',
-                        name: 'weather_schema',
-                        input: {
-                            city: 'Berlin',
-                            temperatureC: 21,
-                        },
-                        caller: { type: 'direct' },
+                        type: 'text',
+                        text: '{"city":"Berlin","temperatureC":21}',
+                        citations: null,
                     },
                 ],
-                stop_reason: 'tool_use',
+                stop_reason: 'end_turn',
                 usage: {
                     input_tokens: 12,
                     output_tokens: 8,
@@ -138,7 +134,7 @@ describe('generate', () => {
             city: 'Berlin',
             temperatureC: 21,
         });
-        expect(result.finishReason).toBe('tool-calls');
+        expect(result.finishReason).toBe('stop');
     });
 
     it('should throw validation error for invalid structured output', async () => {
@@ -146,17 +142,12 @@ describe('generate', () => {
             asMessage({
                 content: [
                     {
-                        type: 'tool_use',
-                        id: 'toolu_1',
-                        name: 'weather_schema',
-                        input: {
-                            city: 'Berlin',
-                            temperatureC: 'warm',
-                        },
-                        caller: { type: 'direct' },
+                        type: 'text',
+                        text: '{"city":"Berlin","temperatureC":"warm"}',
+                        citations: null,
                     },
                 ],
-                stop_reason: 'tool_use',
+                stop_reason: 'end_turn',
                 usage: {
                     input_tokens: 12,
                     output_tokens: 8,
@@ -180,6 +171,41 @@ describe('generate', () => {
                 schemaName: 'weather_schema',
             })
         ).rejects.toBeInstanceOf(StructuredOutputValidationError);
+    });
+
+    it('should throw no-object error when structured output is refused', async () => {
+        const create = vi.fn(async () =>
+            asMessage({
+                content: [
+                    {
+                        type: 'text',
+                        text: 'I cannot help with that.',
+                        citations: null,
+                    },
+                ],
+                stop_reason: 'refusal',
+                usage: {
+                    input_tokens: 12,
+                    output_tokens: 8,
+                },
+            })
+        );
+        const model = createAnthropicChatModel(
+            createMockClient(create),
+            'claude-sonnet-4',
+            4096
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        await expect(
+            model.generateObject({
+                messages: [{ role: 'user', content: 'Return weather JSON' }],
+                schema,
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputNoObjectGeneratedError);
     });
 
     it('should wrap provider errors', async () => {
@@ -301,27 +327,25 @@ describe('stream', () => {
                     type: 'content_block_start',
                     index: 0,
                     content_block: {
-                        type: 'tool_use',
-                        id: 'toolu_1',
-                        name: 'weather_schema',
-                        input: {},
-                        caller: { type: 'direct' },
+                        type: 'text',
+                        text: '',
+                        citations: null,
                     },
                 },
                 {
                     type: 'content_block_delta',
                     index: 0,
                     delta: {
-                        type: 'input_json_delta',
-                        partial_json: '{"city":"Berlin",',
+                        type: 'text_delta',
+                        text: '{"city":"Berlin",',
                     },
                 },
                 {
                     type: 'content_block_delta',
                     index: 0,
                     delta: {
-                        type: 'input_json_delta',
-                        partial_json: '"temperatureC":21}',
+                        type: 'text_delta',
+                        text: '"temperatureC":21}',
                     },
                 },
                 {
@@ -331,7 +355,7 @@ describe('stream', () => {
                 {
                     type: 'message_delta',
                     delta: {
-                        stop_reason: 'tool_use',
+                        stop_reason: 'end_turn',
                         stop_sequence: null,
                         container: null,
                     },
@@ -377,7 +401,7 @@ describe('stream', () => {
             city: 'Berlin',
             temperatureC: 21,
         });
-        expect(response.finishReason).toBe('tool-calls');
+        expect(response.finishReason).toBe('stop');
     });
 });
 
