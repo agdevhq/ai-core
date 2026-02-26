@@ -326,7 +326,7 @@ packages/
 npm install
 
 # Run tests
-npm run build && npx turbo test
+npm run test
 
 # Type-check
 npm run check-types
