@@ -55,6 +55,10 @@ Rules:
 - Bump type is one of: `patch`, `minor`, `major`
 - Body below the frontmatter is the changelog entry
 
+### Pre-1.0 versioning
+
+While packages are below `1.0.0`, use `minor` for breaking changes instead of `major`. Changesets does not auto-downgrade major bumps for pre-1.0 packages -- a `major` on `0.x.y` will jump straight to `1.0.0`. Use `major` only when intentionally releasing `1.0.0`.
+
 ### Fixed version group
 
 All publishable packages share a single version number:
