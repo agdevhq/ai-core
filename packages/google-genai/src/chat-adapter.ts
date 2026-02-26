@@ -1,5 +1,4 @@
 import {
-    ApiError,
     FunctionCallingConfigMode,
     type Content,
     type FinishReason as GoogleFinishReason,
@@ -13,7 +12,6 @@ import {
 } from '@google/genai';
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ProviderError } from '@core-ai/core-ai';
 import type {
     FinishReason,
     GenerateObjectOptions,
@@ -26,6 +24,7 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
+import { asObject } from './object-utils.js';
 
 export const DEFAULT_STRUCTURED_OUTPUT_TOOL_NAME = 'core_ai_generate_object';
 export const DEFAULT_STRUCTURED_OUTPUT_TOOL_DESCRIPTION =
@@ -511,24 +510,4 @@ function mapUsage(
         reasoningTokens,
         totalTokens,
     };
-}
-
-function asObject(value: unknown): Record<string, unknown> {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-        return value as Record<string, unknown>;
-    }
-    return {};
-}
-
-export function wrapError(error: unknown): ProviderError {
-    if (error instanceof ApiError) {
-        return new ProviderError(error.message, 'google', error.status, error);
-    }
-
-    return new ProviderError(
-        error instanceof Error ? error.message : String(error),
-        'google',
-        undefined,
-        error
-    );
 }
