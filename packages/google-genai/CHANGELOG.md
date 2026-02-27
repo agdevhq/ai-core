@@ -1,5 +1,22 @@
 # @core-ai/google-genai
 
+## 0.4.0
+
+### Minor Changes
+
+- 9664af0: Update Google GenAI usage mapping to the new nested `ChatUsage` structure.
+
+    Google GenAI responses now map:
+    - `usage.inputTokenDetails.cacheReadTokens` from `usageMetadata.cachedContentTokenCount`
+    - `usage.outputTokenDetails.reasoningTokens` from `usageMetadata.thoughtsTokenCount`
+
+    `usage.totalTokens` and top-level `usage.reasoningTokens` are no longer returned.
+
+### Patch Changes
+
+- Updated dependencies [9664af0]
+    - @core-ai/core-ai@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes

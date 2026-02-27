@@ -1,5 +1,25 @@
 # @core-ai/anthropic
 
+## 0.4.0
+
+### Minor Changes
+
+- 9664af0: Update Anthropic usage mapping to the new nested `ChatUsage` structure and
+  normalize cache accounting semantics.
+
+    Anthropic now reports:
+    - total `usage.inputTokens` as `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`
+    - `usage.inputTokenDetails.cacheReadTokens` from `cache_read_input_tokens`
+    - `usage.inputTokenDetails.cacheWriteTokens` from `cache_creation_input_tokens`
+    - `usage.outputTokenDetails.reasoningTokens` as `0`
+
+    `usage.totalTokens` and top-level `usage.reasoningTokens` are no longer returned.
+
+### Patch Changes
+
+- Updated dependencies [9664af0]
+    - @core-ai/core-ai@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
