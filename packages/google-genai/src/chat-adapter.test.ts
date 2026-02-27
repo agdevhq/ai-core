@@ -103,12 +103,14 @@ describe('convertMessages', () => {
         const messages: Message[] = [
             {
                 role: 'assistant',
-                content: null,
-                toolCalls: [
+                parts: [
                     {
-                        id: 'tc_1',
-                        name: 'search',
-                        arguments: { query: 'weather' },
+                        type: 'tool-call',
+                        toolCall: {
+                            id: 'tc_1',
+                            name: 'search',
+                            arguments: { query: 'weather' },
+                        },
                     },
                 ],
             },
@@ -134,17 +136,22 @@ describe('convertMessages', () => {
         const messages: Message[] = [
             {
                 role: 'assistant',
-                content: null,
-                toolCalls: [
+                parts: [
                     {
-                        id: 'tc_1',
-                        name: 'search',
-                        arguments: { query: 'weather' },
+                        type: 'tool-call',
+                        toolCall: {
+                            id: 'tc_1',
+                            name: 'search',
+                            arguments: { query: 'weather' },
+                        },
                     },
                     {
-                        id: 'tc_2',
-                        name: 'temperature',
-                        arguments: { city: 'Berlin' },
+                        type: 'tool-call',
+                        toolCall: {
+                            id: 'tc_2',
+                            name: 'temperature',
+                            arguments: { city: 'Berlin' },
+                        },
                     },
                 ],
             },
@@ -206,8 +213,12 @@ describe('convertMessages', () => {
         const messages: Message[] = [
             {
                 role: 'assistant',
-                content: null,
-                toolCalls: [{ id: 'tc_1', name: 'search', arguments: {} }],
+                parts: [
+                    {
+                        type: 'tool-call',
+                        toolCall: { id: 'tc_1', name: 'search', arguments: {} },
+                    },
+                ],
             },
             {
                 role: 'tool',

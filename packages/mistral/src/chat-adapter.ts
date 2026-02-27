@@ -13,6 +13,7 @@ import type {
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
+    AssistantContentPart,
     FinishReason,
     GenerateObjectOptions,
     GenerateOptions,
@@ -52,12 +53,18 @@ function convertMessage(message: Message): MistralMessage {
     }
 
     if (message.role === 'assistant') {
+        const text = message.parts
+            .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+            .join('');
+        const toolCalls = message.parts.flatMap((part) =>
+            part.type === 'tool-call' ? [part.toolCall] : []
+        );
         return {
             role: 'assistant',
-            content: message.content,
-            ...(message.toolCalls && message.toolCalls.length > 0
+            content: text.length > 0 ? text : null,
+            ...(toolCalls.length > 0
                 ? {
-                      toolCalls: message.toolCalls.map((toolCall) => ({
+                      toolCalls: toolCalls.map((toolCall) => ({
                           id: toolCall.id,
                           type: 'function',
                           function: {
@@ -165,6 +172,7 @@ export function createStructuredOutputOptions<TSchema extends z.ZodType>(
             type: 'tool',
             toolName,
         },
+        reasoning: options.reasoning,
         config: options.config,
         providerOptions: options.providerOptions,
         signal: options.signal,
@@ -243,18 +251,31 @@ export function mapGenerateResponse(
     const firstChoice = response.choices[0];
     if (!firstChoice) {
         return {
+            parts: [],
             content: null,
+            reasoning: null,
             toolCalls: [],
             finishReason: 'unknown',
             usage: mapUsage(response.usage),
         };
     }
 
-    const toolCalls = parseToolCalls(firstChoice.message.toolCalls);
+    const parts = extractAssistantParts(firstChoice.message);
+    const toolCalls = parts.flatMap((part) =>
+        part.type === 'tool-call' ? [part.toolCall] : []
+    );
+    const content = parts
+        .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+        .join('');
+    const reasoning = parts
+        .flatMap((part) => (part.type === 'reasoning' ? [part.text] : []))
+        .join('');
     const mappedFinishReason = mapFinishReason(firstChoice.finishReason);
 
     return {
-        content: extractTextContent(firstChoice.message.content),
+        parts,
+        content: content.length > 0 ? content : null,
+        reasoning: reasoning.length > 0 ? reasoning : null,
         toolCalls,
         finishReason:
             toolCalls.length > 0 && mappedFinishReason !== 'content-filter'
@@ -277,6 +298,7 @@ export async function* transformStream(
     const emittedToolCalls = new Set<number>();
 
     let finishReason: FinishReason = 'unknown';
+    let reasoningOpen = false;
     let usage: GenerateResult['usage'] = {
         inputTokens: 0,
         outputTokens: 0,
@@ -301,14 +323,42 @@ export async function* transformStream(
             continue;
         }
 
+        const thinkingDeltas = extractThinkingDeltas(choice.delta.content);
+        if (thinkingDeltas.length > 0) {
+            if (!reasoningOpen) {
+                reasoningOpen = true;
+                yield {
+                    type: 'reasoning-start',
+                };
+            }
+            for (const thinkingDelta of thinkingDeltas) {
+                yield {
+                    type: 'reasoning-delta',
+                    text: thinkingDelta,
+                };
+            }
+        }
+
         for (const textDelta of extractTextDeltas(choice.delta.content)) {
+            if (reasoningOpen) {
+                reasoningOpen = false;
+                yield {
+                    type: 'reasoning-end',
+                };
+            }
             yield {
-                type: 'content-delta',
+                type: 'text-delta',
                 text: textDelta,
             };
         }
 
         if (choice.delta.toolCalls) {
+            if (reasoningOpen) {
+                reasoningOpen = false;
+                yield {
+                    type: 'reasoning-end',
+                };
+            }
             for (const [
                 position,
                 partialToolCall,
@@ -370,6 +420,12 @@ export async function* transformStream(
         if (finishReason === 'tool-calls') {
             yield* emitBufferedToolCalls(bufferedToolCalls, emittedToolCalls);
         }
+    }
+
+    if (reasoningOpen) {
+        yield {
+            type: 'reasoning-end',
+        };
     }
 
     yield* emitBufferedToolCalls(bufferedToolCalls, emittedToolCalls);
@@ -443,6 +499,49 @@ function mapUsage(usage: UsageInfo | undefined): GenerateResult['usage'] {
     };
 }
 
+function extractAssistantParts(message: {
+    content: string | ContentChunk[] | null | undefined;
+    toolCalls: MistralToolCall[] | null | undefined;
+}): AssistantContentPart[] {
+    const parts: AssistantContentPart[] = [];
+
+    if (typeof message.content === 'string') {
+        if (message.content.length > 0) {
+            parts.push({
+                type: 'text',
+                text: message.content,
+            });
+        }
+    } else if (Array.isArray(message.content)) {
+        for (const chunk of message.content) {
+            if (chunk.type === 'text') {
+                parts.push({
+                    type: 'text',
+                    text: chunk.text,
+                });
+                continue;
+            }
+
+            if (chunk.type === 'thinking') {
+                const thinkingText = extractThinkingText(chunk.thinking);
+                parts.push({
+                    type: 'reasoning',
+                    text: thinkingText,
+                });
+            }
+        }
+    }
+
+    for (const toolCall of parseToolCalls(message.toolCalls)) {
+        parts.push({
+            type: 'tool-call',
+            toolCall,
+        });
+    }
+
+    return parts;
+}
+
 function extractTextContent(
     content: string | ContentChunk[] | null | undefined
 ): string | null {
@@ -473,6 +572,45 @@ function extractTextDeltas(
     return content.flatMap((chunk) =>
         chunk.type === 'text' ? [chunk.text] : []
     );
+}
+
+function extractThinkingDeltas(
+    content: string | ContentChunk[] | null | undefined
+): string[] {
+    if (!content || typeof content === 'string') {
+        return [];
+    }
+
+    return content.flatMap((chunk) => {
+        if (chunk.type !== 'thinking') {
+            return [];
+        }
+
+        const thinkingText = extractThinkingText(chunk.thinking);
+        if (thinkingText.length === 0) {
+            return [];
+        }
+        return [thinkingText];
+    });
+}
+
+function extractThinkingText(value: unknown): string {
+    if (typeof value === 'string') {
+        return value;
+    }
+    if (!Array.isArray(value)) {
+        return '';
+    }
+
+    return value
+        .flatMap((part) => {
+            if (!part || typeof part !== 'object') {
+                return [];
+            }
+            const text = (part as { text?: unknown }).text;
+            return typeof text === 'string' ? [text] : [];
+        })
+        .join('');
 }
 
 function serializeJsonObject(value: unknown): string {

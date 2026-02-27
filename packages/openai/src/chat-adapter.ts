@@ -10,6 +10,7 @@ import type {
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
+    AssistantContentPart,
     FinishReason,
     GenerateObjectOptions,
     GenerateOptions,
@@ -21,6 +22,12 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
+import { ProviderError } from '@core-ai/core-ai';
+import {
+    clampReasoningEffort,
+    getOpenAIModelCapabilities,
+    toOpenAIReasoningEffort,
+} from './model-capabilities.js';
 
 export const DEFAULT_STRUCTURED_OUTPUT_TOOL_NAME = 'core_ai_generate_object';
 export const DEFAULT_STRUCTURED_OUTPUT_TOOL_DESCRIPTION =
@@ -51,12 +58,19 @@ function convertMessage(message: Message): ChatCompletionMessageParam {
     }
 
     if (message.role === 'assistant') {
+        const text = message.parts
+            .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+            .join('');
+        const toolCalls = message.parts.flatMap((part) =>
+            part.type === 'tool-call' ? [part.toolCall] : []
+        );
+
         return {
             role: 'assistant',
-            content: message.content,
-            ...(message.toolCalls && message.toolCalls.length > 0
+            content: text.length > 0 ? text : null,
+            ...(toolCalls.length > 0
                 ? {
-                      tool_calls: message.toolCalls.map((toolCall) => ({
+                      tool_calls: toolCalls.map((toolCall) => ({
                           id: toolCall.id,
                           type: 'function' as const,
                           function: {
@@ -168,6 +182,7 @@ export function createStructuredOutputOptions<TSchema extends z.ZodType>(
             type: 'tool',
             toolName,
         },
+        reasoning: options.reasoning,
         config: options.config,
         providerOptions: options.providerOptions,
         signal: options.signal,
@@ -196,6 +211,10 @@ export function createStreamRequest(modelId: string, options: GenerateOptions) {
 }
 
 function createRequestBase(modelId: string, options: GenerateOptions) {
+    validateOpenAIReasoningConfig(modelId, options);
+
+    const reasoningFields = mapReasoningToRequestFields(modelId, options);
+
     return {
         model: modelId,
         messages: convertMessages(options.messages),
@@ -205,6 +224,7 @@ function createRequestBase(modelId: string, options: GenerateOptions) {
         ...(options.toolChoice
             ? { tool_choice: convertToolChoice(options.toolChoice) }
             : {}),
+        ...reasoningFields,
         ...mapConfigToRequestFields(options.config),
     };
 }
@@ -231,7 +251,9 @@ export function mapGenerateResponse(response: ChatCompletion): GenerateResult {
 
     if (!firstChoice) {
         return {
+            parts: [],
             content: null,
+            reasoning: null,
             toolCalls: [],
             finishReason: 'unknown',
             usage: {
@@ -250,10 +272,16 @@ export function mapGenerateResponse(response: ChatCompletion): GenerateResult {
 
     const reasoningTokens =
         response.usage?.completion_tokens_details?.reasoning_tokens ?? 0;
+    const content = extractTextContent(firstChoice.message.content);
+    const reasoning = extractReasoningText(firstChoice.message);
+    const toolCalls = parseToolCalls(firstChoice.message.tool_calls);
+    const parts = createAssistantParts(content, reasoning, toolCalls);
 
     return {
-        content: firstChoice.message.content,
-        toolCalls: parseToolCalls(firstChoice.message.tool_calls),
+        parts,
+        content,
+        reasoning,
+        toolCalls,
         finishReason: mapFinishReason(firstChoice.finish_reason),
         usage: {
             inputTokens: response.usage?.prompt_tokens ?? 0,
@@ -328,6 +356,7 @@ export async function* transformStream(
     const emittedToolCalls = new Set<string>();
 
     let finishReason: FinishReason = 'unknown';
+    let reasoningOpen = false;
     let usage = {
         inputTokens: 0,
         outputTokens: 0,
@@ -363,14 +392,40 @@ export async function* transformStream(
             continue;
         }
 
-        if (choice.delta.content) {
+        const reasoningDelta = extractReasoningDelta(choice.delta);
+        if (reasoningDelta) {
+            if (!reasoningOpen) {
+                reasoningOpen = true;
+                yield {
+                    type: 'reasoning-start',
+                };
+            }
             yield {
-                type: 'content-delta',
+                type: 'reasoning-delta',
+                text: reasoningDelta,
+            };
+        }
+
+        if (choice.delta.content) {
+            if (reasoningOpen) {
+                reasoningOpen = false;
+                yield {
+                    type: 'reasoning-end',
+                };
+            }
+            yield {
+                type: 'text-delta',
                 text: choice.delta.content,
             };
         }
 
         if (choice.delta.tool_calls) {
+            if (reasoningOpen) {
+                reasoningOpen = false;
+                yield {
+                    type: 'reasoning-end',
+                };
+            }
             for (const partialToolCall of choice.delta.tool_calls) {
                 const current = bufferedToolCalls.get(
                     partialToolCall.index
@@ -432,6 +487,12 @@ export async function* transformStream(
         }
     }
 
+    if (reasoningOpen) {
+        yield {
+            type: 'reasoning-end',
+        };
+    }
+
     yield {
         type: 'finish',
         finishReason,
@@ -449,4 +510,163 @@ function safeParseJsonObject(json: string): Record<string, unknown> {
     } catch {
         return {};
     }
+}
+
+function validateOpenAIReasoningConfig(
+    modelId: string,
+    options: GenerateOptions
+): void {
+    if (!options.reasoning) {
+        return;
+    }
+
+    const capabilities = getOpenAIModelCapabilities(modelId);
+    if (!capabilities.reasoning.restrictsSamplingParams) {
+        return;
+    }
+
+    if (options.config?.temperature !== undefined) {
+        throw new ProviderError(
+            `OpenAI model "${modelId}" does not support temperature when reasoning is enabled`,
+            'openai'
+        );
+    }
+
+    if (options.config?.topP !== undefined) {
+        throw new ProviderError(
+            `OpenAI model "${modelId}" does not support topP when reasoning is enabled`,
+            'openai'
+        );
+    }
+}
+
+function mapReasoningToRequestFields(modelId: string, options: GenerateOptions) {
+    if (!options.reasoning) {
+        return {};
+    }
+
+    const capabilities = getOpenAIModelCapabilities(modelId);
+    if (!capabilities.reasoning.supportsEffort) {
+        return {};
+    }
+
+    const clampedEffort = clampReasoningEffort(
+        options.reasoning.effort,
+        capabilities.reasoning.supportedRange
+    );
+
+    return {
+        reasoning_effort: toOpenAIReasoningEffort(clampedEffort),
+    };
+}
+
+function createAssistantParts(
+    content: string | null,
+    reasoning: string | null,
+    toolCalls: ToolCall[]
+): AssistantContentPart[] {
+    const parts: AssistantContentPart[] = [];
+
+    if (reasoning && reasoning.length > 0) {
+        parts.push({
+            type: 'reasoning',
+            text: reasoning,
+        });
+    }
+    if (content && content.length > 0) {
+        parts.push({
+            type: 'text',
+            text: content,
+        });
+    }
+    for (const toolCall of toolCalls) {
+        parts.push({
+            type: 'tool-call',
+            toolCall,
+        });
+    }
+
+    return parts;
+}
+
+function extractTextContent(content: unknown): string | null {
+    if (typeof content === 'string') {
+        return content;
+    }
+    if (!Array.isArray(content)) {
+        return null;
+    }
+
+    const text = content
+        .flatMap((item) => {
+            if (!item || typeof item !== 'object') {
+                return [];
+            }
+            const textValue = (item as { text?: unknown }).text;
+            return typeof textValue === 'string' ? [textValue] : [];
+        })
+        .join('');
+
+    return text.length > 0 ? text : null;
+}
+
+function extractReasoningText(message: unknown): string | null {
+    if (!message || typeof message !== 'object') {
+        return null;
+    }
+
+    const candidates = [
+        (message as { reasoning?: unknown }).reasoning,
+        (message as { reasoning_content?: unknown }).reasoning_content,
+        (message as { reasoningContent?: unknown }).reasoningContent,
+        (message as { reasoning_summary?: unknown }).reasoning_summary,
+        (message as { reasoningSummary?: unknown }).reasoningSummary,
+    ];
+    const text = candidates
+        .flatMap((candidate) => extractTextFragments(candidate))
+        .join('');
+
+    return text.length > 0 ? text : null;
+}
+
+function extractReasoningDelta(delta: unknown): string | null {
+    if (!delta || typeof delta !== 'object') {
+        return null;
+    }
+
+    const candidates = [
+        (delta as { reasoning?: unknown }).reasoning,
+        (delta as { reasoning_content?: unknown }).reasoning_content,
+        (delta as { reasoningContent?: unknown }).reasoningContent,
+        (delta as { reasoning_delta?: unknown }).reasoning_delta,
+        (delta as { reasoningDelta?: unknown }).reasoningDelta,
+    ];
+    const text = candidates
+        .flatMap((candidate) => extractTextFragments(candidate))
+        .join('');
+
+    return text.length > 0 ? text : null;
+}
+
+function extractTextFragments(value: unknown): string[] {
+    if (typeof value === 'string') {
+        return [value];
+    }
+    if (Array.isArray(value)) {
+        return value.flatMap((item) => extractTextFragments(item));
+    }
+    if (!value || typeof value !== 'object') {
+        return [];
+    }
+
+    const result: string[] = [];
+    const text = (value as { text?: unknown }).text;
+    if (typeof text === 'string') {
+        result.push(text);
+    }
+
+    for (const nestedValue of Object.values(value as Record<string, unknown>)) {
+        result.push(...extractTextFragments(nestedValue));
+    }
+    return result;
 }

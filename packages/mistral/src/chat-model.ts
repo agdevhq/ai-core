@@ -149,7 +149,7 @@ async function* transformStructuredOutputStream<TSchema extends z.ZodType>(
     const toolArgumentDeltas = new Map<string, string>();
 
     for await (const event of stream) {
-        if (event.type === 'content-delta') {
+        if (event.type === 'text-delta') {
             contentBuffer += event.text;
             yield {
                 type: 'object-delta',

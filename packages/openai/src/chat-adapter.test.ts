@@ -94,12 +94,14 @@ describe('convertMessages', () => {
         const messages: Message[] = [
             {
                 role: 'assistant',
-                content: null,
-                toolCalls: [
+                parts: [
                     {
-                        id: 'tc_1',
-                        name: 'search',
-                        arguments: { query: 'weather' },
+                        type: 'tool-call',
+                        toolCall: {
+                            id: 'tc_1',
+                            name: 'search',
+                            arguments: { query: 'weather' },
+                        },
                     },
                 ],
             },

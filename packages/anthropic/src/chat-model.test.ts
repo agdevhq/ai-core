@@ -339,7 +339,7 @@ describe('stream', () => {
 
         const chunks: string[] = [];
         for await (const event of streamResult) {
-            if (event.type === 'content-delta') {
+            if (event.type === 'text-delta') {
                 chunks.push(event.text);
             }
         }

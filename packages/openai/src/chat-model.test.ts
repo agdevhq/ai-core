@@ -354,7 +354,7 @@ describe('stream', () => {
 
         const events: string[] = [];
         for await (const event of streamResult) {
-            if (event.type === 'content-delta') {
+            if (event.type === 'text-delta') {
                 events.push(event.text);
             }
         }

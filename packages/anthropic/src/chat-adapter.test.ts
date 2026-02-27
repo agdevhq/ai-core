@@ -87,12 +87,14 @@ describe('convertMessages', () => {
             { role: 'user', content: 'weather?' },
             {
                 role: 'assistant',
-                content: null,
-                toolCalls: [
+                parts: [
                     {
-                        id: 'tc_1',
-                        name: 'search',
-                        arguments: { query: 'weather' },
+                        type: 'tool-call',
+                        toolCall: {
+                            id: 'tc_1',
+                            name: 'search',
+                            arguments: { query: 'weather' },
+                        },
                     },
                 ],
             },
@@ -118,12 +120,14 @@ describe('convertMessages', () => {
             { role: 'user', content: 'weather?' },
             {
                 role: 'assistant',
-                content: null,
-                toolCalls: [
+                parts: [
                     {
-                        id: 'tc_1',
-                        name: 'search',
-                        arguments: { query: 'weather' },
+                        type: 'tool-call',
+                        toolCall: {
+                            id: 'tc_1',
+                            name: 'search',
+                            arguments: { query: 'weather' },
+                        },
                     },
                 ],
             },
@@ -153,10 +157,15 @@ describe('convertMessages', () => {
             { role: 'user', content: 'do both' },
             {
                 role: 'assistant',
-                content: null,
-                toolCalls: [
-                    { id: 'tc_1', name: 'a', arguments: {} },
-                    { id: 'tc_2', name: 'b', arguments: {} },
+                parts: [
+                    {
+                        type: 'tool-call',
+                        toolCall: { id: 'tc_1', name: 'a', arguments: {} },
+                    },
+                    {
+                        type: 'tool-call',
+                        toolCall: { id: 'tc_2', name: 'b', arguments: {} },
+                    },
                 ],
             },
             { role: 'tool', toolCallId: 'tc_1', content: 'result1' },

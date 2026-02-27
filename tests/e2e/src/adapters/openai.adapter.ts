@@ -4,11 +4,16 @@ import type { ProviderE2EAdapter } from './provider-adapter.ts';
 
 const OPENAI_API_KEY_ENV = 'OPENAI_API_KEY';
 const OPENAI_CHAT_MODEL_ENV = 'OPENAI_E2E_CHAT_MODEL';
+const OPENAI_REASONING_MODEL_ENV = 'OPENAI_E2E_REASONING_MODEL';
 const OPENAI_EMBED_MODEL_ENV = 'OPENAI_E2E_EMBED_MODEL';
 const OPENAI_IMAGE_MODEL_ENV = 'OPENAI_E2E_IMAGE_MODEL';
 
 export function createOpenAIAdapter(): ProviderE2EAdapter {
     const chatModelId = getEnvOrDefault(OPENAI_CHAT_MODEL_ENV, 'gpt-5-mini');
+    const reasoningModelId = getEnvOrDefault(
+        OPENAI_REASONING_MODEL_ENV,
+        'gpt-5-mini'
+    );
     const embeddingModelId = getEnvOrDefault(
         OPENAI_EMBED_MODEL_ENV,
         'text-embedding-3-small'
@@ -21,6 +26,7 @@ export function createOpenAIAdapter(): ProviderE2EAdapter {
         apiKeyEnvVar: OPENAI_API_KEY_ENV,
         models: {
             chat: chatModelId,
+            reasoning: reasoningModelId,
             embedding: embeddingModelId,
             image: imageModelId,
         },
@@ -28,6 +34,7 @@ export function createOpenAIAdapter(): ProviderE2EAdapter {
             chat: true,
             stream: true,
             object: true,
+            reasoning: true,
             embedding: true,
             image: true,
         },
@@ -36,6 +43,10 @@ export function createOpenAIAdapter(): ProviderE2EAdapter {
             createOpenAI({
                 apiKey: getEnvValue(OPENAI_API_KEY_ENV),
             }).chatModel(chatModelId),
+        createReasoningChatModel: () =>
+            createOpenAI({
+                apiKey: getEnvValue(OPENAI_API_KEY_ENV),
+            }).chatModel(reasoningModelId),
         createEmbeddingModel: () =>
             createOpenAI({
                 apiKey: getEnvValue(OPENAI_API_KEY_ENV),

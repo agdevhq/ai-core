@@ -8,6 +8,12 @@ export type {
     TextPart,
     ImagePart,
     FilePart,
+    ReasoningEffort,
+    ReasoningConfig,
+    AssistantTextPart,
+    ReasoningPart,
+    ToolCallPart,
+    AssistantContentPart,
     ToolCall,
     ToolDefinition,
     ToolSet,
@@ -45,6 +51,7 @@ export {
     StructuredOutputValidationError,
 } from './errors.ts';
 export { defineTool } from './tool.ts';
+export { resultToMessage, assistantMessage } from './result-to-message.ts';
 export { generate } from './generate.ts';
 export { generateObject } from './generate-object.ts';
 export { stream } from './stream-chat.ts';

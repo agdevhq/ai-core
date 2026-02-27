@@ -10,12 +10,14 @@ export type ProviderCapabilities = {
     chat: boolean;
     stream: boolean;
     object: boolean;
+    reasoning: boolean;
     embedding: boolean;
     image: boolean;
 };
 
 export type ProviderModelIds = {
     chat: string;
+    reasoning?: string;
     embedding?: string;
     image?: string;
 };
@@ -28,6 +30,7 @@ export type ProviderE2EAdapter = {
     capabilities: ProviderCapabilities;
     isConfigured: () => boolean;
     createChatModel: () => ChatModel;
+    createReasoningChatModel?: () => ChatModel;
     createEmbeddingModel?: () => EmbeddingModel;
     createImageModel?: () => ImageModel;
 };

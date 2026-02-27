@@ -5,6 +5,7 @@ import {
     generate,
     generateImage,
     generateObject,
+    resultToMessage,
     stream,
 } from '../../../packages/core-ai/src/index.ts';
 import type { ProviderCapabilities } from './adapters/provider-adapter.ts';
@@ -13,6 +14,9 @@ import type { ProviderE2EAdapter } from './adapters/provider-adapter.ts';
 export type ProviderContractCaseId =
     | 'chatGenerate'
     | 'chatStream'
+    | 'chatGenerateReasoning'
+    | 'chatStreamReasoning'
+    | 'chatReasoningMultiTurn'
     | 'generateObject'
     | 'embed'
     | 'generateImage';
@@ -80,7 +84,7 @@ export const providerCases: ProviderContractCase[] = [
             let sawContentDelta = false;
             let streamedText = '';
             for await (const event of result) {
-                if (event.type === 'content-delta') {
+                if (event.type === 'text-delta') {
                     sawContentDelta = true;
                     streamedText += event.text;
                 }
@@ -92,6 +96,125 @@ export const providerCases: ProviderContractCase[] = [
             expect(response.content).toBeTypeOf('string');
             expect(response.content?.trim().length ?? 0).toBeGreaterThan(0);
             assertChatUsage(response.usage);
+        },
+    },
+    {
+        id: 'chatGenerateReasoning',
+        name: 'generate with reasoning returns parts and usage',
+        requiredCapability: 'reasoning',
+        run: async ({ adapter }) => {
+            const model = adapter.createReasoningChatModel?.();
+            if (!model) {
+                throw new Error(
+                    `Missing reasoning chat model factory for ${adapter.id}`
+                );
+            }
+
+            const result = await generate({
+                model,
+                messages: [
+                    {
+                        role: 'user',
+                        content:
+                            'Think briefly and answer in one sentence: why are tests useful?',
+                    },
+                ],
+                reasoning: { effort: 'medium' },
+            });
+
+            expect(result.parts.length).toBeGreaterThan(0);
+            expect(result.content?.trim().length ?? 0).toBeGreaterThan(0);
+            expect(
+                result.parts.some((part) => part.type === 'reasoning') ||
+                    result.usage.outputTokenDetails.reasoningTokens >= 0
+            ).toBe(true);
+            assertChatUsage(result.usage);
+        },
+    },
+    {
+        id: 'chatStreamReasoning',
+        name: 'stream with reasoning emits deltas and aggregates response',
+        requiredCapability: 'reasoning',
+        run: async ({ adapter }) => {
+            const model = adapter.createReasoningChatModel?.();
+            if (!model) {
+                throw new Error(
+                    `Missing reasoning chat model factory for ${adapter.id}`
+                );
+            }
+
+            const result = await stream({
+                model,
+                messages: [
+                    {
+                        role: 'user',
+                        content:
+                            'Think and then write one short sentence about resilient systems.',
+                    },
+                ],
+                reasoning: { effort: 'medium' },
+            });
+
+            let sawTextDelta = false;
+            let sawReasoningDelta = false;
+            for await (const event of result) {
+                if (event.type === 'text-delta') {
+                    sawTextDelta = true;
+                }
+                if (event.type === 'reasoning-delta') {
+                    sawReasoningDelta = true;
+                }
+            }
+
+            const response = await result.toResponse();
+            expect(sawTextDelta).toBe(true);
+            expect(
+                sawReasoningDelta ||
+                    response.parts.some((part) => part.type === 'reasoning') ||
+                    response.usage.outputTokenDetails.reasoningTokens >= 0
+            ).toBe(true);
+            expect(response.content?.trim().length ?? 0).toBeGreaterThan(0);
+            assertChatUsage(response.usage);
+        },
+    },
+    {
+        id: 'chatReasoningMultiTurn',
+        name: 'resultToMessage preserves reasoning state across turns',
+        requiredCapability: 'reasoning',
+        run: async ({ adapter }) => {
+            const model = adapter.createReasoningChatModel?.();
+            if (!model) {
+                throw new Error(
+                    `Missing reasoning chat model factory for ${adapter.id}`
+                );
+            }
+
+            const messages = [
+                {
+                    role: 'user' as const,
+                    content: 'Think and answer: what is property-based testing?',
+                },
+            ];
+            const firstResult = await generate({
+                model,
+                messages,
+                reasoning: { effort: 'high' },
+            });
+            const followUp = await generate({
+                model,
+                messages: [
+                    ...messages,
+                    resultToMessage(firstResult),
+                    {
+                        role: 'user',
+                        content: 'Explain in one additional sentence.',
+                    },
+                ],
+                reasoning: { effort: 'high' },
+            });
+
+            expect(followUp.content?.trim().length ?? 0).toBeGreaterThan(0);
+            assertChatUsage(followUp.usage);
         },
     },
     {

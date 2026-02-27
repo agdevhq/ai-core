@@ -43,7 +43,9 @@ function createMockStreamResult(): StreamResult {
         },
         async toResponse() {
             return {
+                parts: [],
                 content: null,
+                reasoning: null,
                 toolCalls: [],
                 finishReason: 'stop',
                 usage: {
