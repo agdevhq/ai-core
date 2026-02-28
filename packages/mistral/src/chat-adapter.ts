@@ -500,8 +500,8 @@ function mapUsage(usage: UsageInfo | undefined): GenerateResult['usage'] {
 }
 
 function extractAssistantParts(message: {
-    content: string | ContentChunk[] | null | undefined;
-    toolCalls: MistralToolCall[] | null | undefined;
+    content?: string | ContentChunk[] | null | undefined;
+    toolCalls?: MistralToolCall[] | null | undefined;
 }): AssistantContentPart[] {
     const parts: AssistantContentPart[] = [];
 
@@ -540,23 +540,6 @@ function extractAssistantParts(message: {
     }
 
     return parts;
-}
-
-function extractTextContent(
-    content: string | ContentChunk[] | null | undefined
-): string | null {
-    if (typeof content === 'string') {
-        return content;
-    }
-    if (!content || content.length === 0) {
-        return null;
-    }
-
-    const text = content
-        .flatMap((chunk) => (chunk.type === 'text' ? [chunk.text] : []))
-        .join('');
-
-    return text.length > 0 ? text : null;
 }
 
 function extractTextDeltas(

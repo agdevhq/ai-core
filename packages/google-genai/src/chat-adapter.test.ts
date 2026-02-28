@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+    FinishReason as GoogleFinishReason,
     FunctionCallingConfigMode,
     type GenerateContentResponse,
 } from '@google/genai';
@@ -438,7 +439,7 @@ describe('reasoning support', () => {
         const response = asGenerateContentResponse({
             candidates: [
                 {
-                    finishReason: 'STOP',
+                    finishReason: GoogleFinishReason.STOP,
                     content: {
                         role: 'model',
                         parts: [
@@ -480,7 +481,7 @@ describe('reasoning support', () => {
         const response = asGenerateContentResponse({
             candidates: [
                 {
-                    finishReason: 'STOP',
+                    finishReason: GoogleFinishReason.STOP,
                     content: {
                         role: 'model',
                         parts: [
@@ -518,7 +519,7 @@ describe('reasoning support', () => {
                 }),
                 asGenerateContentResponse({
                     text: 'answer',
-                    candidates: [{ finishReason: 'STOP' }],
+                    candidates: [{ finishReason: GoogleFinishReason.STOP }],
                     usageMetadata: {
                         promptTokenCount: 10,
                         candidatesTokenCount: 2,
@@ -550,7 +551,7 @@ describe('reasoning support', () => {
                     ],
                 }),
                 asGenerateContentResponse({
-                    candidates: [{ finishReason: 'STOP' }],
+                    candidates: [{ finishReason: GoogleFinishReason.STOP }],
                     functionCalls: [
                         {
                             name: 'search',
@@ -601,7 +602,7 @@ describe('reasoning support', () => {
                 }),
                 asGenerateContentResponse({
                     text: 'answer',
-                    candidates: [{ finishReason: 'STOP' }],
+                    candidates: [{ finishReason: GoogleFinishReason.STOP }],
                     usageMetadata: {
                         promptTokenCount: 10,
                         candidatesTokenCount: 2,
@@ -640,7 +641,7 @@ describe('reasoning support', () => {
                     ],
                 }),
                 asGenerateContentResponse({
-                    candidates: [{ finishReason: 'STOP' }],
+                    candidates: [{ finishReason: GoogleFinishReason.STOP }],
                     usageMetadata: {
                         promptTokenCount: 10,
                         candidatesTokenCount: 1,

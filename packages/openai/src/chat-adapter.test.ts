@@ -9,13 +9,9 @@ import {
     convertTools,
     getStructuredOutputToolName,
     mapGenerateResponse,
-    transformStream,
 } from './chat-adapter.js';
 import { ProviderError, defineTool, type Message, type ToolSet } from '@core-ai/core-ai';
-import type {
-    ChatCompletion,
-    ChatCompletionChunk,
-} from 'openai/resources/chat/completions/completions';
+import type { ChatCompletion } from 'openai/resources/chat/completions/completions';
 
 describe('convertMessages', () => {
     it('should convert a system message', () => {
@@ -420,21 +416,4 @@ function asChatCompletion(value: Partial<ChatCompletion>): ChatCompletion {
         choices: [],
         ...value,
     };
-}
-
-function asChunk(value: Partial<ChatCompletionChunk>): ChatCompletionChunk {
-    return {
-        id: 'chunk-1',
-        object: 'chat.completion.chunk',
-        created: Date.now(),
-        model: 'gpt-5-mini',
-        choices: [],
-        ...value,
-    };
-}
-
-async function* toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
-    for (const item of items) {
-        yield item;
-    }
 }

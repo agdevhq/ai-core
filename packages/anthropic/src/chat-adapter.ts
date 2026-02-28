@@ -21,7 +21,6 @@ import type {
     GenerateResult,
     Message,
     StreamEvent,
-    ToolCall,
     ToolSet,
     UserContentPart,
     ToolChoice as AgToolChoice,

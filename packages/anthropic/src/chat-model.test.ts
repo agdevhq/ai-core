@@ -595,7 +595,7 @@ describe('stream', () => {
                     content_block: {
                         type: 'thinking',
                         thinking: '',
-                    } as RawMessageStreamEvent['content_block'],
+                    } as never,
                 },
                 {
                     type: 'content_block_delta',
@@ -603,7 +603,7 @@ describe('stream', () => {
                     delta: {
                         type: 'thinking_delta',
                         thinking: 'reasoning text ',
-                    } as RawMessageStreamEvent['delta'],
+                    } as never,
                 },
                 {
                     type: 'content_block_stop',

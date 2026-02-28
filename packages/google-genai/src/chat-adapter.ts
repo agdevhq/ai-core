@@ -385,16 +385,6 @@ export function mapGenerateResponse(
     };
 }
 
-function parseFunctionCalls(
-    calls: GoogleFunctionCall[] | undefined
-): ToolCall[] {
-    if (!calls || calls.length === 0) {
-        return [];
-    }
-
-    return calls.map((call, index) => mapFunctionCall(call, index));
-}
-
 function mapFunctionCall(
     toolCall: GoogleFunctionCall,
     index: number

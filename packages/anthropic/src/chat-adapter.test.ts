@@ -492,7 +492,7 @@ describe('reasoning support', () => {
                     content_block: {
                         type: 'thinking',
                         thinking: '',
-                    } as RawMessageStreamEvent['content_block'],
+                    } as never,
                 },
                 {
                     type: 'content_block_delta',
@@ -500,7 +500,7 @@ describe('reasoning support', () => {
                     delta: {
                         type: 'thinking_delta',
                         thinking: 'reason ',
-                    } as RawMessageStreamEvent['delta'],
+                    } as never,
                 },
                 {
                     type: 'content_block_stop',
@@ -552,7 +552,7 @@ describe('reasoning support', () => {
                     content_block: {
                         type: 'thinking',
                         thinking: '',
-                    } as RawMessageStreamEvent['content_block'],
+                    } as never,
                 },
                 {
                     type: 'content_block_delta',
@@ -560,7 +560,7 @@ describe('reasoning support', () => {
                     delta: {
                         type: 'thinking_delta',
                         thinking: 'reasoning',
-                    } as RawMessageStreamEvent['delta'],
+                    } as never,
                 },
                 {
                     type: 'content_block_stop',
@@ -574,7 +574,7 @@ describe('reasoning support', () => {
                         id: 'tu_1',
                         name: 'search',
                         input: {},
-                    } as RawMessageStreamEvent['content_block'],
+                    } as never,
                 },
                 {
                     type: 'content_block_delta',
@@ -582,7 +582,7 @@ describe('reasoning support', () => {
                     delta: {
                         type: 'input_json_delta',
                         partial_json: '{"q":"test"}',
-                    } as RawMessageStreamEvent['delta'],
+                    } as never,
                 },
                 {
                     type: 'content_block_stop',
@@ -634,7 +634,7 @@ describe('reasoning support', () => {
                     content_block: {
                         type: 'thinking',
                         thinking: '',
-                    } as RawMessageStreamEvent['content_block'],
+                    } as never,
                 },
                 {
                     type: 'content_block_delta',
@@ -642,7 +642,7 @@ describe('reasoning support', () => {
                     delta: {
                         type: 'thinking_delta',
                         thinking: 'only reasoning',
-                    } as RawMessageStreamEvent['delta'],
+                    } as never,
                 },
                 {
                     type: 'content_block_stop',
