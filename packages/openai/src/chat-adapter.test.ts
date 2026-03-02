@@ -1,264 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
+import type { Response, ResponseStreamEvent } from 'openai/resources/responses/responses';
+import { ProviderError, type Message } from '@core-ai/core-ai';
 import {
-    createGenerateRequest,
-    createStreamRequest,
-    createStructuredOutputOptions,
     convertMessages,
-    convertToolChoice,
-    convertTools,
-    getStructuredOutputToolName,
+    createGenerateRequest,
     mapGenerateResponse,
+    transformStream,
+    validateOpenAIReasoningConfig,
 } from './chat-adapter.js';
-import { ProviderError, defineTool, type Message, type ToolSet } from '@core-ai/core-ai';
-import type { ChatCompletion } from 'openai/resources/chat/completions/completions';
 
 describe('convertMessages', () => {
-    it('should convert a system message', () => {
+    it('should convert system messages to developer role', () => {
         const messages: Message[] = [
             { role: 'system', content: 'You are helpful.' },
         ];
 
         expect(convertMessages(messages)).toEqual([
-            { role: 'system', content: 'You are helpful.' },
+            { role: 'developer', content: 'You are helpful.' },
         ]);
     });
 
-    it('should convert a simple user message', () => {
-        const messages: Message[] = [{ role: 'user', content: 'Hello' }];
-
-        expect(convertMessages(messages)).toEqual([
-            { role: 'user', content: 'Hello' },
-        ]);
-    });
-
-    it('should convert a user message with image URL', () => {
-        const messages: Message[] = [
-            {
-                role: 'user',
-                content: [
-                    { type: 'text', text: 'What is this?' },
-                    {
-                        type: 'image',
-                        source: {
-                            type: 'url',
-                            url: 'https://example.com/img.png',
-                        },
-                    },
-                ],
-            },
-        ];
-
-        expect(convertMessages(messages)).toEqual([
-            {
-                role: 'user',
-                content: [
-                    { type: 'text', text: 'What is this?' },
-                    {
-                        type: 'image_url',
-                        image_url: { url: 'https://example.com/img.png' },
-                    },
-                ],
-            },
-        ]);
-    });
-
-    it('should convert a user message with a file', () => {
-        const messages: Message[] = [
-            {
-                role: 'user',
-                content: [
-                    {
-                        type: 'file',
-                        data: 'base64-content',
-                        mimeType: 'application/pdf',
-                        filename: 'doc.pdf',
-                    },
-                ],
-            },
-        ];
-
-        expect(convertMessages(messages)).toEqual([
-            {
-                role: 'user',
-                content: [
-                    {
-                        type: 'file',
-                        file: {
-                            file_data: 'base64-content',
-                            filename: 'doc.pdf',
-                        },
-                    },
-                ],
-            },
-        ]);
-    });
-
-    it('should convert an assistant message with tool calls', () => {
+    it('should preserve reasoning encrypted content for stateless round-trips', () => {
         const messages: Message[] = [
             {
                 role: 'assistant',
                 parts: [
                     {
-                        type: 'tool-call',
-                        toolCall: {
-                            id: 'tc_1',
-                            name: 'search',
-                            arguments: { query: 'weather' },
+                        type: 'reasoning',
+                        text: 'thinking...',
+                        providerMetadata: {
+                            encryptedContent: 'enc_123',
                         },
                     },
-                ],
-            },
-        ];
-
-        expect(convertMessages(messages)).toEqual([
-            {
-                role: 'assistant',
-                content: null,
-                tool_calls: [
-                    {
-                        id: 'tc_1',
-                        type: 'function',
-                        function: {
-                            name: 'search',
-                            arguments: '{"query":"weather"}',
-                        },
-                    },
-                ],
-            },
-        ]);
-    });
-
-    it('should convert a tool result message', () => {
-        const messages: Message[] = [
-            {
-                role: 'tool',
-                toolCallId: 'tc_1',
-                content: 'Sunny, 72F',
-            },
-        ];
-
-        expect(convertMessages(messages)).toEqual([
-            {
-                role: 'tool',
-                tool_call_id: 'tc_1',
-                content: 'Sunny, 72F',
-            },
-        ]);
-    });
-});
-
-describe('convertTools', () => {
-    it('should convert a tool set to OpenAI format', () => {
-        const tools: ToolSet = {
-            search: defineTool({
-                name: 'search',
-                description: 'Search the web',
-                parameters: z.object({
-                    query: z.string(),
-                }),
-            }),
-        };
-
-        const result = convertTools(tools);
-
-        expect(result[0]?.type).toBe('function');
-        const firstTool = result[0];
-        expect(firstTool?.type).toBe('function');
-
-        if (!firstTool || firstTool.type !== 'function') {
-            throw new Error('Expected first tool to be a function tool');
-        }
-
-        expect(firstTool.function.name).toBe('search');
-        expect(firstTool.function.description).toBe('Search the web');
-        expect(firstTool.function.parameters).toMatchObject({
-            type: 'object',
-            properties: {
-                query: { type: 'string' },
-            },
-        });
-    });
-});
-
-describe('convertToolChoice', () => {
-    it('should pass through string choices', () => {
-        expect(convertToolChoice('auto')).toBe('auto');
-        expect(convertToolChoice('none')).toBe('none');
-        expect(convertToolChoice('required')).toBe('required');
-    });
-
-    it('should convert specific tool choice', () => {
-        expect(
-            convertToolChoice({
-                type: 'tool',
-                toolName: 'search',
-            })
-        ).toEqual({
-            type: 'function',
-            function: { name: 'search' },
-        });
-    });
-});
-
-describe('structured output helpers', () => {
-    it('should create tool-based generate options for structured output', () => {
-        const schema = z.object({
-            city: z.string(),
-            temperatureC: z.number(),
-        });
-
-        const result = createStructuredOutputOptions({
-            messages: [{ role: 'user', content: 'Return weather as JSON' }],
-            schema,
-            schemaName: 'weather_schema',
-            schemaDescription: 'Structured weather output',
-            config: {
-                temperature: 0,
-                maxTokens: 128,
-            },
-        });
-
-        expect(result.messages).toEqual([
-            { role: 'user', content: 'Return weather as JSON' },
-        ]);
-        expect(result.toolChoice).toEqual({
-            type: 'tool',
-            toolName: 'weather_schema',
-        });
-        expect(result.tools).toMatchObject({
-            structured_output: {
-                name: 'weather_schema',
-                description: 'Structured weather output',
-            },
-        });
-        expect(result.config).toEqual({
-            temperature: 0,
-            maxTokens: 128,
-        });
-    });
-
-    it('should derive default structured output tool name', () => {
-        const schema = z.object({
-            ok: z.boolean(),
-        });
-
-        expect(
-            getStructuredOutputToolName({
-                messages: [{ role: 'user', content: 'json' }],
-                schema,
-            })
-        ).toBe('core_ai_generate_object');
-    });
-});
-
-describe('reasoning support', () => {
-    it('should ignore reasoning parts when converting assistant messages', () => {
-        const messages: Message[] = [
-            {
-                role: 'assistant',
-                parts: [
-                    { type: 'reasoning', text: 'thinking...' },
                     { type: 'text', text: 'answer' },
                     {
                         type: 'tool-call',
@@ -270,121 +43,124 @@ describe('reasoning support', () => {
                     },
                 ],
             },
+            {
+                role: 'tool',
+                toolCallId: 'tc_1',
+                content: 'Sunny, 72F',
+            },
         ];
 
         expect(convertMessages(messages)).toEqual([
             {
+                type: 'reasoning',
+                summary: [{ type: 'summary_text', text: 'thinking...' }],
+                encrypted_content: 'enc_123',
+            },
+            {
                 role: 'assistant',
                 content: 'answer',
-                tool_calls: [
-                    {
-                        id: 'tc_1',
-                        type: 'function',
-                        function: {
-                            name: 'search',
-                            arguments: '{"query":"weather"}',
-                        },
-                    },
-                ],
+            },
+            {
+                type: 'function_call',
+                call_id: 'tc_1',
+                name: 'search',
+                arguments: '{"query":"weather"}',
+            },
+            {
+                type: 'function_call_output',
+                call_id: 'tc_1',
+                output: 'Sunny, 72F',
             },
         ]);
     });
+});
 
-    it('should map and clamp reasoning effort for supported models', () => {
-        const request = createGenerateRequest('gpt-5.2', {
+describe('createGenerateRequest', () => {
+    it('should include reasoning summary and encrypted reasoning include', () => {
+        const request = createGenerateRequest('gpt-5-mini', {
             messages: [{ role: 'user', content: 'Hi' }],
-            reasoning: { effort: 'max' },
+            reasoning: { effort: 'high' },
+            providerOptions: {
+                include: ['foo.bar'],
+                store: false,
+            },
         });
 
-        expect(request).toMatchObject({
-            model: 'gpt-5.2',
-            reasoning_effort: 'xhigh',
+        expect(request.reasoning).toEqual({
+            effort: 'high',
+            summary: 'auto',
         });
-
-        const clamped = createGenerateRequest('gpt-5.1', {
-            messages: [{ role: 'user', content: 'Hi' }],
-            reasoning: { effort: 'minimal' },
-        });
-        expect(clamped).toMatchObject({
-            reasoning_effort: 'low',
-        });
+        expect(request.include).toEqual(
+            expect.arrayContaining(['foo.bar', 'reasoning.encrypted_content'])
+        );
+        expect(request.store).toBe(false);
     });
 
-    it('should skip reasoning effort for unsupported models', () => {
-        const request = createGenerateRequest('o1-mini', {
+    it('should keep encrypted include even when store is false', () => {
+        const request = createGenerateRequest('gpt-5-mini', {
             messages: [{ role: 'user', content: 'Hi' }],
-            reasoning: { effort: 'low' },
+            reasoning: { effort: 'medium' },
+            providerOptions: {
+                store: false,
+            },
         });
 
-        expect(request).not.toHaveProperty('reasoning_effort');
+        expect(request.store).toBe(false);
+        expect(request.include).toEqual(['reasoning.encrypted_content']);
     });
+});
 
-    it('should validate restricted sampling params for GPT-5.1+ when reasoning is enabled', () => {
-        expect(() =>
-            createGenerateRequest('gpt-5.1', {
-                messages: [{ role: 'user', content: 'Hi' }],
-                reasoning: { effort: 'medium' },
-                config: { temperature: 0.2 },
-            })
-        ).toThrowError(ProviderError);
-
-        expect(() =>
-            createStreamRequest('gpt-5.2', {
-                messages: [{ role: 'user', content: 'Hi' }],
-                reasoning: { effort: 'medium' },
-                config: { topP: 0.9 },
-            })
-        ).toThrowError(ProviderError);
-
-        expect(() =>
-            createGenerateRequest('o3', {
-                messages: [{ role: 'user', content: 'Hi' }],
-                reasoning: { effort: 'medium' },
-                config: { temperature: 0.2, topP: 0.9 },
-            })
-        ).not.toThrow();
-    });
-
-    it('should not extract reasoning text from generate responses (Chat Completions API does not expose it)', () => {
-        const response = asChatCompletion({
-            choices: [
+describe('mapGenerateResponse', () => {
+    it('should map reasoning, text, tool calls, and usage', () => {
+        const response = asResponse({
+            output: [
                 {
-                    index: 0,
-                    finish_reason: 'stop',
-                    logprobs: null,
-                    message: {
-                        role: 'assistant',
-                        content: 'final answer',
-                        refusal: null,
-                        tool_calls: [
-                            {
-                                id: 'tc_1',
-                                type: 'function',
-                                function: {
-                                    name: 'search',
-                                    arguments: '{"query":"weather"}',
-                                },
-                            },
-                        ],
-                    },
+                    type: 'reasoning',
+                    summary: [{ type: 'summary_text', text: 'short summary' }],
+                    encrypted_content: 'enc_1',
+                },
+                {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [{ type: 'output_text', text: 'Final answer' }],
+                },
+                {
+                    type: 'function_call',
+                    call_id: 'tc_1',
+                    name: 'search',
+                    arguments: '{"query":"weather"}',
                 },
             ],
+            status: 'completed',
             usage: {
-                prompt_tokens: 10,
-                completion_tokens: 5,
-                total_tokens: 15,
-                completion_tokens_details: {
-                    reasoning_tokens: 2,
-                },
+                input_tokens: 12,
+                output_tokens: 7,
+                input_tokens_details: { cached_tokens: 3 },
+                output_tokens_details: { reasoning_tokens: 2 },
+                total_tokens: 19,
             },
         });
 
         const result = mapGenerateResponse(response);
 
-        expect(result.reasoning).toBeNull();
-        expect(result.content).toBe('final answer');
+        expect(result.content).toBe('Final answer');
+        expect(result.reasoning).toBe('short summary');
+        expect(result.toolCalls).toEqual([
+            {
+                id: 'tc_1',
+                name: 'search',
+                arguments: { query: 'weather' },
+            },
+        ]);
         expect(result.parts).toEqual([
-            { type: 'text', text: 'final answer' },
+            {
+                type: 'reasoning',
+                text: 'short summary',
+                providerMetadata: {
+                    encryptedContent: 'enc_1',
+                },
+            },
+            { type: 'text', text: 'Final answer' },
             {
                 type: 'tool-call',
                 toolCall: {
@@ -394,26 +170,181 @@ describe('reasoning support', () => {
                 },
             },
         ]);
-        expect(result.usage.outputTokenDetails.reasoningTokens).toBe(2);
+        expect(result.usage).toEqual({
+            inputTokens: 12,
+            outputTokens: 7,
+            inputTokenDetails: {
+                cacheReadTokens: 3,
+                cacheWriteTokens: 0,
+            },
+            outputTokenDetails: {
+                reasoningTokens: 2,
+            },
+        });
     });
 
-    it('should not add reasoning_effort when reasoning is not configured', () => {
-        const request = createGenerateRequest('gpt-5.1', {
-            messages: [{ role: 'user', content: 'Hi' }],
+    it('should omit encryptedContent metadata when not provided', () => {
+        const response = asResponse({
+            output: [
+                {
+                    type: 'reasoning',
+                    summary: [{ type: 'summary_text', text: 'stored mode summary' }],
+                },
+            ],
+            status: 'completed',
         });
 
-        expect(request).not.toHaveProperty('reasoning_effort');
-    });
+        const result = mapGenerateResponse(response);
+        const reasoningPart = result.parts[0];
 
+        expect(reasoningPart).toEqual({
+            type: 'reasoning',
+            text: 'stored mode summary',
+        });
+    });
 });
 
-function asChatCompletion(value: Partial<ChatCompletion>): ChatCompletion {
-    return {
-        id: 'chatcmpl-1',
-        object: 'chat.completion',
-        created: Date.now(),
-        model: 'gpt-5-mini',
-        choices: [],
-        ...value,
-    };
+describe('transformStream', () => {
+    it('should map reasoning, tool call, text, and finish events', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.delta',
+                delta: 'think',
+            }),
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.done',
+                text: 'think',
+            }),
+            asStreamEvent({
+                type: 'response.output_item.added',
+                output_index: 0,
+                item: {
+                    type: 'function_call',
+                    call_id: 'tc_1',
+                    name: 'search',
+                    arguments: '',
+                },
+            }),
+            asStreamEvent({
+                type: 'response.function_call_arguments.delta',
+                output_index: 0,
+                item_id: 'item_1',
+                delta: '{"query":"wea',
+            }),
+            asStreamEvent({
+                type: 'response.function_call_arguments.delta',
+                output_index: 0,
+                item_id: 'item_1',
+                delta: 'ther"}',
+            }),
+            asStreamEvent({
+                type: 'response.output_item.done',
+                output_index: 0,
+                item: {
+                    type: 'function_call',
+                    call_id: 'tc_1',
+                    name: 'search',
+                    arguments: '{"query":"weather"}',
+                },
+            }),
+            asStreamEvent({
+                type: 'response.output_text.delta',
+                delta: 'answer',
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'completed',
+                    usage: {
+                        input_tokens: 4,
+                        output_tokens: 2,
+                        input_tokens_details: { cached_tokens: 0 },
+                        output_tokens_details: { reasoning_tokens: 1 },
+                        total_tokens: 6,
+                    },
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        expect(events).toEqual([
+            { type: 'reasoning-start' },
+            { type: 'reasoning-delta', text: 'think' },
+            { type: 'reasoning-end' },
+            { type: 'tool-call-start', toolCallId: 'tc_1', toolName: 'search' },
+            {
+                type: 'tool-call-delta',
+                toolCallId: 'tc_1',
+                argumentsDelta: '{"query":"wea',
+            },
+            {
+                type: 'tool-call-delta',
+                toolCallId: 'tc_1',
+                argumentsDelta: 'ther"}',
+            },
+            {
+                type: 'tool-call-end',
+                toolCall: {
+                    id: 'tc_1',
+                    name: 'search',
+                    arguments: { query: 'weather' },
+                },
+            },
+            { type: 'text-delta', text: 'answer' },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 4,
+                    outputTokens: 2,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {
+                        reasoningTokens: 1,
+                    },
+                },
+            },
+        ]);
+    });
+});
+
+describe('validateOpenAIReasoningConfig', () => {
+    it('should reject temperature/topP for restricted models', () => {
+        expect(() =>
+            validateOpenAIReasoningConfig('gpt-5.2', {
+                messages: [{ role: 'user', content: 'Hi' }],
+                reasoning: { effort: 'medium' },
+                config: { temperature: 0.2 },
+            })
+        ).toThrowError(ProviderError);
+
+        expect(() =>
+            validateOpenAIReasoningConfig('gpt-5.1', {
+                messages: [{ role: 'user', content: 'Hi' }],
+                reasoning: { effort: 'medium' },
+                config: { topP: 0.9 },
+            })
+        ).toThrowError(ProviderError);
+    });
+});
+
+function asResponse(value: unknown): Response {
+    return value as Response;
+}
+
+function asStreamEvent(value: unknown): ResponseStreamEvent {
+    return value as ResponseStreamEvent;
+}
+
+async function* toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
+    for (const item of items) {
+        yield item;
+    }
 }
