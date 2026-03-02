@@ -306,9 +306,7 @@ export async function* transformStream(
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
         },
-        outputTokenDetails: {
-            reasoningTokens: 0,
-        },
+        outputTokenDetails: {},
     };
 
     for await (const event of stream) {
@@ -493,9 +491,7 @@ function mapUsage(usage: UsageInfo | undefined): GenerateResult['usage'] {
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
         },
-        outputTokenDetails: {
-            reasoningTokens: 0,
-        },
+        outputTokenDetails: {},
     };
 }
 

@@ -126,7 +126,7 @@ export const providerCases: ProviderContractCase[] = [
             expect(result.content?.trim().length ?? 0).toBeGreaterThan(0);
             expect(
                 result.parts.some((part) => part.type === 'reasoning') ||
-                    result.usage.outputTokenDetails.reasoningTokens >= 0
+                    (result.usage.outputTokenDetails.reasoningTokens ?? 0) >= 0
             ).toBe(true);
             assertChatUsage(result.usage);
         },
@@ -171,7 +171,7 @@ export const providerCases: ProviderContractCase[] = [
             expect(
                 sawReasoningDelta ||
                     response.parts.some((part) => part.type === 'reasoning') ||
-                    response.usage.outputTokenDetails.reasoningTokens >= 0
+                    (response.usage.outputTokenDetails.reasoningTokens ?? 0) >= 0
             ).toBe(true);
             expect(response.content?.trim().length ?? 0).toBeGreaterThan(0);
             assertChatUsage(response.usage);
@@ -302,32 +302,33 @@ function assertChatUsage(usage: {
         cacheWriteTokens: number;
     };
     outputTokenDetails: {
-        reasoningTokens: number;
+        reasoningTokens?: number;
     };
 }): void {
     expect(usage).toHaveProperty('inputTokenDetails');
     expect(usage).toHaveProperty('outputTokenDetails');
     expect(usage.inputTokenDetails).toHaveProperty('cacheReadTokens');
     expect(usage.inputTokenDetails).toHaveProperty('cacheWriteTokens');
-    expect(usage.outputTokenDetails).toHaveProperty('reasoningTokens');
 
     expect(Number.isFinite(usage.inputTokens)).toBe(true);
     expect(Number.isFinite(usage.outputTokens)).toBe(true);
     expect(Number.isFinite(usage.inputTokenDetails.cacheReadTokens)).toBe(true);
     expect(Number.isFinite(usage.inputTokenDetails.cacheWriteTokens)).toBe(true);
-    expect(Number.isFinite(usage.outputTokenDetails.reasoningTokens)).toBe(true);
 
     expect(usage.inputTokens).toBeGreaterThan(0);
     expect(usage.outputTokens).toBeGreaterThanOrEqual(0);
     expect(usage.inputTokenDetails.cacheReadTokens).toBeGreaterThanOrEqual(0);
     expect(usage.inputTokenDetails.cacheWriteTokens).toBeGreaterThanOrEqual(0);
-    expect(usage.outputTokenDetails.reasoningTokens).toBeGreaterThanOrEqual(0);
 
     expect(
         usage.inputTokenDetails.cacheReadTokens +
             usage.inputTokenDetails.cacheWriteTokens
     ).toBeLessThanOrEqual(usage.inputTokens);
-    expect(usage.outputTokenDetails.reasoningTokens).toBeLessThanOrEqual(
-        usage.outputTokens
-    );
+
+    if (usage.outputTokenDetails.reasoningTokens !== undefined) {
+        expect(usage.outputTokenDetails.reasoningTokens).toBeGreaterThanOrEqual(0);
+        expect(usage.outputTokenDetails.reasoningTokens).toBeLessThanOrEqual(
+            usage.outputTokens
+        );
+    }
 }

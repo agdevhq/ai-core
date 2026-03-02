@@ -432,9 +432,7 @@ export async function* transformStream(
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
         },
-        outputTokenDetails: {
-            reasoningTokens: 0,
-        },
+        outputTokenDetails: {},
     };
 
     for await (const chunk of stream) {
@@ -675,9 +673,8 @@ function mapUsage(
     const textTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
     const reasoningTokens =
         response.usageMetadata?.thoughtsTokenCount ??
-        fallback?.outputTokenDetails.reasoningTokens ??
-        0;
-    const outputTokens = textTokens + reasoningTokens;
+        fallback?.outputTokenDetails?.reasoningTokens;
+    const outputTokens = textTokens + (reasoningTokens ?? 0);
     const cacheReadTokens =
         response.usageMetadata?.cachedContentTokenCount ??
         fallback?.inputTokenDetails.cacheReadTokens ??
@@ -691,7 +688,7 @@ function mapUsage(
             cacheWriteTokens: 0,
         },
         outputTokenDetails: {
-            reasoningTokens,
+            ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
         },
     };
 }

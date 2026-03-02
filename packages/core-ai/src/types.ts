@@ -206,9 +206,9 @@ export type ChatInputTokenDetails = {
 export type ChatOutputTokenDetails = {
     /**
      * Tokens consumed by internal reasoning/thinking. Subset of `outputTokens`.
-     * For non-reasoning models (or providers that don't report it), this is `0`.
+     * Omitted when the provider does not report a breakdown.
      */
-    reasoningTokens: number;
+    reasoningTokens?: number;
 };
 
 export type StreamEvent =

@@ -57,9 +57,7 @@ describe('generate', () => {
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         });
     });
 
@@ -93,9 +91,7 @@ describe('generate', () => {
                 cacheReadTokens: 40,
                 cacheWriteTokens: 20,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         });
     });
 
@@ -393,9 +389,7 @@ describe('stream', () => {
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         });
     });
 
@@ -474,9 +468,7 @@ describe('stream', () => {
                 cacheReadTokens: 40,
                 cacheWriteTokens: 20,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         });
     });
 

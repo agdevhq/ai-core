@@ -263,15 +263,13 @@ export function mapGenerateResponse(response: ChatCompletion): GenerateResult {
                     cacheReadTokens: 0,
                     cacheWriteTokens: 0,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             },
         };
     }
 
     const reasoningTokens =
-        response.usage?.completion_tokens_details?.reasoning_tokens ?? 0;
+        response.usage?.completion_tokens_details?.reasoning_tokens;
     const content = extractTextContent(firstChoice.message.content);
     const toolCalls = parseToolCalls(firstChoice.message.tool_calls);
     const parts = createAssistantParts(content, toolCalls);
@@ -291,7 +289,7 @@ export function mapGenerateResponse(response: ChatCompletion): GenerateResult {
                 cacheWriteTokens: 0,
             },
             outputTokenDetails: {
-                reasoningTokens,
+                ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
             },
         },
     };
@@ -355,20 +353,20 @@ export async function* transformStream(
     const emittedToolCalls = new Set<string>();
 
     let finishReason: FinishReason = 'unknown';
-    let usage = {
+    let usage: GenerateResult['usage'] = {
         inputTokens: 0,
         outputTokens: 0,
         inputTokenDetails: {
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
         },
-        outputTokenDetails: {
-            reasoningTokens: 0,
-        },
+        outputTokenDetails: {},
     };
 
     for await (const chunk of stream) {
         if (chunk.usage) {
+            const reasoningTokens =
+                chunk.usage.completion_tokens_details?.reasoning_tokens;
             usage = {
                 inputTokens: chunk.usage.prompt_tokens ?? 0,
                 outputTokens: chunk.usage.completion_tokens ?? 0,
@@ -378,9 +376,9 @@ export async function* transformStream(
                     cacheWriteTokens: 0,
                 },
                 outputTokenDetails: {
-                    reasoningTokens:
-                        chunk.usage.completion_tokens_details
-                            ?.reasoning_tokens ?? 0,
+                    ...(reasoningTokens !== undefined
+                        ? { reasoningTokens }
+                        : {}),
                 },
             };
         }

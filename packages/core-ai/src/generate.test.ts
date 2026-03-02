@@ -35,9 +35,7 @@ describe('generate', () => {
                     cacheReadTokens: 0,
                     cacheWriteTokens: 0,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             },
         };
         const model = createMockChatModel(expected);
@@ -64,9 +62,7 @@ describe('generate', () => {
                     cacheReadTokens: 0,
                     cacheWriteTokens: 0,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             },
         });
 

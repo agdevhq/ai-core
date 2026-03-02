@@ -28,9 +28,7 @@ export function createStreamResult(
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         };
 
         const flushText = () => {

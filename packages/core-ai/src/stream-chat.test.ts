@@ -13,9 +13,7 @@ async function* events(): AsyncIterable<{
             cacheReadTokens: 0;
             cacheWriteTokens: 0;
         };
-        outputTokenDetails: {
-            reasoningTokens: 0;
-        };
+        outputTokenDetails: {};
     };
 }> {
     yield {
@@ -28,9 +26,7 @@ async function* events(): AsyncIterable<{
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         },
     };
 }

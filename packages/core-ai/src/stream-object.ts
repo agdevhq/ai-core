@@ -51,9 +51,7 @@ export function createObjectStreamResult<TSchema extends z.ZodType>(
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         };
 
         try {

@@ -567,9 +567,7 @@ export function mapGenerateResponse(
                 cacheReadTokens,
                 cacheWriteTokens,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         },
     };
 }
@@ -585,9 +583,7 @@ export async function* transformStream(
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
         },
-        outputTokenDetails: {
-            reasoningTokens: 0,
-        },
+        outputTokenDetails: {},
     };
 
     const toolBuffers = new Map<
@@ -614,9 +610,7 @@ export async function* transformStream(
                     cacheReadTokens,
                     cacheWriteTokens,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             };
             continue;
         }
@@ -744,9 +738,7 @@ export async function* transformStream(
                     cacheReadTokens,
                     cacheWriteTokens,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             };
             continue;
         }

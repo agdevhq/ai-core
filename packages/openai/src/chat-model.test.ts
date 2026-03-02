@@ -62,9 +62,7 @@ describe('generate', () => {
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         });
 
         expect(create).toHaveBeenCalledWith(
@@ -414,9 +412,7 @@ describe('stream', () => {
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         });
     });
 
