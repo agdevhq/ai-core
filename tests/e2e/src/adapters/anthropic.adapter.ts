@@ -4,11 +4,16 @@ import type { ProviderE2EAdapter } from './provider-adapter.ts';
 
 const ANTHROPIC_API_KEY_ENV = 'ANTHROPIC_API_KEY';
 const ANTHROPIC_CHAT_MODEL_ENV = 'ANTHROPIC_E2E_CHAT_MODEL';
+const ANTHROPIC_REASONING_MODEL_ENV = 'ANTHROPIC_E2E_REASONING_MODEL';
 
 export function createAnthropicAdapter(): ProviderE2EAdapter {
     const chatModelId = getEnvOrDefault(
         ANTHROPIC_CHAT_MODEL_ENV,
         'claude-haiku-4-5'
+    );
+    const reasoningModelId = getEnvOrDefault(
+        ANTHROPIC_REASONING_MODEL_ENV,
+        'claude-sonnet-4-6'
     );
 
     return {
@@ -17,11 +22,13 @@ export function createAnthropicAdapter(): ProviderE2EAdapter {
         apiKeyEnvVar: ANTHROPIC_API_KEY_ENV,
         models: {
             chat: chatModelId,
+            reasoning: reasoningModelId,
         },
         capabilities: {
             chat: true,
             stream: true,
             object: true,
+            reasoning: true,
             embedding: false,
             image: false,
         },
@@ -30,5 +37,9 @@ export function createAnthropicAdapter(): ProviderE2EAdapter {
             createAnthropic({
                 apiKey: getEnvValue(ANTHROPIC_API_KEY_ENV),
             }).chatModel(chatModelId),
+        createReasoningChatModel: () =>
+            createAnthropic({
+                apiKey: getEnvValue(ANTHROPIC_API_KEY_ENV),
+            }).chatModel(reasoningModelId),
     };
 }

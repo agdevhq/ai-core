@@ -23,7 +23,9 @@ function createMockChatModel(result: GenerateResult): ChatModel {
 describe('generate', () => {
     it('should delegate to model.generate', async () => {
         const expected: GenerateResult = {
+            parts: [{ type: 'text', text: 'Hello' }],
             content: 'Hello',
+            reasoning: null,
             toolCalls: [],
             finishReason: 'stop',
             usage: {
@@ -33,9 +35,7 @@ describe('generate', () => {
                     cacheReadTokens: 0,
                     cacheWriteTokens: 0,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             },
         };
         const model = createMockChatModel(expected);
@@ -50,7 +50,9 @@ describe('generate', () => {
 
     it('should throw LLMError for empty messages', async () => {
         const model = createMockChatModel({
+            parts: [],
             content: null,
+            reasoning: null,
             toolCalls: [],
             finishReason: 'unknown',
             usage: {
@@ -60,9 +62,7 @@ describe('generate', () => {
                     cacheReadTokens: 0,
                     cacheWriteTokens: 0,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             },
         });
 

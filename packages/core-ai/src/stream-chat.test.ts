@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { LLMError } from './errors.ts';
 import { stream } from './stream-chat.ts';
-import type { ChatModel, StreamResult } from './types.ts';
+import type { ChatModel, ChatOutputTokenDetails, StreamResult } from './types.ts';
 
 async function* events(): AsyncIterable<{
     type: 'finish';
@@ -13,9 +13,7 @@ async function* events(): AsyncIterable<{
             cacheReadTokens: 0;
             cacheWriteTokens: 0;
         };
-        outputTokenDetails: {
-            reasoningTokens: 0;
-        };
+        outputTokenDetails: ChatOutputTokenDetails;
     };
 }> {
     yield {
@@ -28,9 +26,7 @@ async function* events(): AsyncIterable<{
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         },
     };
 }
@@ -43,7 +39,9 @@ function createMockStreamResult(): StreamResult {
         },
         async toResponse() {
             return {
+                parts: [],
                 content: null,
+                reasoning: null,
                 toolCalls: [],
                 finishReason: 'stop',
                 usage: {

@@ -13,6 +13,7 @@ import {
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
+    AssistantContentPart,
     FinishReason,
     GenerateObjectOptions,
     GenerateOptions,
@@ -24,6 +25,7 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
+import { getGoogleModelCapabilities, toGoogleThinkingBudget, toGoogleThinkingLevel } from './model-capabilities.js';
 import { asObject } from './object-utils.js';
 
 export const DEFAULT_STRUCTURED_OUTPUT_TOOL_NAME = 'core_ai_generate_object';
@@ -61,20 +63,33 @@ export function convertMessages(messages: Message[]): ConvertedGoogleMessages {
 
         if (message.role === 'assistant') {
             const assistantParts: Part[] = [];
+            for (const part of message.parts) {
+                if (part.type === 'text') {
+                    assistantParts.push({ text: part.text });
+                    continue;
+                }
 
-            if (message.content) {
-                assistantParts.push({ text: message.content });
-            }
+                if (part.type === 'tool-call') {
+                    toolCallNameById.set(part.toolCall.id, part.toolCall.name);
+                    assistantParts.push({
+                        functionCall: {
+                            id: part.toolCall.id,
+                            name: part.toolCall.name,
+                            args: part.toolCall.arguments,
+                        },
+                    });
+                    continue;
+                }
 
-            for (const toolCall of message.toolCalls ?? []) {
-                toolCallNameById.set(toolCall.id, toolCall.name);
-                assistantParts.push({
-                    functionCall: {
-                        id: toolCall.id,
-                        name: toolCall.name,
-                        args: toolCall.arguments,
-                    },
-                });
+                const thoughtPart: Record<string, unknown> = {
+                    text: part.text,
+                    thought: true,
+                };
+                const thoughtSignature = part.providerMetadata?.['thoughtSignature'];
+                if (typeof thoughtSignature === 'string') {
+                    thoughtPart['thoughtSignature'] = thoughtSignature;
+                }
+                assistantParts.push(thoughtPart as Part);
             }
 
             contents.push({
@@ -224,6 +239,7 @@ export function createStructuredOutputOptions<TSchema extends z.ZodType>(
 
     return {
         messages: options.messages,
+        reasoning: options.reasoning,
         tools: {
             structured_output: {
                 name: toolName,
@@ -311,6 +327,7 @@ export function createGenerateRequest(
             ...(options.config?.presencePenalty !== undefined
                 ? { presencePenalty: options.config.presencePenalty }
                 : {}),
+            ...mapReasoningToConfig(modelId, options),
         },
     };
 
@@ -333,14 +350,25 @@ export function createGenerateRequest(
 export function mapGenerateResponse(
     response: GenerateContentResponse
 ): GenerateResult {
-    const toolCalls = parseFunctionCalls(response.functionCalls);
+    const parts = extractAssistantParts(response);
+    const toolCalls = parts.flatMap((part) =>
+        part.type === 'tool-call' ? [part.toolCall] : []
+    );
+    const content = parts
+        .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+        .join('');
+    const reasoning = parts
+        .flatMap((part) => (part.type === 'reasoning' ? [part.text] : []))
+        .join('');
     const finishReason = mapFinishReason(
         response.candidates?.[0]?.finishReason ?? undefined
     );
 
     if (!response.candidates?.[0]) {
         return {
-            content: null,
+            parts,
+            content: content.length > 0 ? content : null,
+            reasoning: reasoning.length > 0 ? reasoning : null,
             toolCalls,
             finishReason: toolCalls.length > 0 ? 'tool-calls' : finishReason,
             usage: mapUsage(response),
@@ -348,21 +376,13 @@ export function mapGenerateResponse(
     }
 
     return {
-        content: response.text ?? null,
+        parts,
+        content: content.length > 0 ? content : null,
+        reasoning: reasoning.length > 0 ? reasoning : null,
         toolCalls,
         finishReason: toolCalls.length > 0 ? 'tool-calls' : finishReason,
         usage: mapUsage(response),
     };
-}
-
-function parseFunctionCalls(
-    calls: GoogleFunctionCall[] | undefined
-): ToolCall[] {
-    if (!calls || calls.length === 0) {
-        return [];
-    }
-
-    return calls.map((call, index) => mapFunctionCall(call, index));
 }
 
 function mapFunctionCall(
@@ -404,6 +424,7 @@ export async function* transformStream(
     const bufferedToolCalls = new Map<string, ToolCall>();
     let finishReason: FinishReason = 'unknown';
     let sawToolCalls = false;
+    let reasoningOpen = false;
     let usage: GenerateResult['usage'] = {
         inputTokens: 0,
         outputTokens: 0,
@@ -411,23 +432,50 @@ export async function* transformStream(
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
         },
-        outputTokenDetails: {
-            reasoningTokens: 0,
-        },
+        outputTokenDetails: {},
     };
 
     for await (const chunk of stream) {
         usage = mapUsage(chunk, usage);
 
+        const reasoningDeltas = extractReasoningDeltas(chunk);
+        if (reasoningDeltas.length > 0) {
+            if (!reasoningOpen) {
+                reasoningOpen = true;
+                yield {
+                    type: 'reasoning-start',
+                };
+            }
+
+            for (const delta of reasoningDeltas) {
+                yield {
+                    type: 'reasoning-delta',
+                    text: delta,
+                };
+            }
+        }
+
         if (chunk.text) {
+            if (reasoningOpen) {
+                reasoningOpen = false;
+                yield {
+                    type: 'reasoning-end',
+                };
+            }
             yield {
-                type: 'content-delta',
+                type: 'text-delta',
                 text: chunk.text,
             };
         }
 
         const functionCalls = chunk.functionCalls ?? [];
         if (functionCalls.length > 0) {
+            if (reasoningOpen) {
+                reasoningOpen = false;
+                yield {
+                    type: 'reasoning-end',
+                };
+            }
             sawToolCalls = true;
             for (const [index, functionCall] of functionCalls.entries()) {
                 const mappedCall = mapFunctionCall(functionCall, index);
@@ -474,6 +522,12 @@ export async function* transformStream(
         }
     }
 
+    if (reasoningOpen) {
+        yield {
+            type: 'reasoning-end',
+        };
+    }
+
     for (const toolCall of bufferedToolCalls.values()) {
         yield {
             type: 'tool-call-end',
@@ -492,6 +546,124 @@ export async function* transformStream(
     };
 }
 
+function mapReasoningToConfig(
+    modelId: string,
+    options: GenerateOptions
+): Record<string, unknown> {
+    if (!options.reasoning) {
+        return {};
+    }
+
+    const capabilities = getGoogleModelCapabilities(modelId);
+    const providerConfig = asObject(options.providerOptions?.['config']);
+    const providerThinkingConfig = asObject(providerConfig['thinkingConfig']);
+    if (Object.keys(providerThinkingConfig).length > 0) {
+        return {};
+    }
+
+    if (capabilities.reasoning.thinkingParam === 'thinkingLevel') {
+        return {
+            thinkingConfig: {
+                thinkingLevel: toGoogleThinkingLevel(options.reasoning.effort),
+                includeThoughts: true,
+            },
+        };
+    }
+
+    return {
+        thinkingConfig: {
+            thinkingBudget: toGoogleThinkingBudget(options.reasoning.effort),
+            includeThoughts: true,
+        },
+    };
+}
+
+function extractAssistantParts(
+    response: GenerateContentResponse
+): AssistantContentPart[] {
+    const parts: AssistantContentPart[] = [];
+    const seenToolCalls = new Set<string>();
+    const candidateParts = response.candidates?.[0]?.content?.parts ?? [];
+
+    for (const part of candidateParts) {
+        if (part.thought) {
+            const thoughtText = typeof part.text === 'string' ? part.text : '';
+            if (thoughtText.length === 0) {
+                continue;
+            }
+            const thoughtSignature =
+                typeof (part as { thoughtSignature?: unknown }).thoughtSignature ===
+                'string'
+                    ? (part as { thoughtSignature?: string }).thoughtSignature
+                    : undefined;
+            parts.push({
+                type: 'reasoning',
+                text: thoughtText,
+                ...(thoughtSignature
+                    ? {
+                          providerMetadata: {
+                              thoughtSignature,
+                          },
+                      }
+                    : {}),
+            });
+            continue;
+        }
+
+        if (part.functionCall) {
+            const toolCall = mapFunctionCall(part.functionCall, 0);
+            const key = `${toolCall.id}:${toolCall.name}`;
+            if (!seenToolCalls.has(key)) {
+                seenToolCalls.add(key);
+                parts.push({
+                    type: 'tool-call',
+                    toolCall,
+                });
+            }
+            continue;
+        }
+
+        if (typeof part.text === 'string' && part.text.length > 0) {
+            parts.push({
+                type: 'text',
+                text: part.text,
+            });
+        }
+    }
+
+    for (const [index, functionCall] of (response.functionCalls ?? []).entries()) {
+        const toolCall = mapFunctionCall(functionCall, index);
+        const key = `${toolCall.id}:${toolCall.name}`;
+        if (seenToolCalls.has(key)) {
+            continue;
+        }
+        seenToolCalls.add(key);
+        parts.push({
+            type: 'tool-call',
+            toolCall,
+        });
+    }
+
+    if (parts.length === 0 && response.text) {
+        parts.push({
+            type: 'text',
+            text: response.text,
+        });
+    }
+
+    return parts;
+}
+
+function extractReasoningDeltas(response: GenerateContentResponse): string[] {
+    const candidateParts = response.candidates?.[0]?.content?.parts ?? [];
+    return candidateParts.flatMap((part) => {
+        if (!part.thought || typeof part.text !== 'string' || part.text.length === 0) {
+            return [];
+        }
+        return [part.text];
+    });
+}
+
 function mapUsage(
     response: GenerateContentResponse,
     fallback?: GenerateResult['usage']
@@ -501,9 +673,8 @@ function mapUsage(
     const textTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
     const reasoningTokens =
         response.usageMetadata?.thoughtsTokenCount ??
-        fallback?.outputTokenDetails.reasoningTokens ??
-        0;
-    const outputTokens = textTokens + reasoningTokens;
+        fallback?.outputTokenDetails?.reasoningTokens;
+    const outputTokens = textTokens + (reasoningTokens ?? 0);
     const cacheReadTokens =
         response.usageMetadata?.cachedContentTokenCount ??
         fallback?.inputTokenDetails.cacheReadTokens ??
@@ -517,7 +688,7 @@ function mapUsage(
             cacheWriteTokens: 0,
         },
         outputTokenDetails: {
-            reasoningTokens,
+            ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
         },
     };
 }

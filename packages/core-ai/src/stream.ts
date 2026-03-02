@@ -1,8 +1,8 @@
 import type {
+    AssistantContentPart,
     GenerateResult,
     StreamEvent,
     StreamResult,
-    ToolCall,
 } from './types.ts';
 
 export function createStreamResult(
@@ -16,8 +16,10 @@ export function createStreamResult(
     let iteratorCreated = false;
 
     async function* iterate(): AsyncGenerator<StreamEvent> {
-        let content = '';
-        const toolCalls: ToolCall[] = [];
+        const parts: AssistantContentPart[] = [];
+        let textBuffer = '';
+        let reasoningBuffer = '';
+        let insideReasoning = false;
         let finishReason: GenerateResult['finishReason'] = 'unknown';
         let usage: GenerateResult['usage'] = {
             inputTokens: 0,
@@ -26,16 +28,59 @@ export function createStreamResult(
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
+        };
+
+        const flushText = () => {
+            if (textBuffer.length === 0) {
+                return;
+            }
+            parts.push({
+                type: 'text',
+                text: textBuffer,
+            });
+            textBuffer = '';
+        };
+
+        const flushReasoning = () => {
+            if (reasoningBuffer.length === 0) {
+                return;
+            }
+            parts.push({
+                type: 'reasoning',
+                text: reasoningBuffer,
+            });
+            reasoningBuffer = '';
         };
 
         for await (const event of source) {
-            if (event.type === 'content-delta') {
-                content += event.text;
+            if (event.type === 'reasoning-start') {
+                flushText();
+                flushReasoning();
+                insideReasoning = true;
+            } else if (event.type === 'reasoning-delta') {
+                if (!insideReasoning) {
+                    flushText();
+                    insideReasoning = true;
+                }
+                reasoningBuffer += event.text;
+            } else if (event.type === 'reasoning-end') {
+                flushReasoning();
+                insideReasoning = false;
+            } else if (event.type === 'text-delta') {
+                if (insideReasoning) {
+                    flushReasoning();
+                    insideReasoning = false;
+                }
+                textBuffer += event.text;
             } else if (event.type === 'tool-call-end') {
-                toolCalls.push(event.toolCall);
+                flushText();
+                flushReasoning();
+                insideReasoning = false;
+                parts.push({
+                    type: 'tool-call',
+                    toolCall: event.toolCall,
+                });
             } else if (event.type === 'finish') {
                 finishReason = event.finishReason;
                 usage = event.usage;
@@ -44,8 +89,23 @@ export function createStreamResult(
             yield event;
         }
 
+        flushText();
+        flushReasoning();
+
+        const content = parts
+            .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+            .join('');
+        const reasoning = parts
+            .flatMap((part) => (part.type === 'reasoning' ? [part.text] : []))
+            .join('');
+        const toolCalls = parts.flatMap((part) =>
+            part.type === 'tool-call' ? [part.toolCall] : []
+        );
+
         resolveResponse?.({
+            parts,
             content: content.length > 0 ? content : null,
+            reasoning: reasoning.length > 0 ? reasoning : null,
             toolCalls,
             finishReason,
             usage,

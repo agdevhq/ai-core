@@ -37,10 +37,41 @@ export type FilePart = {
     filename?: string;
 };
 
+export type ReasoningEffort =
+    | 'minimal'
+    | 'low'
+    | 'medium'
+    | 'high'
+    | 'max';
+
+export type ReasoningConfig = {
+    effort: ReasoningEffort;
+};
+
+export type AssistantTextPart = {
+    type: 'text';
+    text: string;
+};
+
+export type ReasoningPart = {
+    type: 'reasoning';
+    text: string;
+    providerMetadata?: Record<string, unknown>;
+};
+
+export type ToolCallPart = {
+    type: 'tool-call';
+    toolCall: ToolCall;
+};
+
+export type AssistantContentPart =
+    | AssistantTextPart
+    | ReasoningPart
+    | ToolCallPart;
+
 export type AssistantMessage = {
     role: 'assistant';
-    content: string | null;
-    toolCalls?: ToolCall[];
+    parts: AssistantContentPart[];
 };
 
 export type ToolCall = {
@@ -94,6 +125,7 @@ export type ModelConfig = {
 
 export type GenerateOptions = {
     messages: Message[];
+    reasoning?: ReasoningConfig;
     tools?: ToolSet;
     toolChoice?: ToolChoice;
     config?: ModelConfig;
@@ -102,7 +134,9 @@ export type GenerateOptions = {
 };
 
 export type GenerateResult = {
+    parts: AssistantContentPart[];
     content: string | null;
+    reasoning: string | null;
     toolCalls: ToolCall[];
     finishReason: FinishReason;
     usage: ChatUsage;
@@ -113,6 +147,7 @@ export type GenerateObjectOptions<TSchema extends z.ZodType> = {
     schema: TSchema;
     schemaName?: string;
     schemaDescription?: string;
+    reasoning?: ReasoningConfig;
     config?: ModelConfig;
     providerOptions?: Record<string, unknown>;
     signal?: AbortSignal;
@@ -171,13 +206,16 @@ export type ChatInputTokenDetails = {
 export type ChatOutputTokenDetails = {
     /**
      * Tokens consumed by internal reasoning/thinking. Subset of `outputTokens`.
-     * For non-reasoning models (or providers that don't report it), this is `0`.
+     * Omitted when the provider does not report a breakdown.
      */
-    reasoningTokens: number;
+    reasoningTokens?: number;
 };
 
 export type StreamEvent =
-    | { type: 'content-delta'; text: string }
+    | { type: 'reasoning-start' }
+    | { type: 'reasoning-delta'; text: string }
+    | { type: 'reasoning-end' }
+    | { type: 'text-delta'; text: string }
     | { type: 'tool-call-start'; toolCallId: string; toolName: string }
     | { type: 'tool-call-delta'; toolCallId: string; argumentsDelta: string }
     | { type: 'tool-call-end'; toolCall: ToolCall }

@@ -14,17 +14,22 @@ import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ProviderError } from '@core-ai/core-ai';
 import type {
+    AssistantContentPart,
     FinishReason,
     GenerateObjectOptions,
     GenerateOptions,
     GenerateResult,
     Message,
     StreamEvent,
-    ToolCall,
     ToolSet,
     UserContentPart,
     ToolChoice as AgToolChoice,
 } from '@core-ai/core-ai';
+import {
+    getAnthropicModelCapabilities,
+    toAnthropicAdaptiveEffort,
+    toAnthropicManualBudget,
+} from './model-capabilities.js';
 
 const UNSUPPORTED_ANTHROPIC_SCHEMA_KEYWORDS = new Set([
     'minimum',
@@ -70,21 +75,43 @@ export function convertMessages(
 
         if (message.role === 'assistant') {
             const contentBlocks: ContentBlockParam[] = [];
+            for (const part of message.parts) {
+                if (part.type === 'text') {
+                    contentBlocks.push({
+                        type: 'text',
+                        text: part.text,
+                    });
+                    continue;
+                }
 
-            if (message.content) {
-                contentBlocks.push({
-                    type: 'text',
-                    text: message.content,
-                });
-            }
+                if (part.type === 'tool-call') {
+                    contentBlocks.push({
+                        type: 'tool_use',
+                        id: part.toolCall.id,
+                        name: part.toolCall.name,
+                        input: part.toolCall.arguments,
+                    });
+                    continue;
+                }
 
-            for (const toolCall of message.toolCalls ?? []) {
-                contentBlocks.push({
-                    type: 'tool_use',
-                    id: toolCall.id,
-                    name: toolCall.name,
-                    input: toolCall.arguments,
-                });
+                const signature = part.providerMetadata?.['signature'];
+                const redactedData = part.providerMetadata?.['redactedData'];
+                if (typeof redactedData === 'string') {
+                    contentBlocks.push({
+                        type: 'redacted_thinking',
+                        data: redactedData,
+                    } as unknown as ContentBlockParam);
+                    continue;
+                }
+
+                const thinkingBlock: Record<string, unknown> = {
+                    type: 'thinking',
+                    thinking: part.text,
+                };
+                if (typeof signature === 'string') {
+                    thinkingBlock['signature'] = signature;
+                }
+                contentBlocks.push(thinkingBlock as unknown as ContentBlockParam);
             }
 
             convertedMessages.push({
@@ -222,6 +249,7 @@ export function createStructuredOutputOptions<TSchema extends z.ZodType>(
 
     return {
         messages: options.messages,
+        reasoning: options.reasoning,
         config: options.config,
         providerOptions: {
             ...(options.providerOptions ?? {}),
@@ -292,10 +320,8 @@ export function createGenerateRequest(
     defaultMaxTokens: number,
     options: GenerateOptions
 ) {
-    return {
-        ...createRequestBase(modelId, defaultMaxTokens, options),
-        ...options.providerOptions,
-    };
+    const baseRequest = createRequestBase(modelId, defaultMaxTokens, options);
+    return mergeProviderOptions(baseRequest, options.providerOptions);
 }
 
 export function createStreamRequest(
@@ -303,11 +329,11 @@ export function createStreamRequest(
     defaultMaxTokens: number,
     options: GenerateOptions
 ) {
-    return {
+    const baseRequest = {
         ...createRequestBase(modelId, defaultMaxTokens, options),
         stream: true as const,
-        ...options.providerOptions,
     };
+    return mergeProviderOptions(baseRequest, options.providerOptions);
 }
 
 function createRequestBase(
@@ -315,7 +341,9 @@ function createRequestBase(
     defaultMaxTokens: number,
     options: GenerateOptions
 ) {
+    validateAnthropicReasoningConfig(modelId, options);
     const converted = convertMessages(options.messages);
+    const reasoningFields = mapReasoningToRequestFields(modelId, options);
 
     return {
         model: modelId,
@@ -328,6 +356,7 @@ function createRequestBase(
         ...(options.toolChoice
             ? { tool_choice: convertToolChoice(options.toolChoice) }
             : {}),
+        ...reasoningFields,
         ...mapConfigToRequestFields(options.config),
     };
 }
@@ -344,22 +373,169 @@ function mapConfigToRequestFields(config: GenerateOptions['config']) {
     };
 }
 
+function validateAnthropicReasoningConfig(
+    modelId: string,
+    options: GenerateOptions
+): void {
+    if (!options.reasoning) {
+        return;
+    }
+
+    if (options.config?.temperature !== undefined) {
+        throw new ProviderError(
+            `Anthropic model "${modelId}" does not support temperature when reasoning is enabled`,
+            'anthropic'
+        );
+    }
+
+    if (
+        options.config?.topP !== undefined &&
+        (options.config.topP < 0.95 || options.config.topP > 1)
+    ) {
+        throw new ProviderError(
+            `Anthropic model "${modelId}" requires topP between 0.95 and 1 when reasoning is enabled`,
+            'anthropic'
+        );
+    }
+
+    if (options.toolChoice && options.toolChoice !== 'auto' && options.toolChoice !== 'none') {
+        throw new ProviderError(
+            `Anthropic model "${modelId}" only supports toolChoice "auto" or "none" when reasoning is enabled`,
+            'anthropic'
+        );
+    }
+
+    const providerOptions = asObject(options.providerOptions);
+    if (providerOptions['top_k'] !== undefined) {
+        throw new ProviderError(
+            `Anthropic model "${modelId}" does not support top_k when reasoning is enabled`,
+            'anthropic'
+        );
+    }
+}
+
+function mapReasoningToRequestFields(modelId: string, options: GenerateOptions) {
+    if (!options.reasoning) {
+        return {};
+    }
+
+    const capabilities = getAnthropicModelCapabilities(modelId);
+    const baseFields: Record<string, unknown> = {};
+
+    if (
+        options.tools &&
+        Object.keys(options.tools).length > 0
+    ) {
+        baseFields['betas'] = ['interleaved-thinking-2025-05-14'];
+    }
+
+    if (capabilities.reasoning.thinkingMode === 'adaptive') {
+        baseFields['thinking'] = { type: 'adaptive' };
+        baseFields['output_config'] = {
+            effort: toAnthropicAdaptiveEffort(
+                options.reasoning.effort,
+                capabilities.reasoning.supportsMaxEffort
+            ),
+        };
+        return baseFields;
+    }
+
+    baseFields['thinking'] = {
+        type: 'enabled',
+        budget_tokens: toAnthropicManualBudget(options.reasoning.effort),
+    };
+    return baseFields;
+}
+
+function mergeProviderOptions<TRequest extends object>(
+    baseRequest: TRequest,
+    providerOptions: Record<string, unknown> | undefined
+): TRequest {
+    if (!providerOptions) {
+        return baseRequest;
+    }
+
+    const baseOutputConfig = asObject(
+        (baseRequest as { output_config?: unknown }).output_config
+    );
+    const providerOutputConfig = asObject(providerOptions['output_config']);
+    const mergedOutputConfig = {
+        ...baseOutputConfig,
+        ...providerOutputConfig,
+    };
+
+    const mergedBetas = [
+        ...asStringArray((baseRequest as { betas?: unknown }).betas),
+        ...asStringArray(providerOptions['betas']),
+    ];
+
+    const mergedRequest = {
+        ...baseRequest,
+        ...(providerOptions as Partial<TRequest>),
+        ...(Object.keys(mergedOutputConfig).length > 0
+            ? { output_config: mergedOutputConfig }
+            : {}),
+        ...(mergedBetas.length > 0 ? { betas: uniqueStrings(mergedBetas) } : {}),
+    };
+    return mergedRequest as TRequest;
+}
+
 export function mapGenerateResponse(
     response: AnthropicMessage
 ): GenerateResult {
-    const toolCalls: ToolCall[] = [];
-    let content = '';
-
+    const parts: AssistantContentPart[] = [];
     for (const block of response.content) {
         if (block.type === 'text') {
-            content += block.text;
+            parts.push({
+                type: 'text',
+                text: block.text,
+            });
             continue;
         }
         if (block.type === 'tool_use') {
-            toolCalls.push({
-                id: block.id,
-                name: block.name,
-                arguments: asObject(block.input),
+            parts.push({
+                type: 'tool-call',
+                toolCall: {
+                    id: block.id,
+                    name: block.name,
+                    arguments: asObject(block.input),
+                },
+            });
+            continue;
+        }
+        if (block.type === 'thinking') {
+            const thinkingText =
+                typeof block.thinking === 'string'
+                    ? block.thinking
+                    : extractThinkingText(block.thinking);
+            const signature =
+                typeof block.signature === 'string' ? block.signature : undefined;
+            parts.push({
+                type: 'reasoning',
+                text: thinkingText,
+                ...(signature
+                    ? {
+                          providerMetadata: {
+                              signature,
+                          },
+                      }
+                    : {}),
+            });
+            continue;
+        }
+        if (block.type === 'redacted_thinking') {
+            const redactedData =
+                typeof block.data === 'string' ? block.data : undefined;
+            parts.push({
+                type: 'reasoning',
+                text: '',
+                ...(redactedData
+                    ? {
+                          providerMetadata: {
+                              redactedData,
+                          },
+                      }
+                    : {}),
             });
         }
     }
@@ -368,9 +544,20 @@ export function mapGenerateResponse(
     const cacheWriteTokens = response.usage.cache_creation_input_tokens ?? 0;
     const inputTokens =
         response.usage.input_tokens + cacheReadTokens + cacheWriteTokens;
+    const content = parts
+        .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+        .join('');
+    const reasoning = parts
+        .flatMap((part) => (part.type === 'reasoning' ? [part.text] : []))
+        .join('');
+    const toolCalls = parts.flatMap((part) =>
+        part.type === 'tool-call' ? [part.toolCall] : []
+    );
 
     return {
+        parts,
         content: content.length > 0 ? content : null,
+        reasoning: reasoning.length > 0 ? reasoning : null,
         toolCalls,
         finishReason: mapStopReason(response.stop_reason),
         usage: {
@@ -380,9 +567,7 @@ export function mapGenerateResponse(
                 cacheReadTokens,
                 cacheWriteTokens,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         },
     };
 }
@@ -398,9 +583,7 @@ export async function* transformStream(
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
         },
-        outputTokenDetails: {
-            reasoningTokens: 0,
-        },
+        outputTokenDetails: {},
     };
 
     const toolBuffers = new Map<
@@ -408,6 +591,7 @@ export async function* transformStream(
         { id: string; name: string; arguments: string }
     >();
     const emittedToolCalls = new Set<number>();
+    const contentBlockTypeByIndex = new Map<number, string>();
 
     for await (const event of stream) {
         if (event.type === 'message_start') {
@@ -426,14 +610,19 @@ export async function* transformStream(
                     cacheReadTokens,
                     cacheWriteTokens,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             };
             continue;
         }
 
         if (event.type === 'content_block_start') {
+            contentBlockTypeByIndex.set(event.index, event.content_block.type);
+            if (event.content_block.type === 'thinking') {
+                yield {
+                    type: 'reasoning-start',
+                };
+                continue;
+            }
             if (event.content_block.type === 'tool_use') {
                 const block = event.content_block as ToolUseBlock;
                 const initialArguments =
@@ -461,9 +650,29 @@ export async function* transformStream(
         if (event.type === 'content_block_delta') {
             if (event.delta.type === 'text_delta') {
                 yield {
-                    type: 'content-delta',
+                    type: 'text-delta',
                     text: event.delta.text,
                 };
+                continue;
+            }
+
+            if (event.delta.type === 'thinking_delta') {
+                const thinkingDelta = event.delta as {
+                    thinking?: unknown;
+                    text?: unknown;
+                };
+                const thinkingText =
+                    typeof thinkingDelta.thinking === 'string'
+                        ? thinkingDelta.thinking
+                        : typeof thinkingDelta.text === 'string'
+                          ? thinkingDelta.text
+                        : '';
+                if (thinkingText.length > 0) {
+                    yield {
+                        type: 'reasoning-delta',
+                        text: thinkingText,
+                    };
+                }
                 continue;
             }
 
@@ -484,6 +693,13 @@ export async function* transformStream(
         }
 
         if (event.type === 'content_block_stop') {
+            if (contentBlockTypeByIndex.get(event.index) === 'thinking') {
+                yield {
+                    type: 'reasoning-end',
+                };
+                continue;
+            }
+
             const current = toolBuffers.get(event.index);
             if (!current || emittedToolCalls.has(event.index)) {
                 continue;
@@ -522,9 +738,7 @@ export async function* transformStream(
                     cacheReadTokens,
                     cacheWriteTokens,
                 },
-                outputTokenDetails: {
-                    reasoningTokens: 0,
-                },
+                outputTokenDetails: {},
             };
             continue;
         }
@@ -567,6 +781,36 @@ function asObject(value: unknown): Record<string, unknown> {
         return value as Record<string, unknown>;
     }
     return {};
+}
+
+function asStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value.filter((item): item is string => typeof item === 'string');
+}
+
+function uniqueStrings(values: string[]): string[] {
+    return [...new Set(values)];
+}
+
+function extractThinkingText(value: unknown): string {
+    if (typeof value === 'string') {
+        return value;
+    }
+    if (!Array.isArray(value)) {
+        return '';
+    }
+
+    return value
+        .flatMap((item) => {
+            if (!item || typeof item !== 'object') {
+                return [];
+            }
+            const text = (item as { text?: unknown }).text;
+            return typeof text === 'string' ? [text] : [];
+        })
+        .join('');
 }
 
 export function wrapError(error: unknown): ProviderError {

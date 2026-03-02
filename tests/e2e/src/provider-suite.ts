@@ -55,5 +55,12 @@ function isContractCaseRunnable(
         return false;
     }
 
+    if (
+        contractCase.requiredCapability === 'reasoning' &&
+        !adapter.createReasoningChatModel
+    ) {
+        return false;
+    }
+
     return true;
 }

@@ -5,8 +5,8 @@ import type { StreamEvent } from './types.ts';
 describe('createStreamResult', () => {
     it('should iterate over all events', async () => {
         const events: StreamEvent[] = [
-            { type: 'content-delta', text: 'Hello' },
-            { type: 'content-delta', text: ' world' },
+            { type: 'text-delta', text: 'Hello' },
+            { type: 'text-delta', text: ' world' },
             {
                 type: 'finish',
                 finishReason: 'stop',
@@ -17,9 +17,7 @@ describe('createStreamResult', () => {
                         cacheReadTokens: 0,
                         cacheWriteTokens: 0,
                     },
-                    outputTokenDetails: {
-                        reasoningTokens: 0,
-                    },
+                    outputTokenDetails: {},
                 },
             },
         ];
@@ -35,8 +33,11 @@ describe('createStreamResult', () => {
 
     it('should aggregate content via toResponse()', async () => {
         const events: StreamEvent[] = [
-            { type: 'content-delta', text: 'Hello' },
-            { type: 'content-delta', text: ' world' },
+            { type: 'reasoning-start' },
+            { type: 'reasoning-delta', text: 'Thinking...' },
+            { type: 'reasoning-end' },
+            { type: 'text-delta', text: 'Hello' },
+            { type: 'text-delta', text: ' world' },
             {
                 type: 'finish',
                 finishReason: 'stop',
@@ -47,9 +48,7 @@ describe('createStreamResult', () => {
                         cacheReadTokens: 0,
                         cacheWriteTokens: 0,
                     },
-                    outputTokenDetails: {
-                        reasoningTokens: 0,
-                    },
+                    outputTokenDetails: {},
                 },
             },
         ];
@@ -57,6 +56,17 @@ describe('createStreamResult', () => {
         const response = await result.toResponse();
 
         expect(response.content).toBe('Hello world');
+        expect(response.reasoning).toBe('Thinking...');
+        expect(response.parts).toEqual([
+            {
+                type: 'reasoning',
+                text: 'Thinking...',
+            },
+            {
+                type: 'text',
+                text: 'Hello world',
+            },
+        ]);
         expect(response.finishReason).toBe('stop');
         expect(response.toolCalls).toEqual([]);
         expect(response.usage).toEqual({
@@ -66,9 +76,7 @@ describe('createStreamResult', () => {
                 cacheReadTokens: 0,
                 cacheWriteTokens: 0,
             },
-            outputTokenDetails: {
-                reasoningTokens: 0,
-            },
+            outputTokenDetails: {},
         });
     });
 
@@ -102,15 +110,23 @@ describe('createStreamResult', () => {
                         cacheReadTokens: 0,
                         cacheWriteTokens: 0,
                     },
-                    outputTokenDetails: {
-                        reasoningTokens: 0,
-                    },
+                    outputTokenDetails: {},
                 },
             },
         ];
         const result = createStreamResult(toAsyncIterable(events));
         const response = await result.toResponse();
 
+        expect(response.parts).toEqual([
+            {
+                type: 'tool-call',
+                toolCall: {
+                    id: 'tc1',
+                    name: 'search',
+                    arguments: { query: 'hello' },
+                },
+            },
+        ]);
         expect(response.toolCalls).toEqual([
             {
                 id: 'tc1',
@@ -123,7 +139,7 @@ describe('createStreamResult', () => {
 
     it('should auto-consume stream when toResponse called without iteration', async () => {
         const events: StreamEvent[] = [
-            { type: 'content-delta', text: 'auto' },
+            { type: 'text-delta', text: 'auto' },
             {
                 type: 'finish',
                 finishReason: 'stop',
@@ -134,9 +150,7 @@ describe('createStreamResult', () => {
                         cacheReadTokens: 0,
                         cacheWriteTokens: 0,
                     },
-                    outputTokenDetails: {
-                        reasoningTokens: 0,
-                    },
+                    outputTokenDetails: {},
                 },
             },
         ];
@@ -144,6 +158,7 @@ describe('createStreamResult', () => {
         const response = await result.toResponse();
 
         expect(response.content).toBe('auto');
+        expect(response.reasoning).toBeNull();
     });
 });
 

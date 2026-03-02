@@ -77,7 +77,7 @@ const result = await stream({
 });
 
 for await (const event of result) {
-    if (event.type === 'content-delta') {
+    if (event.type === 'text-delta') {
         process.stdout.write(event.text);
     }
 }

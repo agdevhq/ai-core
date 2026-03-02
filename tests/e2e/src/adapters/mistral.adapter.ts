@@ -4,12 +4,17 @@ import type { ProviderE2EAdapter } from './provider-adapter.ts';
 
 const MISTRAL_API_KEY_ENV = 'MISTRAL_API_KEY';
 const MISTRAL_CHAT_MODEL_ENV = 'MISTRAL_E2E_CHAT_MODEL';
+const MISTRAL_REASONING_MODEL_ENV = 'MISTRAL_E2E_REASONING_MODEL';
 const MISTRAL_EMBED_MODEL_ENV = 'MISTRAL_E2E_EMBED_MODEL';
 
 export function createMistralAdapter(): ProviderE2EAdapter {
     const chatModelId = getEnvOrDefault(
         MISTRAL_CHAT_MODEL_ENV,
         'mistral-large-latest'
+    );
+    const reasoningModelId = getEnvOrDefault(
+        MISTRAL_REASONING_MODEL_ENV,
+        'magistral-medium-latest'
     );
     const embeddingModelId = getEnvOrDefault(
         MISTRAL_EMBED_MODEL_ENV,
@@ -22,12 +27,14 @@ export function createMistralAdapter(): ProviderE2EAdapter {
         apiKeyEnvVar: MISTRAL_API_KEY_ENV,
         models: {
             chat: chatModelId,
+            reasoning: reasoningModelId,
             embedding: embeddingModelId,
         },
         capabilities: {
             chat: true,
             stream: true,
             object: true,
+            reasoning: true,
             embedding: true,
             image: false,
         },
@@ -36,6 +43,10 @@ export function createMistralAdapter(): ProviderE2EAdapter {
             createMistral({
                 apiKey: getEnvValue(MISTRAL_API_KEY_ENV),
             }).chatModel(chatModelId),
+        createReasoningChatModel: () =>
+            createMistral({
+                apiKey: getEnvValue(MISTRAL_API_KEY_ENV),
+            }).chatModel(reasoningModelId),
         createEmbeddingModel: () =>
             createMistral({
                 apiKey: getEnvValue(MISTRAL_API_KEY_ENV),
