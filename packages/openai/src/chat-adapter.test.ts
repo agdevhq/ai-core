@@ -181,13 +181,29 @@ describe('convertMessages', () => {
 });
 
 describe('createGenerateRequest', () => {
+    it('should set store: false by default', () => {
+        const request = createGenerateRequest('gpt-5-mini', {
+            messages: [{ role: 'user', content: 'Hi' }],
+        });
+
+        expect(request.store).toBe(false);
+    });
+
+    it('should allow overriding store via providerOptions', () => {
+        const request = createGenerateRequest('gpt-5-mini', {
+            messages: [{ role: 'user', content: 'Hi' }],
+            providerOptions: { store: true },
+        });
+
+        expect(request.store).toBe(true);
+    });
+
     it('should include reasoning summary and encrypted reasoning include', () => {
         const request = createGenerateRequest('gpt-5-mini', {
             messages: [{ role: 'user', content: 'Hi' }],
             reasoning: { effort: 'high' },
             providerOptions: {
                 include: ['foo.bar'],
-                store: false,
             },
         });
 
@@ -201,13 +217,10 @@ describe('createGenerateRequest', () => {
         expect(request.store).toBe(false);
     });
 
-    it('should keep encrypted include even when store is false', () => {
+    it('should include encrypted reasoning even without providerOptions', () => {
         const request = createGenerateRequest('gpt-5-mini', {
             messages: [{ role: 'user', content: 'Hi' }],
             reasoning: { effort: 'medium' },
-            providerOptions: {
-                store: false,
-            },
         });
 
         expect(request.store).toBe(false);

@@ -211,6 +211,11 @@ function createRequestBase(modelId: string, options: GenerateOptions) {
 
     return {
         model: modelId,
+        // Disable server-side storage by default. This adapter manages context
+        // manually (full input arrays, encrypted_content round-trips) and never
+        // uses item_reference or previous_response_id. Consumers can override
+        // via providerOptions if needed.
+        store: false as const,
         input: convertMessages(options.messages),
         ...(options.tools && Object.keys(options.tools).length > 0
             ? { tools: convertResponseTools(options.tools) }

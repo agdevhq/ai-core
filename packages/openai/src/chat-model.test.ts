@@ -101,7 +101,6 @@ describe('generate', () => {
         const first = await model.generate({
             messages: [{ role: 'user', content: 'Question 1' }],
             reasoning: { effort: 'high' },
-            providerOptions: { store: false },
         });
 
         const secondMessages = [
@@ -113,7 +112,6 @@ describe('generate', () => {
         await model.generate({
             messages: secondMessages,
             reasoning: { effort: 'high' },
-            providerOptions: { store: false },
         });
 
         const secondCall = create.mock.calls[1] as [unknown] | undefined;
