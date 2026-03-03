@@ -11,6 +11,7 @@ import {
     resultToMessage,
 } from '@core-ai/core-ai';
 import { createOpenAIChatModel } from './chat-model.js';
+import { toAsyncIterable } from '@core-ai/testing';
 
 describe('createOpenAIChatModel', () => {
     it('should create model metadata', () => {
@@ -278,6 +279,90 @@ describe('stream', () => {
     });
 });
 
+describe('streamObject', () => {
+    it('should stream and validate a structured object', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ResponseStreamEvent>([
+                asStreamEvent({
+                    type: 'response.output_item.added',
+                    output_index: 0,
+                    item: {
+                        type: 'function_call',
+                        call_id: 'tc_1',
+                        name: 'weather_schema',
+                        arguments: '',
+                    },
+                }),
+                asStreamEvent({
+                    type: 'response.function_call_arguments.delta',
+                    output_index: 0,
+                    item_id: 'item_1',
+                    delta: '{"city":"Berlin",',
+                }),
+                asStreamEvent({
+                    type: 'response.function_call_arguments.delta',
+                    output_index: 0,
+                    item_id: 'item_1',
+                    delta: '"temperatureC":21}',
+                }),
+                asStreamEvent({
+                    type: 'response.output_item.done',
+                    output_index: 0,
+                    item: {
+                        type: 'function_call',
+                        call_id: 'tc_1',
+                        name: 'weather_schema',
+                        arguments: '{"city":"Berlin","temperatureC":21}',
+                    },
+                }),
+                asStreamEvent({
+                    type: 'response.completed',
+                    response: asResponse({
+                        output: [],
+                        status: 'completed',
+                        usage: {
+                            input_tokens: 10,
+                            output_tokens: 5,
+                            input_tokens_details: { cached_tokens: 0 },
+                            output_tokens_details: { reasoning_tokens: 0 },
+                            total_tokens: 15,
+                        },
+                    }),
+                }),
+            ])
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        const streamResult = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        const objects: Array<{ city: string; temperatureC: number }> = [];
+        for await (const event of streamResult) {
+            if (event.type === 'object') {
+                objects.push(event.object);
+            }
+        }
+
+        expect(objects).toEqual([{ city: 'Berlin', temperatureC: 21 }]);
+        const response = await streamResult.toResponse();
+        expect(response.object).toEqual({
+            city: 'Berlin',
+            temperatureC: 21,
+        });
+        expect(response.finishReason).toBe('tool-calls');
+    });
+});
+
 function createMockClient(
     create?: (options: unknown) => Promise<unknown>
 ): Pick<OpenAI, 'responses'> {
@@ -300,8 +385,3 @@ function asStreamEvent(value: unknown): ResponseStreamEvent {
     return value as ResponseStreamEvent;
 }
 
-async function* toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
-    for (const item of items) {
-        yield item;
-    }
-}

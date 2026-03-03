@@ -10,6 +10,7 @@ import {
     StructuredOutputValidationError,
 } from '@core-ai/core-ai';
 import { createOpenAICompatChatModel } from './chat-model.js';
+import { toAsyncIterable } from '@core-ai/testing';
 
 describe('createOpenAICompatChatModel', () => {
     it('should create model metadata', () => {
@@ -658,8 +659,3 @@ function asChunk(value: Partial<ChatCompletionChunk>): ChatCompletionChunk {
     };
 }
 
-async function* toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
-    for (const item of items) {
-        yield item;
-    }
-}

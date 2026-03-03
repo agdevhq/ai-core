@@ -8,6 +8,7 @@ import {
     transformStream,
     validateOpenAIReasoningConfig,
 } from './chat-adapter.js';
+import { toAsyncIterable } from '@core-ai/testing';
 
 describe('convertMessages', () => {
     it('should convert system messages to developer role', () => {
@@ -17,6 +18,110 @@ describe('convertMessages', () => {
 
         expect(convertMessages(messages)).toEqual([
             { role: 'developer', content: 'You are helpful.' },
+        ]);
+    });
+
+    it('should convert user text array to input_text parts', () => {
+        const messages: Message[] = [
+            {
+                role: 'user',
+                content: [{ type: 'text', text: 'Hello there' }],
+            },
+        ];
+
+        expect(convertMessages(messages)).toEqual([
+            {
+                role: 'user',
+                content: [{ type: 'input_text', text: 'Hello there' }],
+            },
+        ]);
+    });
+
+    it('should convert user image URL to input_image', () => {
+        const messages: Message[] = [
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'image',
+                        source: {
+                            type: 'url',
+                            url: 'https://example.com/photo.png',
+                        },
+                    },
+                ],
+            },
+        ];
+
+        expect(convertMessages(messages)).toEqual([
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'input_image',
+                        image_url: 'https://example.com/photo.png',
+                    },
+                ],
+            },
+        ]);
+    });
+
+    it('should convert user base64 image to data URI', () => {
+        const messages: Message[] = [
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'image',
+                        source: {
+                            type: 'base64',
+                            mediaType: 'image/png',
+                            data: 'abc123',
+                        },
+                    },
+                ],
+            },
+        ];
+
+        expect(convertMessages(messages)).toEqual([
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'input_image',
+                        image_url: 'data:image/png;base64,abc123',
+                    },
+                ],
+            },
+        ]);
+    });
+
+    it('should convert user file to input_file', () => {
+        const messages: Message[] = [
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'file',
+                        data: 'base64data',
+                        mimeType: 'application/pdf',
+                        filename: 'report.pdf',
+                    },
+                ],
+            },
+        ];
+
+        expect(convertMessages(messages)).toEqual([
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'input_file',
+                        file_data: 'base64data',
+                        filename: 'report.pdf',
+                    },
+                ],
+            },
         ]);
     });
 
@@ -183,6 +288,65 @@ describe('mapGenerateResponse', () => {
         });
     });
 
+    it('should return finishReason length when max_output_tokens', () => {
+        const response = asResponse({
+            output: [
+                {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [{ type: 'output_text', text: 'truncated' }],
+                },
+            ],
+            status: 'incomplete',
+            incomplete_details: { reason: 'max_output_tokens' },
+        });
+
+        expect(mapGenerateResponse(response).finishReason).toBe('length');
+    });
+
+    it('should return finishReason content-filter', () => {
+        const response = asResponse({
+            output: [
+                {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [{ type: 'output_text', text: '' }],
+                },
+            ],
+            status: 'incomplete',
+            incomplete_details: { reason: 'content_filter' },
+        });
+
+        expect(mapGenerateResponse(response).finishReason).toBe(
+            'content-filter'
+        );
+    });
+
+    it('should return finishReason unknown for non-completed status', () => {
+        const response = asResponse({
+            output: [],
+            status: 'failed',
+        });
+
+        expect(mapGenerateResponse(response).finishReason).toBe('unknown');
+    });
+
+    it('should return finishReason tool-calls when tool calls present', () => {
+        const response = asResponse({
+            output: [
+                {
+                    type: 'function_call',
+                    call_id: 'tc_1',
+                    name: 'search',
+                    arguments: '{"q":"test"}',
+                },
+            ],
+            status: 'completed',
+        });
+
+        expect(mapGenerateResponse(response).finishReason).toBe('tool-calls');
+    });
+
     it('should omit encryptedContent metadata when not provided', () => {
         const response = asResponse({
             output: [
@@ -313,6 +477,55 @@ describe('transformStream', () => {
             },
         ]);
     });
+
+    it('should return finishReason stop for text-only stream', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.output_text.delta',
+                delta: 'hello',
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'completed',
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        const finish = events.find((e) => e.type === 'finish');
+        expect(finish).toMatchObject({ finishReason: 'stop' });
+    });
+
+    it('should return finishReason length when stream is incomplete', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.output_text.delta',
+                delta: 'partial',
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'incomplete',
+                    incomplete_details: { reason: 'max_output_tokens' },
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        const finish = events.find((e) => e.type === 'finish');
+        expect(finish).toMatchObject({ finishReason: 'length' });
+    });
 });
 
 describe('validateOpenAIReasoningConfig', () => {
@@ -343,8 +556,3 @@ function asStreamEvent(value: unknown): ResponseStreamEvent {
     return value as ResponseStreamEvent;
 }
 
-async function* toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
-    for (const item of items) {
-        yield item;
-    }
-}
