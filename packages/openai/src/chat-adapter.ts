@@ -21,6 +21,7 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
+import { getProviderMetadata } from '@core-ai/core-ai';
 import {
     clampReasoningEffort,
     getOpenAIModelCapabilities,
@@ -39,6 +40,10 @@ import {
 
 export { createStructuredOutputOptions, getStructuredOutputToolName };
 export { validateOpenAIReasoningConfig };
+
+type OpenAIReasoningMetadata = {
+    encryptedContent?: string;
+};
 
 const ENCRYPTED_REASONING_INCLUDE = 'reasoning.encrypted_content';
 
@@ -81,31 +86,43 @@ function convertMessage(message: Message): ResponseInputItem[] {
     ];
 }
 
-function convertAssistantMessage(parts: AssistantContentPart[]): ResponseInputItem[] {
+function convertAssistantMessage(
+    parts: AssistantContentPart[]
+): ResponseInputItem[] {
     const items: ResponseInputItem[] = [];
-    let textBuffer = '';
+    const textParts: string[] = [];
 
     const flushTextBuffer = () => {
-        if (textBuffer.length === 0) {
+        if (textParts.length === 0) {
             return;
         }
 
         items.push({
             role: 'assistant',
-            content: textBuffer,
+            content: textParts.join('\n\n'),
         } as ResponseInputItem);
-        textBuffer = '';
+        textParts.length = 0;
     };
 
     for (const part of parts) {
         if (part.type === 'text') {
-            textBuffer += part.text;
+            textParts.push(part.text);
             continue;
         }
 
-        flushTextBuffer();
-
         if (part.type === 'reasoning') {
+            // Cross-provider: fold into text buffer wrapped in <thinking> tags so the
+            // model recognises the content as a reasoning trace rather than regular prose.
+            // OpenAI reasoning items require encrypted_content for continuity,
+            // which only exists for blocks this provider generated itself.
+            if (getProviderMetadata<OpenAIReasoningMetadata>(part.providerMetadata, 'openai') == null) {
+                if (part.text.length > 0) {
+                    textParts.push(`<thinking>${part.text}</thinking>`);
+                }
+                continue;
+            }
+
+            flushTextBuffer();
             const encryptedContent = getEncryptedReasoningContent(part);
             items.push({
                 type: 'reasoning',
@@ -115,11 +132,14 @@ function convertAssistantMessage(parts: AssistantContentPart[]): ResponseInputIt
                         text: part.text,
                     },
                 ],
-                ...(encryptedContent ? { encrypted_content: encryptedContent } : {}),
+                ...(encryptedContent
+                    ? { encrypted_content: encryptedContent }
+                    : {}),
             } as ResponseInputItem);
             continue;
         }
 
+        flushTextBuffer();
         items.push({
             type: 'function_call',
             call_id: part.toolCall.id,
@@ -136,7 +156,8 @@ function convertAssistantMessage(parts: AssistantContentPart[]): ResponseInputIt
 function getEncryptedReasoningContent(
     part: Extract<AssistantContentPart, { type: 'reasoning' }>
 ): string | undefined {
-    const encryptedContent = part.providerMetadata?.encryptedContent;
+    const { encryptedContent } =
+        getProviderMetadata<OpenAIReasoningMetadata>(part.providerMetadata, 'openai') ?? {};
     return typeof encryptedContent === 'string' && encryptedContent.length > 0
         ? encryptedContent
         : undefined;
@@ -237,7 +258,9 @@ function convertResponseTools(tools: ToolSet) {
     }));
 }
 
-function convertResponseToolChoice(choice: NonNullable<GenerateOptions['toolChoice']>) {
+function convertResponseToolChoice(
+    choice: NonNullable<GenerateOptions['toolChoice']>
+) {
     const converted = convertToolChoice(choice);
 
     if (typeof converted === 'string') {
@@ -341,21 +364,21 @@ function mapReasoningPart(
     return {
         type: 'reasoning',
         text,
-        ...(encryptedContent
-            ? {
-                  providerMetadata: {
-                      encryptedContent,
-                  },
-              }
-            : {}),
+        providerMetadata: {
+            openai: { ...(encryptedContent ? { encryptedContent } : {}) },
+        },
     };
 }
 
-function getReasoningSummaryText(summary: ResponseReasoningItem['summary']): string {
+function getReasoningSummaryText(
+    summary: ResponseReasoningItem['summary']
+): string {
     return summary.map((item) => item.text).join('');
 }
 
-function mapMessageTextParts(message: ResponseOutputMessage): AssistantContentPart[] {
+function mapMessageTextParts(
+    message: ResponseOutputMessage
+): AssistantContentPart[] {
     return message.content.flatMap((contentItem) =>
         contentItem.type === 'output_text' && contentItem.text.length > 0
             ? [{ type: 'text' as const, text: contentItem.text }]
@@ -385,7 +408,10 @@ function getToolCalls(parts: AssistantContentPart[]): ToolCall[] {
     );
 }
 
-function mapFinishReason(response: Response, hasToolCalls: boolean): FinishReason {
+function mapFinishReason(
+    response: Response,
+    hasToolCalls: boolean
+): FinishReason {
     const incompleteReason = response.incomplete_details?.reason;
     if (incompleteReason === 'max_output_tokens') {
         return 'length';
@@ -487,7 +513,9 @@ export async function* transformStream(
         }
 
         if (event.type === 'response.function_call_arguments.delta') {
-            const currentToolCall = bufferedToolCalls.get(event.output_index) ?? {
+            const currentToolCall = bufferedToolCalls.get(
+                event.output_index
+            ) ?? {
                 id: event.item_id,
                 name: '',
                 arguments: '',
@@ -529,13 +557,13 @@ export async function* transformStream(
                     reasoningStarted = false;
                     yield {
                         type: 'reasoning-end',
-                        ...(encryptedContent
-                            ? {
-                                  providerMetadata: {
-                                      encryptedContent,
-                                  },
-                              }
-                            : {}),
+                        providerMetadata: {
+                            openai: {
+                                ...(encryptedContent
+                                    ? { encryptedContent }
+                                    : {}),
+                            },
+                        },
                     };
                 }
                 continue;
@@ -545,7 +573,9 @@ export async function* transformStream(
                 continue;
             }
 
-            const currentToolCall = bufferedToolCalls.get(event.output_index) ?? {
+            const currentToolCall = bufferedToolCalls.get(
+                event.output_index
+            ) ?? {
                 id: event.item.call_id,
                 name: event.item.name,
                 arguments: '',
@@ -563,7 +593,9 @@ export async function* transformStream(
                     toolCall: {
                         id: currentToolCall.id,
                         name: currentToolCall.name,
-                        arguments: safeParseJsonObject(currentToolCall.arguments),
+                        arguments: safeParseJsonObject(
+                            currentToolCall.arguments
+                        ),
                     },
                 };
             }
@@ -575,7 +607,10 @@ export async function* transformStream(
 
             if (reasoningStarted) {
                 reasoningStarted = false;
-                yield { type: 'reasoning-end' };
+                yield {
+                    type: 'reasoning-end',
+                    providerMetadata: { openai: {} },
+                };
             }
 
             for (const bufferedToolCall of bufferedToolCalls.values()) {
@@ -589,7 +624,9 @@ export async function* transformStream(
                     toolCall: {
                         id: bufferedToolCall.id,
                         name: bufferedToolCall.name,
-                        arguments: safeParseJsonObject(bufferedToolCall.arguments),
+                        arguments: safeParseJsonObject(
+                            bufferedToolCall.arguments
+                        ),
                     },
                 };
             }
@@ -605,11 +642,13 @@ export async function* transformStream(
     }
 
     if (reasoningStarted) {
-        yield { type: 'reasoning-end' };
+        yield { type: 'reasoning-end', providerMetadata: { openai: {} } };
     }
 
     const hasToolCalls = bufferedToolCalls.size > 0;
-    const usage = latestResponse ? mapUsage(latestResponse.usage) : mapUsage(undefined);
+    const usage = latestResponse
+        ? mapUsage(latestResponse.usage)
+        : mapUsage(undefined);
     const finishReason = latestResponse
         ? mapFinishReason(latestResponse, hasToolCalls)
         : 'unknown';
@@ -621,7 +660,10 @@ export async function* transformStream(
     };
 }
 
-function mapReasoningToRequestFields(modelId: string, options: GenerateOptions) {
+function mapReasoningToRequestFields(
+    modelId: string,
+    options: GenerateOptions
+) {
     if (!options.reasoning) {
         return {};
     }
@@ -650,10 +692,14 @@ function isFunctionToolCall(
     return item.type === 'function_call';
 }
 
-function isOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
+function isOutputMessage(
+    item: ResponseOutputItem
+): item is ResponseOutputMessage {
     return item.type === 'message';
 }
 
-function isReasoningItem(item: ResponseOutputItem): item is ResponseReasoningItem {
+function isReasoningItem(
+    item: ResponseOutputItem
+): item is ResponseReasoningItem {
     return item.type === 'reasoning';
 }

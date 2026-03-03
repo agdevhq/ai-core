@@ -65,8 +65,16 @@ function convertMessage(message: Message): ChatCompletionMessageParam {
 
     if (message.role === 'assistant') {
         const text = message.parts
-            .flatMap((part) => (part.type === 'text' ? [part.text] : []))
-            .join('');
+            .flatMap((part) => {
+                if (part.type === 'text') return [part.text];
+                // Chat Completions API has no native reasoning item type — fold reasoning
+                // into the text content wrapped in <thinking> tags to preserve context.
+                if (part.type === 'reasoning' && part.text.length > 0) {
+                    return [`<thinking>${part.text}</thinking>`];
+                }
+                return [];
+            })
+            .join('\n\n');
         const toolCalls = message.parts.flatMap((part) =>
             part.type === 'tool-call' ? [part.toolCall] : []
         );

@@ -125,6 +125,29 @@ describe('convertMessages', () => {
         ]);
     });
 
+    it('should wrap cross-provider reasoning in <thinking> tags', () => {
+        const messages: Message[] = [
+            {
+                role: 'assistant',
+                parts: [
+                    {
+                        type: 'reasoning',
+                        text: 'step-by-step thought',
+                        providerMetadata: { anthropic: { signature: 'sig_123' } },
+                    },
+                    { type: 'text', text: 'answer' },
+                ],
+            },
+        ];
+
+        expect(convertMessages(messages)).toEqual([
+            {
+                role: 'assistant',
+                content: '<thinking>step-by-step thought</thinking>\n\nanswer',
+            },
+        ]);
+    });
+
     it('should preserve reasoning encrypted content for stateless round-trips', () => {
         const messages: Message[] = [
             {
@@ -134,7 +157,7 @@ describe('convertMessages', () => {
                         type: 'reasoning',
                         text: 'thinking...',
                         providerMetadata: {
-                            encryptedContent: 'enc_123',
+                            openai: { encryptedContent: 'enc_123' },
                         },
                     },
                     { type: 'text', text: 'answer' },
@@ -275,7 +298,7 @@ describe('mapGenerateResponse', () => {
                 type: 'reasoning',
                 text: 'short summary',
                 providerMetadata: {
-                    encryptedContent: 'enc_1',
+                    openai: { encryptedContent: 'enc_1' },
                 },
             },
             { type: 'text', text: 'Final answer' },
@@ -377,6 +400,7 @@ describe('mapGenerateResponse', () => {
         expect(reasoningPart).toEqual({
             type: 'reasoning',
             text: 'stored mode summary',
+            providerMetadata: { openai: {} },
         });
     });
 });
@@ -465,7 +489,7 @@ describe('transformStream', () => {
             {
                 type: 'reasoning-end',
                 providerMetadata: {
-                    encryptedContent: 'enc_1',
+                    openai: { encryptedContent: 'enc_1' },
                 },
             },
             { type: 'tool-call-start', toolCallId: 'tc_1', toolName: 'search' },
@@ -558,7 +582,7 @@ describe('transformStream', () => {
             {
                 type: 'reasoning-end',
                 providerMetadata: {
-                    encryptedContent: 'enc_2',
+                    openai: { encryptedContent: 'enc_2' },
                 },
             },
             {

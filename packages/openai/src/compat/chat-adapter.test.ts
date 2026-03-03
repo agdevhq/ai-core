@@ -253,7 +253,7 @@ describe('structured output helpers', () => {
 });
 
 describe('reasoning support', () => {
-    it('should ignore reasoning parts when converting assistant messages', () => {
+    it('should fold reasoning parts into text content wrapped in <thinking> tags', () => {
         const messages: Message[] = [
             {
                 role: 'assistant',
@@ -275,7 +275,7 @@ describe('reasoning support', () => {
         expect(convertMessages(messages)).toEqual([
             {
                 role: 'assistant',
-                content: 'answer',
+                content: '<thinking>thinking...</thinking>\n\nanswer',
                 tool_calls: [
                     {
                         id: 'tc_1',

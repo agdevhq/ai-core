@@ -12,7 +12,10 @@ import type {
 } from '@anthropic-ai/sdk/resources/messages/messages';
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ProviderError } from '@core-ai/core-ai';
+import {
+    ProviderError,
+    getProviderMetadata,
+} from '@core-ai/core-ai';
 import type {
     AssistantContentPart,
     FinishReason,
@@ -30,6 +33,11 @@ import {
     toAnthropicAdaptiveEffort,
     toAnthropicManualBudget,
 } from './model-capabilities.js';
+
+type AnthropicReasoningMetadata = {
+    signature?: string;
+    redactedData?: string;
+};
 
 const UNSUPPORTED_ANTHROPIC_SCHEMA_KEYWORDS = new Set([
     'minimum',
@@ -94,8 +102,18 @@ export function convertMessages(
                     continue;
                 }
 
-                const signature = part.providerMetadata?.['signature'];
-                const redactedData = part.providerMetadata?.['redactedData'];
+                // Cross-provider: wrap in <thinking> tags so Claude recognises the
+                // content as a reasoning trace rather than regular prose.
+                // Opaque blobs (signatures, redacted data) are meaningless to other providers.
+                const anthropicMeta = getProviderMetadata<AnthropicReasoningMetadata>(part.providerMetadata, 'anthropic');
+                if (anthropicMeta == null) {
+                    if (part.text.length > 0) {
+                        contentBlocks.push({ type: 'text', text: `<thinking>${part.text}</thinking>` });
+                    }
+                    continue;
+                }
+
+                const { signature, redactedData } = anthropicMeta;
                 if (typeof redactedData === 'string') {
                     contentBlocks.push({
                         type: 'redacted_thinking',
@@ -104,14 +122,22 @@ export function convertMessages(
                     continue;
                 }
 
-                const thinkingBlock: Record<string, unknown> = {
+                if (part.text.length === 0) {
+                    continue;
+                }
+
+                // Missing signature (e.g. from an aborted stream): downgrade to text to
+                // avoid Anthropic rejecting the request for an unsigned thinking block.
+                if (typeof signature !== 'string') {
+                    contentBlocks.push({ type: 'text', text: part.text });
+                    continue;
+                }
+
+                contentBlocks.push({
                     type: 'thinking',
                     thinking: part.text,
-                };
-                if (typeof signature === 'string') {
-                    thinkingBlock['signature'] = signature;
-                }
-                contentBlocks.push(thinkingBlock as unknown as ContentBlockParam);
+                    signature,
+                } as unknown as ContentBlockParam);
             }
 
             convertedMessages.push({
@@ -513,13 +539,9 @@ export function mapGenerateResponse(
             parts.push({
                 type: 'reasoning',
                 text: thinkingText,
-                ...(signature
-                    ? {
-                          providerMetadata: {
-                              signature,
-                          },
-                      }
-                    : {}),
+                providerMetadata: {
+                    anthropic: { ...(signature ? { signature } : {}) },
+                },
             });
             continue;
         }
@@ -529,13 +551,9 @@ export function mapGenerateResponse(
             parts.push({
                 type: 'reasoning',
                 text: '',
-                ...(redactedData
-                    ? {
-                          providerMetadata: {
-                              redactedData,
-                          },
-                      }
-                    : {}),
+                providerMetadata: {
+                    anthropic: { ...(redactedData ? { redactedData } : {}) },
+                },
             });
         }
     }
@@ -705,13 +723,9 @@ export async function* transformStream(
                 contentBlockTypeByIndex.delete(event.index);
                 yield {
                     type: 'reasoning-end',
-                    ...(signature
-                        ? {
-                              providerMetadata: {
-                                  signature,
-                              },
-                          }
-                        : {}),
+                    providerMetadata: {
+                        anthropic: { ...(signature ? { signature } : {}) },
+                    },
                 };
                 continue;
             }

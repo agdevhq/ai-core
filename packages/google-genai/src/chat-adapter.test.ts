@@ -358,7 +358,7 @@ describe('reasoning support', () => {
                         type: 'reasoning',
                         text: 'thinking',
                         providerMetadata: {
-                            thoughtSignature: 'sig_1',
+                            google: { thoughtSignature: 'sig_1' },
                         },
                     },
                     {
@@ -381,6 +381,32 @@ describe('reasoning support', () => {
                     {
                         text: 'answer',
                     },
+                ],
+            },
+        ]);
+    });
+
+    it('should send cross-provider reasoning as a thought part without a signature', () => {
+        const messages: Message[] = [
+            {
+                role: 'assistant',
+                parts: [
+                    {
+                        type: 'reasoning',
+                        text: 'step-by-step thought',
+                        providerMetadata: { anthropic: { signature: 'sig_123' } },
+                    },
+                    { type: 'text', text: 'answer' },
+                ],
+            },
+        ];
+
+        expect(convertMessages(messages).contents).toEqual([
+            {
+                role: 'model',
+                parts: [
+                    { text: 'step-by-step thought', thought: true },
+                    { text: 'answer' },
                 ],
             },
         ]);
@@ -472,7 +498,7 @@ describe('reasoning support', () => {
             type: 'reasoning',
             text: 'internal thought',
             providerMetadata: {
-                thoughtSignature: 'sig_1',
+                google: { thoughtSignature: 'sig_1' },
             },
         });
         expect(result.usage.outputTokenDetails.reasoningTokens).toBe(1);

@@ -298,14 +298,14 @@ describe('reasoning support', () => {
                         type: 'reasoning',
                         text: 'thought',
                         providerMetadata: {
-                            signature: 'sig_123',
+                            anthropic: { signature: 'sig_123' },
                         },
                     },
                     {
                         type: 'reasoning',
                         text: '',
                         providerMetadata: {
-                            redactedData: 'redacted_payload',
+                            anthropic: { redactedData: 'redacted_payload' },
                         },
                     },
                     {
@@ -334,6 +334,33 @@ describe('reasoning support', () => {
                         type: 'text',
                         text: 'answer',
                     },
+                ],
+            },
+        ]);
+    });
+
+    it('should wrap cross-provider reasoning in <thinking> tags', () => {
+        const messages: Message[] = [
+            {
+                role: 'assistant',
+                parts: [
+                    {
+                        type: 'reasoning',
+                        text: 'step-by-step thought',
+                        providerMetadata: { openai: { encryptedContent: 'enc_123' } },
+                    },
+                    { type: 'text', text: 'answer' },
+                ],
+            },
+        ];
+
+        const result = convertMessages(messages);
+        expect(result.messages).toEqual([
+            {
+                role: 'assistant',
+                content: [
+                    { type: 'text', text: '<thinking>step-by-step thought</thinking>' },
+                    { type: 'text', text: 'answer' },
                 ],
             },
         ]);
@@ -449,14 +476,14 @@ describe('reasoning support', () => {
             type: 'reasoning',
             text: 'step-by-step',
             providerMetadata: {
-                signature: 'sig_1',
+                anthropic: { signature: 'sig_1' },
             },
         });
         expect(result.parts[1]).toEqual({
             type: 'reasoning',
             text: '',
             providerMetadata: {
-                redactedData: 'hidden_data',
+                anthropic: { redactedData: 'hidden_data' },
             },
         });
     });
@@ -475,8 +502,8 @@ describe('reasoning support', () => {
         expect(result.parts[0]).toEqual({
             type: 'reasoning',
             text: 'bare thought',
+            providerMetadata: { anthropic: {} },
         });
-        expect(result.parts[0]).not.toHaveProperty('providerMetadata');
     });
 
     it('should emit reasoning events from thinking deltas in streams', async () => {
@@ -548,7 +575,7 @@ describe('reasoning support', () => {
         expect(events.find((event) => event.type === 'reasoning-end')).toEqual({
             type: 'reasoning-end',
             providerMetadata: {
-                signature: 'sig_1',
+                anthropic: { signature: 'sig_1' },
             },
         });
     });

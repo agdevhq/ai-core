@@ -19,7 +19,7 @@ export function createStreamResult(
         const parts: AssistantContentPart[] = [];
         let textBuffer = '';
         let reasoningBuffer = '';
-        let reasoningProviderMetadata: Record<string, unknown> | undefined;
+        let reasoningProviderMetadata: Record<string, Record<string, unknown>> | undefined;
         let insideReasoning = false;
         let finishReason: GenerateResult['finishReason'] = 'unknown';
         let usage: GenerateResult['usage'] = {
