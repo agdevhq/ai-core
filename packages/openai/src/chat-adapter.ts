@@ -21,7 +21,6 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
-import { ProviderError } from '@core-ai/core-ai';
 import {
     clampReasoningEffort,
     getOpenAIModelCapabilities,
@@ -33,8 +32,13 @@ import {
     createStructuredOutputOptions,
     getStructuredOutputToolName,
 } from './shared/tools.js';
+import {
+    safeParseJsonObject,
+    validateOpenAIReasoningConfig,
+} from './shared/utils.js';
 
 export { createStructuredOutputOptions, getStructuredOutputToolName };
+export { validateOpenAIReasoningConfig };
 
 const ENCRYPTED_REASONING_INCLUDE = 'reasoning.encrypted_content';
 
@@ -642,45 +646,6 @@ export async function* transformStream(
     };
 }
 
-function safeParseJsonObject(json: string): Record<string, unknown> {
-    try {
-        const parsed = JSON.parse(json) as unknown;
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            return parsed as Record<string, unknown>;
-        }
-        return {};
-    } catch {
-        return {};
-    }
-}
-
-export function validateOpenAIReasoningConfig(
-    modelId: string,
-    options: GenerateOptions
-): void {
-    if (!options.reasoning) {
-        return;
-    }
-
-    const capabilities = getOpenAIModelCapabilities(modelId);
-    if (!capabilities.reasoning.restrictsSamplingParams) {
-        return;
-    }
-
-    if (options.config?.temperature !== undefined) {
-        throw new ProviderError(
-            `OpenAI model "${modelId}" does not support temperature when reasoning is enabled`,
-            'openai'
-        );
-    }
-
-    if (options.config?.topP !== undefined) {
-        throw new ProviderError(
-            `OpenAI model "${modelId}" does not support topP when reasoning is enabled`,
-            'openai'
-        );
-    }
-}
 
 function mapReasoningToRequestFields(modelId: string, options: GenerateOptions) {
     if (!options.reasoning) {
