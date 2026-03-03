@@ -410,10 +410,14 @@ describe('transformStream', () => {
         const stream = toAsyncIterable<ResponseStreamEvent>([
             asStreamEvent({
                 type: 'response.reasoning_summary_text.delta',
+                item_id: 'rs_1',
+                summary_index: 0,
                 delta: 'think',
             }),
             asStreamEvent({
                 type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_1',
+                summary_index: 0,
                 text: 'think',
             }),
             asStreamEvent({
@@ -534,18 +538,26 @@ describe('transformStream', () => {
         const stream = toAsyncIterable<ResponseStreamEvent>([
             asStreamEvent({
                 type: 'response.reasoning_summary_text.delta',
+                item_id: 'rs_2',
+                summary_index: 0,
                 delta: 'first',
             }),
             asStreamEvent({
                 type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_2',
+                summary_index: 0,
                 text: 'first',
             }),
             asStreamEvent({
                 type: 'response.reasoning_summary_text.delta',
+                item_id: 'rs_2',
+                summary_index: 1,
                 delta: 'second',
             }),
             asStreamEvent({
                 type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_2',
+                summary_index: 1,
                 text: 'second',
             }),
             asStreamEvent({
@@ -623,6 +635,269 @@ describe('transformStream', () => {
 
         const finish = events.find((e) => e.type === 'finish');
         expect(finish).toMatchObject({ finishReason: 'stop' });
+    });
+
+    it('should emit reasoning-delta from .done text when no deltas were received', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_1',
+                summary_index: 0,
+                text: 'fallback summary',
+            }),
+            asStreamEvent({
+                type: 'response.output_item.done',
+                output_index: 0,
+                item: {
+                    type: 'reasoning',
+                    id: 'rs_1',
+                    summary: [
+                        { type: 'summary_text', text: 'fallback summary' },
+                    ],
+                    encrypted_content: 'enc_1',
+                },
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'completed',
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        expect(events).toEqual([
+            { type: 'reasoning-start' },
+            { type: 'reasoning-delta', text: 'fallback summary' },
+            {
+                type: 'reasoning-end',
+                providerMetadata: {
+                    openai: { encryptedContent: 'enc_1' },
+                },
+            },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ]);
+    });
+
+    it('should not duplicate reasoning when only some summary parts have deltas', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.delta',
+                item_id: 'rs_1',
+                summary_index: 0,
+                delta: 'alpha',
+            }),
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_1',
+                summary_index: 0,
+                text: 'alpha',
+            }),
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_1',
+                summary_index: 1,
+                text: 'beta',
+            }),
+            asStreamEvent({
+                type: 'response.output_item.done',
+                output_index: 0,
+                item: {
+                    type: 'reasoning',
+                    id: 'rs_1',
+                    summary: [
+                        { type: 'summary_text', text: 'alpha' },
+                        { type: 'summary_text', text: 'beta' },
+                    ],
+                    encrypted_content: 'enc_1',
+                },
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'completed',
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        expect(events).toEqual([
+            { type: 'reasoning-start' },
+            { type: 'reasoning-delta', text: 'alpha' },
+            { type: 'reasoning-delta', text: 'beta' },
+            {
+                type: 'reasoning-end',
+                providerMetadata: {
+                    openai: { encryptedContent: 'enc_1' },
+                },
+            },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ]);
+
+        const reasoningDeltas = events.filter(
+            (event) => event.type === 'reasoning-delta'
+        );
+        expect(reasoningDeltas).toHaveLength(2);
+    });
+
+    it('should backfill reasoning from output_item.done summary when no deltas or .done text were seen', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.output_item.done',
+                output_index: 0,
+                item: {
+                    type: 'reasoning',
+                    id: 'rs_1',
+                    summary: [
+                        { type: 'summary_text', text: 'part one' },
+                        { type: 'summary_text', text: 'part two' },
+                    ],
+                    encrypted_content: 'enc_1',
+                },
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'completed',
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        expect(events).toEqual([
+            { type: 'reasoning-start' },
+            { type: 'reasoning-delta', text: 'part onepart two' },
+            {
+                type: 'reasoning-end',
+                providerMetadata: {
+                    openai: { encryptedContent: 'enc_1' },
+                },
+            },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ]);
+    });
+
+    it('should not duplicate reasoning for multi-part .done-only fallback', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_1',
+                summary_index: 0,
+                text: 'one',
+            }),
+            asStreamEvent({
+                type: 'response.reasoning_summary_text.done',
+                item_id: 'rs_1',
+                summary_index: 1,
+                text: 'two',
+            }),
+            asStreamEvent({
+                type: 'response.output_item.done',
+                output_index: 0,
+                item: {
+                    type: 'reasoning',
+                    id: 'rs_1',
+                    summary: [
+                        { type: 'summary_text', text: 'one' },
+                        { type: 'summary_text', text: 'two' },
+                    ],
+                    encrypted_content: 'enc_1',
+                },
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'completed',
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        expect(events).toEqual([
+            { type: 'reasoning-start' },
+            { type: 'reasoning-delta', text: 'one' },
+            { type: 'reasoning-delta', text: 'two' },
+            {
+                type: 'reasoning-end',
+                providerMetadata: {
+                    openai: { encryptedContent: 'enc_1' },
+                },
+            },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ]);
+
+        const reasoningDeltas = events.filter(
+            (event) => event.type === 'reasoning-delta'
+        );
+        expect(reasoningDeltas).toHaveLength(2);
     });
 
     it('should return finishReason length when stream is incomplete', async () => {

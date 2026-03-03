@@ -451,12 +451,19 @@ export async function* transformStream(
     const bufferedToolCalls = new Map<number, BufferedToolCall>();
     const emittedToolCalls = new Set<string>();
     const startedToolCalls = new Set<string>();
+    const seenSummaryDeltas = new Set<string>();
+    const emittedReasoningItems = new Set<string>();
 
     let latestResponse: Response | undefined;
     let reasoningStarted = false;
 
     for await (const event of stream) {
         if (event.type === 'response.reasoning_summary_text.delta') {
+            seenSummaryDeltas.add(
+                `${event.item_id}:${event.summary_index}`
+            );
+            emittedReasoningItems.add(event.item_id);
+
             if (!reasoningStarted) {
                 reasoningStarted = true;
                 yield { type: 'reasoning-start' };
@@ -470,6 +477,20 @@ export async function* transformStream(
         }
 
         if (event.type === 'response.reasoning_summary_text.done') {
+            const key = `${event.item_id}:${event.summary_index}`;
+            if (!seenSummaryDeltas.has(key) && event.text.length > 0) {
+                emittedReasoningItems.add(event.item_id);
+
+                if (!reasoningStarted) {
+                    reasoningStarted = true;
+                    yield { type: 'reasoning-start' };
+                }
+
+                yield {
+                    type: 'reasoning-delta',
+                    text: event.text,
+                };
+            }
             continue;
         }
 
@@ -534,6 +555,22 @@ export async function* transformStream(
 
         if (event.type === 'response.output_item.done') {
             if (isReasoningItem(event.item)) {
+                if (!emittedReasoningItems.has(event.item.id)) {
+                    const summaryText = getReasoningSummaryText(
+                        event.item.summary
+                    );
+                    if (summaryText.length > 0) {
+                        if (!reasoningStarted) {
+                            reasoningStarted = true;
+                            yield { type: 'reasoning-start' };
+                        }
+                        yield {
+                            type: 'reasoning-delta',
+                            text: summaryText,
+                        };
+                    }
+                }
+
                 const encryptedContent =
                     typeof event.item.encrypted_content === 'string' &&
                     event.item.encrypted_content.length > 0
