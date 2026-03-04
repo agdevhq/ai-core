@@ -37,6 +37,10 @@ import {
     safeParseJsonObject,
     validateOpenAIReasoningConfig,
 } from './shared/utils.js';
+import {
+    parseOpenAIResponsesGenerateProviderOptions,
+    type OpenAIResponsesGenerateProviderOptions,
+} from './provider-options.js';
 
 export { createStructuredOutputOptions, getStructuredOutputToolName };
 export { validateOpenAIReasoningConfig };
@@ -190,9 +194,12 @@ export function createGenerateRequest(
     modelId: string,
     options: GenerateOptions
 ): ResponseCreateParamsNonStreaming {
+    const openaiOptions = parseOpenAIResponsesGenerateProviderOptions(
+        options.providerOptions
+    );
     const request: Record<string, unknown> = {
         ...createRequestBase(modelId, options),
-        ...(options.providerOptions ?? {}),
+        ...mapOpenAIProviderOptionsToRequestFields(openaiOptions),
     };
 
     if (options.reasoning) {
@@ -208,10 +215,13 @@ export function createStreamRequest(
     modelId: string,
     options: GenerateOptions
 ): ResponseCreateParamsStreaming {
+    const openaiOptions = parseOpenAIResponsesGenerateProviderOptions(
+        options.providerOptions
+    );
     const request: Record<string, unknown> = {
         ...createRequestBase(modelId, options),
         stream: true as const,
-        ...(options.providerOptions ?? {}),
+        ...mapOpenAIProviderOptionsToRequestFields(openaiOptions),
     };
 
     if (options.reasoning) {
@@ -237,7 +247,7 @@ function createRequestBase(modelId: string, options: GenerateOptions) {
             ? { tool_choice: convertResponseToolChoice(options.toolChoice) }
             : {}),
         ...mapReasoningToRequestFields(modelId, options),
-        ...mapConfigToRequestFields(options.config),
+        ...mapSamplingToRequestFields(options),
     };
 }
 
@@ -282,15 +292,33 @@ function mergeInclude(
     return include.length > 0 ? include : undefined;
 }
 
-function mapConfigToRequestFields(config: GenerateOptions['config']) {
+function mapSamplingToRequestFields(
+    options: Pick<GenerateOptions, 'temperature' | 'maxTokens' | 'topP'>
+) {
     return {
-        ...(config?.temperature !== undefined
-            ? { temperature: config.temperature }
+        ...(options.temperature !== undefined
+            ? { temperature: options.temperature }
             : {}),
-        ...(config?.maxTokens !== undefined
-            ? { max_output_tokens: config.maxTokens }
+        ...(options.maxTokens !== undefined
+            ? { max_output_tokens: options.maxTokens }
             : {}),
-        ...(config?.topP !== undefined ? { top_p: config.topP } : {}),
+        ...(options.topP !== undefined ? { top_p: options.topP } : {}),
+    };
+}
+
+function mapOpenAIProviderOptionsToRequestFields(
+    options: OpenAIResponsesGenerateProviderOptions | undefined
+) {
+    return {
+        ...(options?.store !== undefined ? { store: options.store } : {}),
+        ...(options?.serviceTier !== undefined
+            ? { service_tier: options.serviceTier }
+            : {}),
+        ...(options?.include ? { include: options.include } : {}),
+        ...(options?.parallelToolCalls !== undefined
+            ? { parallel_tool_calls: options.parallelToolCalls }
+            : {}),
+        ...(options?.user !== undefined ? { user: options.user } : {}),
     };
 }
 

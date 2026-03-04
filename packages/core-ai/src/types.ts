@@ -125,23 +125,31 @@ export type ChatModel = {
     ): Promise<StreamObjectResult<TSchema>>;
 };
 
-export type ModelConfig = {
+export interface GenerateProviderOptions {
+    [key: string]: Record<string, unknown> | undefined;
+}
+
+export interface EmbedProviderOptions {
+    [key: string]: Record<string, unknown> | undefined;
+}
+
+export interface ImageProviderOptions {
+    [key: string]: Record<string, unknown> | undefined;
+}
+
+export type BaseGenerateOptions = {
+    messages: Message[];
     temperature?: number;
     maxTokens?: number;
     topP?: number;
-    stopSequences?: string[];
-    frequencyPenalty?: number;
-    presencePenalty?: number;
+    reasoning?: ReasoningConfig;
+    providerOptions?: GenerateProviderOptions;
+    signal?: AbortSignal;
 };
 
-export type GenerateOptions = {
-    messages: Message[];
-    reasoning?: ReasoningConfig;
+export type GenerateOptions = BaseGenerateOptions & {
     tools?: ToolSet;
     toolChoice?: ToolChoice;
-    config?: ModelConfig;
-    providerOptions?: Record<string, unknown>;
-    signal?: AbortSignal;
 };
 
 export type GenerateResult = {
@@ -153,15 +161,11 @@ export type GenerateResult = {
     usage: ChatUsage;
 };
 
-export type GenerateObjectOptions<TSchema extends z.ZodType> = {
-    messages: Message[];
+export type GenerateObjectOptions<TSchema extends z.ZodType> =
+    BaseGenerateOptions & {
     schema: TSchema;
     schemaName?: string;
     schemaDescription?: string;
-    reasoning?: ReasoningConfig;
-    config?: ModelConfig;
-    providerOptions?: Record<string, unknown>;
-    signal?: AbortSignal;
 };
 
 export type StreamObjectOptions<TSchema extends z.ZodType> =
@@ -256,7 +260,7 @@ export type EmbeddingModel = {
 export type EmbedOptions = {
     input: string | string[];
     dimensions?: number;
-    providerOptions?: Record<string, unknown>;
+    providerOptions?: EmbedProviderOptions;
 };
 
 export type EmbedResult = {
@@ -283,7 +287,7 @@ export type ImageGenerateOptions = {
     prompt: string;
     n?: number;
     size?: string;
-    providerOptions?: Record<string, unknown>;
+    providerOptions?: ImageProviderOptions;
 };
 
 export type ImageGenerateResult = {

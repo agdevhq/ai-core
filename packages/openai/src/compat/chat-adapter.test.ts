@@ -10,7 +10,8 @@ import {
     getStructuredOutputToolName,
     mapGenerateResponse,
 } from './chat-adapter.js';
-import { ProviderError, defineTool, type Message, type ToolSet } from '@core-ai/core-ai';
+import { ProviderError, defineTool, type GenerateOptions, type Message, type ToolSet } from '@core-ai/core-ai';
+import type { OpenAICompatRequestOptions } from '../provider-options.js';
 import type { ChatCompletion } from 'openai/resources/chat/completions/completions';
 
 describe('convertMessages', () => {
@@ -213,10 +214,8 @@ describe('structured output helpers', () => {
             schema,
             schemaName: 'weather_schema',
             schemaDescription: 'Structured weather output',
-            config: {
-                temperature: 0,
-                maxTokens: 128,
-            },
+            temperature: 0,
+            maxTokens: 128,
         });
 
         expect(result.messages).toEqual([
@@ -232,10 +231,8 @@ describe('structured output helpers', () => {
                 description: 'Structured weather output',
             },
         });
-        expect(result.config).toEqual({
-            temperature: 0,
-            maxTokens: 128,
-        });
+        expect(result.temperature).toBe(0);
+        expect(result.maxTokens).toBe(128);
     });
 
     it('should derive default structured output tool name', () => {
@@ -324,7 +321,7 @@ describe('reasoning support', () => {
             createGenerateRequest('gpt-5.1', {
                 messages: [{ role: 'user', content: 'Hi' }],
                 reasoning: { effort: 'medium' },
-                config: { temperature: 0.2 },
+                temperature: 0.2,
             })
         ).toThrowError(ProviderError);
 
@@ -332,7 +329,7 @@ describe('reasoning support', () => {
             createStreamRequest('gpt-5.2', {
                 messages: [{ role: 'user', content: 'Hi' }],
                 reasoning: { effort: 'medium' },
-                config: { topP: 0.9 },
+                topP: 0.9,
             })
         ).toThrowError(ProviderError);
 
@@ -340,9 +337,46 @@ describe('reasoning support', () => {
             createGenerateRequest('o3', {
                 messages: [{ role: 'user', content: 'Hi' }],
                 reasoning: { effort: 'medium' },
-                config: { temperature: 0.2, topP: 0.9 },
+                temperature: 0.2,
+                topP: 0.9,
             })
         ).not.toThrow();
+    });
+
+    it('should accept compat-only provider options in the openai namespace', () => {
+        const compatOptions: OpenAICompatRequestOptions = {
+            stopSequences: ['END'],
+            frequencyPenalty: 0.1,
+            presencePenalty: 0.2,
+            seed: 42,
+        };
+
+        const request = createGenerateRequest('gpt-4o-mini', {
+            messages: [{ role: 'user', content: 'Hi' }],
+            providerOptions: {
+                openai: compatOptions,
+            },
+        });
+
+        expect(request).toMatchObject({
+            stop: ['END'],
+            frequency_penalty: 0.1,
+            presence_penalty: 0.2,
+            seed: 42,
+        });
+    });
+
+    it('should reject invalid compat provider options', () => {
+        const invalidProviderOptions = {
+            openai: { seed: 1.5 },
+        } as unknown as GenerateOptions['providerOptions'];
+
+        expect(() =>
+            createGenerateRequest('gpt-4o-mini', {
+                messages: [{ role: 'user', content: 'Hi' }],
+                providerOptions: invalidProviderOptions,
+            })
+        ).toThrowError(/Expected integer/);
     });
 
     it('should not extract reasoning text from generate responses (Chat Completions API does not expose it)', () => {

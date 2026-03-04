@@ -4,7 +4,7 @@ import type {
     ChatCompletionResponse,
     CompletionEvent,
 } from '@mistralai/mistralai/models/components';
-import { defineTool, type Message, type ToolSet } from '@core-ai/core-ai';
+import { defineTool, type GenerateOptions, type Message, type ToolSet } from '@core-ai/core-ai';
 import {
     createGenerateRequest,
     createStructuredOutputOptions,
@@ -185,9 +185,7 @@ describe('structured output helpers', () => {
             schema,
             schemaName: 'weather_schema',
             schemaDescription: 'Structured weather output',
-            config: {
-                maxTokens: 256,
-            },
+            maxTokens: 256,
         });
 
         expect(result.toolChoice).toEqual({
@@ -269,7 +267,7 @@ describe('reasoning support', () => {
         const request = createGenerateRequest('magistral-medium-latest', {
             messages: [{ role: 'user', content: 'Hi' }],
             reasoning: { effort: 'high' },
-            config: { maxTokens: 256 },
+            maxTokens: 256,
         });
 
         expect(request).toMatchObject({
@@ -277,6 +275,38 @@ describe('reasoning support', () => {
             maxTokens: 256,
             messages: [{ role: 'user', content: 'Hi' }],
         });
+    });
+
+    it('should map namespaced mistral provider options', () => {
+        const request = createGenerateRequest('mistral-large-latest', {
+            messages: [{ role: 'user', content: 'Hi' }],
+            providerOptions: {
+                mistral: {
+                    stopSequences: ['END'],
+                    frequencyPenalty: 0.2,
+                    presencePenalty: 0.1,
+                },
+            },
+        });
+
+        expect(request).toMatchObject({
+            stop: ['END'],
+            frequencyPenalty: 0.2,
+            presencePenalty: 0.1,
+        });
+    });
+
+    it('should reject invalid mistral provider options', () => {
+        const invalidProviderOptions = {
+            mistral: { stopSequences: [42] },
+        } as unknown as GenerateOptions['providerOptions'];
+
+        expect(() =>
+            createGenerateRequest('mistral-large-latest', {
+                messages: [{ role: 'user', content: 'Hi' }],
+                providerOptions: invalidProviderOptions,
+            })
+        ).toThrowError(/Expected string/);
     });
 
     it('should extract reasoning parts from thinking content chunks', () => {

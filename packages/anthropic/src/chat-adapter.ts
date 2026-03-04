@@ -33,6 +33,10 @@ import {
     toAnthropicAdaptiveEffort,
     toAnthropicManualBudget,
 } from './model-capabilities.js';
+import {
+    parseAnthropicGenerateProviderOptions,
+    type AnthropicGenerateProviderOptions,
+} from './provider-options.js';
 
 export type AnthropicReasoningMetadata = {
     signature?: string;
@@ -271,13 +275,18 @@ export function createStructuredOutputOptions<TSchema extends z.ZodType>(
     return {
         messages: options.messages,
         reasoning: options.reasoning,
-        config: options.config,
+        temperature: options.temperature,
+        maxTokens: options.maxTokens,
+        topP: options.topP,
         providerOptions: {
             ...(options.providerOptions ?? {}),
-            output_config: {
-                format: {
-                    type: 'json_schema',
-                    schema,
+            anthropic: {
+                ...(options.providerOptions?.anthropic ?? {}),
+                outputConfig: {
+                    format: {
+                        type: 'json_schema',
+                        schema,
+                    },
                 },
             },
         },
@@ -341,8 +350,16 @@ export function createGenerateRequest(
     defaultMaxTokens: number,
     options: GenerateOptions
 ) {
-    const baseRequest = createRequestBase(modelId, defaultMaxTokens, options);
-    return mergeProviderOptions(baseRequest, options.providerOptions);
+    const anthropicOptions = parseAnthropicGenerateProviderOptions(
+        options.providerOptions
+    );
+    const baseRequest = createRequestBase(
+        modelId,
+        defaultMaxTokens,
+        options,
+        anthropicOptions
+    );
+    return mapAnthropicProviderOptionsToRequest(baseRequest, anthropicOptions);
 }
 
 export function createStreamRequest(
@@ -350,26 +367,35 @@ export function createStreamRequest(
     defaultMaxTokens: number,
     options: GenerateOptions
 ) {
+    const anthropicOptions = parseAnthropicGenerateProviderOptions(
+        options.providerOptions
+    );
     const baseRequest = {
-        ...createRequestBase(modelId, defaultMaxTokens, options),
+        ...createRequestBase(
+            modelId,
+            defaultMaxTokens,
+            options,
+            anthropicOptions
+        ),
         stream: true as const,
     };
-    return mergeProviderOptions(baseRequest, options.providerOptions);
+    return mapAnthropicProviderOptionsToRequest(baseRequest, anthropicOptions);
 }
 
 function createRequestBase(
     modelId: string,
     defaultMaxTokens: number,
-    options: GenerateOptions
+    options: GenerateOptions,
+    anthropicOptions: AnthropicGenerateProviderOptions | undefined
 ) {
-    validateAnthropicReasoningConfig(modelId, options);
+    validateAnthropicReasoningConfig(modelId, options, anthropicOptions);
     const converted = convertMessages(options.messages);
     const reasoningFields = mapReasoningToRequestFields(modelId, options);
 
     return {
         model: modelId,
         messages: converted.messages,
-        max_tokens: options.config?.maxTokens ?? defaultMaxTokens,
+        max_tokens: options.maxTokens ?? defaultMaxTokens,
         ...(converted.system ? { system: converted.system } : {}),
         ...(options.tools && Object.keys(options.tools).length > 0
             ? { tools: convertTools(options.tools) }
@@ -378,31 +404,31 @@ function createRequestBase(
             ? { tool_choice: convertToolChoice(options.toolChoice) }
             : {}),
         ...reasoningFields,
-        ...mapConfigToRequestFields(options.config),
+        ...mapSamplingToRequestFields(options),
     };
 }
 
-function mapConfigToRequestFields(config: GenerateOptions['config']) {
+function mapSamplingToRequestFields(
+    options: Pick<GenerateOptions, 'temperature' | 'topP'>
+) {
     return {
-        ...(config?.temperature !== undefined
-            ? { temperature: config.temperature }
+        ...(options.temperature !== undefined
+            ? { temperature: options.temperature }
             : {}),
-        ...(config?.topP !== undefined ? { top_p: config.topP } : {}),
-        ...(config?.stopSequences
-            ? { stop_sequences: config.stopSequences }
-            : {}),
+        ...(options.topP !== undefined ? { top_p: options.topP } : {}),
     };
 }
 
 function validateAnthropicReasoningConfig(
     modelId: string,
-    options: GenerateOptions
+    options: GenerateOptions,
+    anthropicOptions: AnthropicGenerateProviderOptions | undefined
 ): void {
     if (!options.reasoning) {
         return;
     }
 
-    if (options.config?.temperature !== undefined) {
+    if (options.temperature !== undefined) {
         throw new ProviderError(
             `Anthropic model "${modelId}" does not support temperature when reasoning is enabled`,
             'anthropic'
@@ -410,8 +436,8 @@ function validateAnthropicReasoningConfig(
     }
 
     if (
-        options.config?.topP !== undefined &&
-        (options.config.topP < 0.95 || options.config.topP > 1)
+        options.topP !== undefined &&
+        (options.topP < 0.95 || options.topP > 1)
     ) {
         throw new ProviderError(
             `Anthropic model "${modelId}" requires topP between 0.95 and 1 when reasoning is enabled`,
@@ -426,8 +452,7 @@ function validateAnthropicReasoningConfig(
         );
     }
 
-    const providerOptions = asObject(options.providerOptions);
-    if (providerOptions['top_k'] !== undefined) {
+    if (anthropicOptions?.topK !== undefined) {
         throw new ProviderError(
             `Anthropic model "${modelId}" does not support top_k when reasoning is enabled`,
             'anthropic'
@@ -468,9 +493,9 @@ function mapReasoningToRequestFields(modelId: string, options: GenerateOptions) 
     return baseFields;
 }
 
-function mergeProviderOptions<TRequest extends object>(
+function mapAnthropicProviderOptionsToRequest<TRequest extends object>(
     baseRequest: TRequest,
-    providerOptions: Record<string, unknown> | undefined
+    providerOptions: AnthropicGenerateProviderOptions | undefined
 ): TRequest {
     if (!providerOptions) {
         return baseRequest;
@@ -479,20 +504,24 @@ function mergeProviderOptions<TRequest extends object>(
     const baseOutputConfig = asObject(
         (baseRequest as { output_config?: unknown }).output_config
     );
-    const providerOutputConfig = asObject(providerOptions['output_config']);
     const mergedOutputConfig = {
         ...baseOutputConfig,
-        ...providerOutputConfig,
+        ...(providerOptions.outputConfig ?? {}),
     };
 
     const mergedBetas = [
         ...asStringArray((baseRequest as { betas?: unknown }).betas),
-        ...asStringArray(providerOptions['betas']),
+        ...(providerOptions.betas ?? []),
     ];
 
     const mergedRequest = {
         ...baseRequest,
-        ...(providerOptions as Partial<TRequest>),
+        ...(providerOptions.topK !== undefined
+            ? { top_k: providerOptions.topK }
+            : {}),
+        ...(providerOptions.stopSequences
+            ? { stop_sequences: providerOptions.stopSequences }
+            : {}),
         ...(Object.keys(mergedOutputConfig).length > 0
             ? { output_config: mergedOutputConfig }
             : {}),

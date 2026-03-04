@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Response, ResponseStreamEvent } from 'openai/resources/responses/responses';
-import { ProviderError, type Message } from '@core-ai/core-ai';
+import { ProviderError, type GenerateOptions, type Message } from '@core-ai/core-ai';
 import {
     convertMessages,
     createGenerateRequest,
@@ -215,10 +215,23 @@ describe('createGenerateRequest', () => {
     it('should allow overriding store via providerOptions', () => {
         const request = createGenerateRequest('gpt-5-mini', {
             messages: [{ role: 'user', content: 'Hi' }],
-            providerOptions: { store: true },
+            providerOptions: { openai: { store: true } },
         });
 
         expect(request.store).toBe(true);
+    });
+
+    it('should reject invalid namespaced provider options', () => {
+        const invalidProviderOptions = {
+            openai: { store: 'yes' },
+        } as unknown as GenerateOptions['providerOptions'];
+
+        expect(() =>
+            createGenerateRequest('gpt-5-mini', {
+                messages: [{ role: 'user', content: 'Hi' }],
+                providerOptions: invalidProviderOptions,
+            })
+        ).toThrowError(/Expected boolean/);
     });
 
     it('should include reasoning summary and encrypted reasoning include', () => {
@@ -226,7 +239,9 @@ describe('createGenerateRequest', () => {
             messages: [{ role: 'user', content: 'Hi' }],
             reasoning: { effort: 'high' },
             providerOptions: {
-                include: ['foo.bar'],
+                openai: {
+                    include: ['foo.bar'],
+                },
             },
         });
 
@@ -932,7 +947,7 @@ describe('validateOpenAIReasoningConfig', () => {
             validateOpenAIReasoningConfig('gpt-5.2', {
                 messages: [{ role: 'user', content: 'Hi' }],
                 reasoning: { effort: 'medium' },
-                config: { temperature: 0.2 },
+                temperature: 0.2,
             })
         ).toThrowError(ProviderError);
 
@@ -940,7 +955,7 @@ describe('validateOpenAIReasoningConfig', () => {
             validateOpenAIReasoningConfig('gpt-5.1', {
                 messages: [{ role: 'user', content: 'Hi' }],
                 reasoning: { effort: 'medium' },
-                config: { topP: 0.9 },
+                topP: 0.9,
             })
         ).toThrowError(ProviderError);
     });
