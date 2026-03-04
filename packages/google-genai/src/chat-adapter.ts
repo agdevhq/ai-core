@@ -29,7 +29,7 @@ import { getProviderMetadata } from '@core-ai/core-ai';
 import { getGoogleModelCapabilities, toGoogleThinkingBudget, toGoogleThinkingLevel } from './model-capabilities.js';
 import { asObject } from './object-utils.js';
 
-type GoogleReasoningMetadata = {
+export type GoogleReasoningMetadata = {
     thoughtSignature?: string;
 };
 

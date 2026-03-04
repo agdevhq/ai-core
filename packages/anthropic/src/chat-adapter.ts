@@ -34,7 +34,7 @@ import {
     toAnthropicManualBudget,
 } from './model-capabilities.js';
 
-type AnthropicReasoningMetadata = {
+export type AnthropicReasoningMetadata = {
     signature?: string;
     redactedData?: string;
 };

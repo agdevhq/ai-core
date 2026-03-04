@@ -41,7 +41,7 @@ import {
 export { createStructuredOutputOptions, getStructuredOutputToolName };
 export { validateOpenAIReasoningConfig };
 
-type OpenAIReasoningMetadata = {
+export type OpenAIReasoningMetadata = {
     encryptedContent?: string;
 };
 
