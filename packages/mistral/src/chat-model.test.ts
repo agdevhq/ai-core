@@ -476,6 +476,64 @@ describe('stream', () => {
         });
     });
 
+    it('should pass the caller abort signal to streaming requests', async () => {
+        const stream = vi.fn(async (_request: unknown, requestOptions?: unknown) => {
+            const typedRequestOptions = requestOptions as
+                | { signal?: AbortSignal }
+                | undefined;
+            return {
+                [Symbol.asyncIterator]() {
+                    return {
+                        async next() {
+                            await new Promise<never>((_resolve, reject) => {
+                                typedRequestOptions?.signal?.addEventListener(
+                                    'abort',
+                                    () => {
+                                        reject(new Error('aborted'));
+                                    },
+                                    { once: true }
+                                );
+                            });
+                            return {
+                                done: true,
+                                value: undefined,
+                            };
+                        },
+                    };
+                },
+            } as AsyncIterable<CompletionEvent>;
+        });
+        const model = createMistralChatModel(
+            createMockClient({ stream }),
+            'mistral-large-latest'
+        );
+        const controller = new AbortController();
+
+        const chatStream = await model.stream({
+            messages: [{ role: 'user', content: 'hello' }],
+            signal: controller.signal,
+        });
+
+        expect(stream).toHaveBeenCalledWith(
+            expect.objectContaining({
+                stream: true,
+            }),
+            expect.objectContaining({
+                signal: expect.any(AbortSignal),
+            })
+        );
+
+        const requestOptions = (stream.mock.calls as unknown[][])[0]?.[1] as
+            | { signal?: AbortSignal }
+            | undefined;
+        expect(requestOptions?.signal?.aborted).toBe(false);
+
+        controller.abort();
+
+        await expect(chatStream.result).rejects.toBeInstanceOf(Error);
+        expect(requestOptions?.signal?.aborted).toBe(true);
+    });
+
     it('should emit tool call events in stream', async () => {
         const stream = vi.fn(async () => {
             return toAsyncIterable<CompletionEvent>([

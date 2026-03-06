@@ -2,4 +2,4 @@
 '@core-ai/core-ai': minor
 ---
 
-Redesign chat and object streaming around replayable stream handles with `result`, `events`, and `abort()`, and rename the handle types to `ChatStream` and `ObjectStream`.
+Redesign chat and object streaming around replayable stream handles with `result` and `events`, rename the handle types to `ChatStream` and `ObjectStream`, and use caller-provided `AbortSignal`s for cancellation.

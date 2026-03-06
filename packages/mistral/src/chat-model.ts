@@ -68,7 +68,11 @@ export function createMistralChatModel(
             ...options,
         });
         const stream = (await callMistralChatApi(() =>
-            client.chat.stream(request)
+            options.signal
+                ? client.chat.stream(request, {
+                      signal: options.signal,
+                  })
+                : client.chat.stream(request)
         )) as unknown as AsyncIterable<CompletionEvent>;
         return createChatStream(transformStream(stream), {
             signal: options.signal,
