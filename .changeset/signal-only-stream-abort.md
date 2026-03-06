@@ -1,3 +1,4 @@
+---
 '@core-ai/core-ai': minor
 '@core-ai/openai': minor
 '@core-ai/anthropic': minor
