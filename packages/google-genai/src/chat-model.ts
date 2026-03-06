@@ -15,8 +15,8 @@ import {
     StructuredOutputNoObjectGeneratedError,
     StructuredOutputParseError,
     StructuredOutputValidationError,
-    createObjectStreamResult,
-    createStreamResult,
+    createObjectStream,
+    createChatStream,
 } from '@core-ai/core-ai';
 import {
     createStructuredOutputOptions,
@@ -74,7 +74,7 @@ export function createGoogleGenAIChatModel(
             signal,
         });
         const stream = await callGenerateContentStreamApi(request);
-        return createStreamResult(transformStream(stream), {
+        return createChatStream(transformStream(stream), {
             abort: () => controller.abort(),
             abortSignal: signal,
         });
@@ -111,7 +111,7 @@ export function createGoogleGenAIChatModel(
             const stream = await streamChat(structuredOptions);
             const toolName = getStructuredOutputToolName(options);
 
-            return createObjectStreamResult(
+            return createObjectStream(
                 transformStructuredOutputStream(
                     stream,
                     options.schema,

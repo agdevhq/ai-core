@@ -4,9 +4,9 @@ import type {
     StreamEvent,
     ChatStream,
 } from './types.ts';
-import { createSingleUseStreamResult } from './single-use-stream.ts';
+import { createStream } from './base-stream.ts';
 
-export function createStreamResult(
+export function createChatStream(
     source: AsyncIterable<StreamEvent>,
     options: {
         abort?: () => void;
@@ -61,7 +61,7 @@ export function createStreamResult(
         reasoningProviderMetadata = undefined;
     };
 
-    return createSingleUseStreamResult({
+    return createStream({
         source,
         abort,
         abortSignal,

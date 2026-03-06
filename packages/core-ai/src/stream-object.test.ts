@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { toAsyncIterable } from '@core-ai/testing';
 import { LLMError, StreamAbortedError } from './errors.ts';
-import { createObjectStreamResult, streamObject } from './stream-object.ts';
+import { createObjectStream, streamObject } from './stream-object.ts';
 import type {
     ChatModel,
     ObjectStreamEvent,
@@ -37,7 +37,7 @@ function createMockObjectStream(): ObjectStream<
         },
     ];
 
-    const iterable = createObjectStreamResult(toAsyncIterable(events));
+    const iterable = createObjectStream(toAsyncIterable(events));
     return iterable;
 }
 
@@ -163,7 +163,7 @@ describe('streamObject', () => {
     });
 });
 
-describe('createObjectStreamResult', () => {
+describe('createObjectStream', () => {
     it('should aggregate the latest object via result', async () => {
         const events: ObjectStreamEvent<typeof weatherSchema>[] = [
             { type: 'object-delta', text: '{"city":"Berlin"' },
@@ -186,7 +186,7 @@ describe('createObjectStreamResult', () => {
             },
         ];
 
-        const objectStream = createObjectStreamResult(toAsyncIterable(events));
+        const objectStream = createObjectStream(toAsyncIterable(events));
         const response = await objectStream.result;
 
         expect(response.object).toEqual({
@@ -214,7 +214,7 @@ describe('createObjectStreamResult', () => {
             },
         ];
 
-        const objectStream = createObjectStreamResult(toAsyncIterable(events));
+        const objectStream = createObjectStream(toAsyncIterable(events));
 
         await expect(objectStream.result).rejects.toBeInstanceOf(LLMError);
         await expect(objectStream.events).resolves.toEqual(events);
@@ -240,7 +240,7 @@ describe('createObjectStreamResult', () => {
                 },
             },
         ];
-        const objectStream = createObjectStreamResult(toAsyncIterable(events));
+        const objectStream = createObjectStream(toAsyncIterable(events));
         const firstPass: ObjectStreamEvent<typeof weatherSchema>[] = [];
         const secondPass: ObjectStreamEvent<typeof weatherSchema>[] = [];
 
@@ -260,7 +260,7 @@ describe('createObjectStreamResult', () => {
         const source = createPushableAsyncIterable<
             ObjectStreamEvent<typeof weatherSchema>
         >();
-        const objectStream = createObjectStreamResult(
+        const objectStream = createObjectStream(
             source.iterable,
             { abort }
         );

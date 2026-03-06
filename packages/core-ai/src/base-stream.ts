@@ -1,12 +1,12 @@
 import { StreamAbortedError } from './errors.ts';
 
-type ReplayableStreamResult<TEvent, TResult> = AsyncIterable<TEvent> & {
+type BaseStream<TEvent, TResult> = AsyncIterable<TEvent> & {
     readonly result: Promise<TResult>;
     readonly events: Promise<readonly TEvent[]>;
     abort(): void;
 };
 
-export type CreateReplayableStreamResultOptions<TEvent, TResult> = {
+export type CreateStreamOptions<TEvent, TResult> = {
     source: AsyncIterable<TEvent>;
     reduceEvent(event: TEvent): void;
     finalizeResult(): TResult;
@@ -20,9 +20,9 @@ type TerminalState<TResult> =
     | { status: 'completed'; result: TResult }
     | { status: 'rejected'; error: unknown };
 
-export function createSingleUseStreamResult<TEvent, TResult>(
-    options: CreateReplayableStreamResultOptions<TEvent, TResult>
-): ReplayableStreamResult<TEvent, TResult> {
+export function createStream<TEvent, TResult>(
+    options: CreateStreamOptions<TEvent, TResult>
+): BaseStream<TEvent, TResult> {
     const {
         source,
         reduceEvent,

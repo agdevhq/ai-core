@@ -16,8 +16,8 @@ import {
     StructuredOutputNoObjectGeneratedError,
     StructuredOutputParseError,
     StructuredOutputValidationError,
-    createObjectStreamResult,
-    createStreamResult,
+    createObjectStream,
+    createChatStream,
 } from '@core-ai/core-ai';
 import {
     createStructuredOutputOptions,
@@ -70,7 +70,7 @@ export function createMistralChatModel(
         const stream = (await callMistralChatApi(() =>
             client.chat.stream(request)
         )) as unknown as AsyncIterable<CompletionEvent>;
-        return createStreamResult(transformStream(stream), {
+        return createChatStream(transformStream(stream), {
             abort: () => controller.abort(),
             abortSignal: signal,
         });
@@ -107,7 +107,7 @@ export function createMistralChatModel(
             const stream = await streamChat(structuredOptions);
             const toolName = getStructuredOutputToolName(options);
 
-            return createObjectStreamResult(
+            return createObjectStream(
                 transformStructuredOutputStream(
                     stream,
                     options.schema,

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { toAsyncIterable } from '@core-ai/testing';
 import { StreamAbortedError } from './errors.ts';
-import { createStreamResult } from './stream.ts';
+import { createChatStream } from './stream.ts';
 import type { StreamEvent } from './types.ts';
 
 type PushableEntry<T> =
@@ -69,7 +69,7 @@ function createPushableAsyncIterable<T>(): {
     };
 }
 
-describe('createStreamResult', () => {
+describe('createChatStream', () => {
     it('should iterate over all events', async () => {
         const events: StreamEvent[] = [
             { type: 'text-delta', text: 'Hello' },
@@ -88,7 +88,7 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const chatStream = createStreamResult(toAsyncIterable(events));
+        const chatStream = createChatStream(toAsyncIterable(events));
         const collected: StreamEvent[] = [];
 
         for await (const event of chatStream) {
@@ -119,7 +119,7 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const chatStream = createStreamResult(toAsyncIterable(events));
+        const chatStream = createChatStream(toAsyncIterable(events));
         const response = await chatStream.result;
 
         expect(response.content).toBe('Hello world');
@@ -181,7 +181,7 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const chatStream = createStreamResult(toAsyncIterable(events));
+        const chatStream = createChatStream(toAsyncIterable(events));
         const response = await chatStream.result;
 
         expect(response.parts).toEqual([
@@ -226,7 +226,7 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const chatStream = createStreamResult(toAsyncIterable(events));
+        const chatStream = createChatStream(toAsyncIterable(events));
         const response = await chatStream.result;
 
         expect(response.parts).toEqual([
@@ -255,7 +255,7 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const chatStream = createStreamResult(toAsyncIterable(events));
+        const chatStream = createChatStream(toAsyncIterable(events));
         const response = await chatStream.result;
 
         expect(response.content).toBe('auto');
@@ -279,7 +279,7 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const chatStream = createStreamResult(toAsyncIterable(events));
+        const chatStream = createChatStream(toAsyncIterable(events));
         const firstPass: StreamEvent[] = [];
         const secondPass: StreamEvent[] = [];
 
@@ -296,7 +296,7 @@ describe('createStreamResult', () => {
 
     it('should replay buffered events for late iterators and continue live', async () => {
         const source = createPushableAsyncIterable<StreamEvent>();
-        const chatStream = createStreamResult(source.iterable);
+        const chatStream = createChatStream(source.iterable);
         const finishEvent: StreamEvent = {
             type: 'finish',
             finishReason: 'stop',
@@ -359,14 +359,14 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const chatStream = createStreamResult(toAsyncIterable(events));
+        const chatStream = createChatStream(toAsyncIterable(events));
 
         await expect(chatStream.events).resolves.toEqual(events);
     });
 
     it('should resolve events and reject result on upstream failure', async () => {
         const source = createPushableAsyncIterable<StreamEvent>();
-        const chatStream = createStreamResult(source.iterable);
+        const chatStream = createChatStream(source.iterable);
         const failure = new Error('stream failed');
 
         source.push({ type: 'text-delta', text: 'partial' });
@@ -380,7 +380,7 @@ describe('createStreamResult', () => {
 
     it('should reject active iterators on upstream failure', async () => {
         const source = createPushableAsyncIterable<StreamEvent>();
-        const chatStream = createStreamResult(source.iterable);
+        const chatStream = createChatStream(source.iterable);
         const iterator = chatStream[Symbol.asyncIterator]();
         const failure = new Error('boom');
 
@@ -400,7 +400,7 @@ describe('createStreamResult', () => {
     it('should reject result and iterators with StreamAbortedError on abort', async () => {
         const source = createPushableAsyncIterable<StreamEvent>();
         const abort = vi.fn();
-        const chatStream = createStreamResult(source.iterable, { abort });
+        const chatStream = createChatStream(source.iterable, { abort });
         const iterator = chatStream[Symbol.asyncIterator]();
 
         source.push({ type: 'text-delta', text: 'partial' });

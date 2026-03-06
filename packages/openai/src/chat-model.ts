@@ -21,8 +21,8 @@ import {
     StructuredOutputNoObjectGeneratedError,
     StructuredOutputParseError,
     StructuredOutputValidationError,
-    createObjectStreamResult,
-    createStreamResult,
+    createObjectStream,
+    createChatStream,
 } from '@core-ai/core-ai';
 import {
     createStructuredOutputOptions,
@@ -84,7 +84,7 @@ export function createOpenAIChatModel(
                 request,
                 signal
             );
-        return createStreamResult(transformStream(stream), {
+        return createChatStream(transformStream(stream), {
             abort: () => controller.abort(),
             abortSignal: signal,
         });
@@ -121,7 +121,7 @@ export function createOpenAIChatModel(
             const stream = await streamChat(structuredOptions);
             const toolName = getStructuredOutputToolName(options);
 
-            return createObjectStreamResult(
+            return createObjectStream(
                 transformStructuredOutputStream(
                     stream,
                     options.schema,

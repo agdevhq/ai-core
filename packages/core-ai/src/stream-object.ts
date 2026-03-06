@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 import { assertNonEmptyMessages } from './assertions.ts';
 import { LLMError } from './errors.ts';
-import { createSingleUseStreamResult } from './single-use-stream.ts';
+import { createStream } from './base-stream.ts';
 import type {
     ChatModel,
     GenerateObjectResult,
@@ -24,7 +24,7 @@ export async function streamObject<TSchema extends z.ZodType>(
     return model.streamObject(options);
 }
 
-export function createObjectStreamResult<TSchema extends z.ZodType>(
+export function createObjectStream<TSchema extends z.ZodType>(
     source: AsyncIterable<ObjectStreamEvent<TSchema>>,
     options: {
         abort?: () => void;
@@ -43,7 +43,7 @@ export function createObjectStreamResult<TSchema extends z.ZodType>(
         outputTokenDetails: {},
     };
 
-    return createSingleUseStreamResult({
+    return createStream({
         source,
         abort,
         reduceEvent(event) {

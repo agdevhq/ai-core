@@ -16,8 +16,8 @@ import {
     StructuredOutputNoObjectGeneratedError,
     StructuredOutputParseError,
     StructuredOutputValidationError,
-    createObjectStreamResult,
-    createStreamResult,
+    createObjectStream,
+    createChatStream,
 } from '@core-ai/core-ai';
 import {
     createStructuredOutputOptions,
@@ -74,7 +74,7 @@ export function createAnthropicChatModel(
             await callAnthropicMessagesApi<
                 AsyncIterable<RawMessageStreamEvent>
             >(request);
-        return createStreamResult(transformStream(stream), {
+        return createChatStream(transformStream(stream), {
             abort: () => controller.abort(),
             abortSignal: signal,
         });
@@ -108,7 +108,7 @@ export function createAnthropicChatModel(
             const structuredOptions = createStructuredOutputOptions(options);
             const stream = await streamChat(structuredOptions);
 
-            return createObjectStreamResult(
+            return createObjectStream(
                 transformStructuredOutputStream(
                     stream,
                     options.schema,
