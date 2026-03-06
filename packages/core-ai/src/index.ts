@@ -33,9 +33,9 @@ export type {
     ChatInputTokenDetails,
     ChatOutputTokenDetails,
     StreamEvent,
-    StreamResult,
+    ChatStream,
     ObjectStreamEvent,
-    StreamObjectResult,
+    ObjectStream,
     EmbeddingModel,
     EmbedOptions,
     EmbedResult,
@@ -47,6 +47,7 @@ export type {
 } from './types.ts';
 export {
     LLMError,
+    StreamAbortedError,
     ProviderError,
     StructuredOutputError,
     StructuredOutputNoObjectGeneratedError,

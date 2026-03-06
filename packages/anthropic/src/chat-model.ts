@@ -9,8 +9,8 @@ import type {
     GenerateResult,
     ObjectStreamEvent,
     StreamObjectOptions,
-    StreamObjectResult,
-    StreamResult,
+    ObjectStream,
+    ChatStream,
 } from '@core-ai/core-ai';
 import {
     StructuredOutputNoObjectGeneratedError,
@@ -62,13 +62,22 @@ export function createAnthropicChatModel(
         return mapGenerateResponse(response);
     }
 
-    async function streamChat(options: GenerateOptions): Promise<StreamResult> {
-        const request = createStreamRequest(modelId, defaultMaxTokens, options);
+    async function streamChat(options: GenerateOptions): Promise<ChatStream> {
+        const { controller, signal } = createStreamAbortController(
+            options.signal
+        );
+        const request = createStreamRequest(modelId, defaultMaxTokens, {
+            ...options,
+            signal,
+        });
         const stream =
             await callAnthropicMessagesApi<
                 AsyncIterable<RawMessageStreamEvent>
             >(request);
-        return createStreamResult(transformStream(stream));
+        return createStreamResult(transformStream(stream), {
+            abort: () => controller.abort(),
+            abortSignal: signal,
+        });
     }
 
     return {
@@ -95,7 +104,7 @@ export function createAnthropicChatModel(
         },
         async streamObject<TSchema extends z.ZodType>(
             options: StreamObjectOptions<TSchema>
-        ): Promise<StreamObjectResult<TSchema>> {
+        ): Promise<ObjectStream<TSchema>> {
             const structuredOptions = createStructuredOutputOptions(options);
             const stream = await streamChat(structuredOptions);
 
@@ -104,9 +113,25 @@ export function createAnthropicChatModel(
                     stream,
                     options.schema,
                     provider
-                )
+                ),
+                {
+                    abort: () => stream.abort(),
+                }
             );
         },
+    };
+}
+
+function createStreamAbortController(signal?: AbortSignal): {
+    controller: AbortController;
+    signal: AbortSignal;
+} {
+    const controller = new AbortController();
+    return {
+        controller,
+        signal: signal
+            ? AbortSignal.any([signal, controller.signal])
+            : controller.signal,
     };
 }
 
@@ -125,7 +150,7 @@ function extractStructuredObject<TSchema extends z.ZodType>(
 }
 
 async function* transformStructuredOutputStream<TSchema extends z.ZodType>(
-    stream: StreamResult,
+    stream: ChatStream,
     schema: TSchema,
     provider: string
 ): AsyncIterable<ObjectStreamEvent<TSchema>> {

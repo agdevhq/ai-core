@@ -9,8 +9,8 @@ import type {
     GenerateResult,
     ObjectStreamEvent,
     StreamObjectOptions,
-    StreamObjectResult,
-    StreamResult,
+    ObjectStream,
+    ChatStream,
 } from '@core-ai/core-ai';
 import {
     StructuredOutputNoObjectGeneratedError,
@@ -59,12 +59,21 @@ export function createMistralChatModel(
         return mapGenerateResponse(response);
     }
 
-    async function streamChat(options: GenerateOptions): Promise<StreamResult> {
-        const request = createStreamRequest(modelId, options);
+    async function streamChat(options: GenerateOptions): Promise<ChatStream> {
+        const { controller, signal } = createStreamAbortController(
+            options.signal
+        );
+        const request = createStreamRequest(modelId, {
+            ...options,
+            signal,
+        });
         const stream = (await callMistralChatApi(() =>
             client.chat.stream(request)
         )) as unknown as AsyncIterable<CompletionEvent>;
-        return createStreamResult(transformStream(stream));
+        return createStreamResult(transformStream(stream), {
+            abort: () => controller.abort(),
+            abortSignal: signal,
+        });
     }
 
     return {
@@ -93,7 +102,7 @@ export function createMistralChatModel(
         },
         async streamObject<TSchema extends z.ZodType>(
             options: StreamObjectOptions<TSchema>
-        ): Promise<StreamObjectResult<TSchema>> {
+        ): Promise<ObjectStream<TSchema>> {
             const structuredOptions = createStructuredOutputOptions(options);
             const stream = await streamChat(structuredOptions);
             const toolName = getStructuredOutputToolName(options);
@@ -104,9 +113,25 @@ export function createMistralChatModel(
                     options.schema,
                     provider,
                     toolName
-                )
+                ),
+                {
+                    abort: () => stream.abort(),
+                }
             );
         },
+    };
+}
+
+function createStreamAbortController(signal?: AbortSignal): {
+    controller: AbortController;
+    signal: AbortSignal;
+} {
+    const controller = new AbortController();
+    return {
+        controller,
+        signal: signal
+            ? AbortSignal.any([signal, controller.signal])
+            : controller.signal,
     };
 }
 
@@ -139,7 +164,7 @@ function extractStructuredObject<TSchema extends z.ZodType>(
 }
 
 async function* transformStructuredOutputStream<TSchema extends z.ZodType>(
-    stream: StreamResult,
+    stream: ChatStream,
     schema: TSchema,
     provider: string,
     toolName: string

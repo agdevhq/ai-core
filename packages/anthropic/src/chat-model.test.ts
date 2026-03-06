@@ -368,19 +368,19 @@ describe('stream', () => {
             4096
         );
 
-        const streamResult = await model.stream({
+        const chatStream = await model.stream({
             messages: [{ role: 'user', content: 'hello' }],
         });
 
         const chunks: string[] = [];
-        for await (const event of streamResult) {
+        for await (const event of chatStream) {
             if (event.type === 'text-delta') {
                 chunks.push(event.text);
             }
         }
 
         expect(chunks.join('')).toBe('Hello world');
-        const response = await streamResult.toResponse();
+        const response = await chatStream.result;
         expect(response.content).toBe('Hello world');
         expect(response.finishReason).toBe('stop');
         expect(response.usage).toEqual({
@@ -453,15 +453,15 @@ describe('stream', () => {
             4096
         );
 
-        const streamResult = await model.stream({
+        const chatStream = await model.stream({
             messages: [{ role: 'user', content: 'hello' }],
         });
 
-        for await (const _event of streamResult) {
+        for await (const _event of chatStream) {
             // Consume stream.
         }
 
-        const response = await streamResult.toResponse();
+        const response = await chatStream.result;
         expect(response.usage).toEqual({
             inputTokens: 70,
             outputTokens: 2,
@@ -546,21 +546,21 @@ describe('stream', () => {
             temperatureC: z.number(),
         });
 
-        const streamResult = await model.streamObject({
+        const objectStream = await model.streamObject({
             messages: [{ role: 'user', content: 'Return weather JSON' }],
             schema,
             schemaName: 'weather_schema',
         });
 
         const objects: Array<{ city: string; temperatureC: number }> = [];
-        for await (const event of streamResult) {
+        for await (const event of objectStream) {
             if (event.type === 'object') {
                 objects.push(event.object);
             }
         }
 
         expect(objects).toEqual([{ city: 'Berlin', temperatureC: 21 }]);
-        const response = await streamResult.toResponse();
+        const response = await objectStream.result;
         expect(response.object).toEqual({
             city: 'Berlin',
             temperatureC: 21,
@@ -628,13 +628,13 @@ describe('stream', () => {
             4096
         );
 
-        const streamResult = await model.stream({
+        const chatStream = await model.stream({
             messages: [{ role: 'user', content: 'Reason through this' }],
             reasoning: { effort: 'medium' },
         });
 
         const eventTypes: string[] = [];
-        for await (const event of streamResult) {
+        for await (const event of chatStream) {
             eventTypes.push(event.type);
         }
 
@@ -642,7 +642,7 @@ describe('stream', () => {
         expect(eventTypes).toContain('reasoning-delta');
         expect(eventTypes).toContain('reasoning-end');
 
-        const response = await streamResult.toResponse();
+        const response = await chatStream.result;
         expect(response.reasoning).toBe('reasoning text ');
     });
 });

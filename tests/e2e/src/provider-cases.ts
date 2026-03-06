@@ -70,7 +70,7 @@ export const providerCases: ProviderContractCase[] = [
         requiredCapability: 'stream',
         run: async ({ adapter }) => {
             const model = adapter.createChatModel();
-            const result = await stream({
+            const chatStream = await stream({
                 model,
                 messages: [
                     {
@@ -83,16 +83,18 @@ export const providerCases: ProviderContractCase[] = [
 
             let sawContentDelta = false;
             let streamedText = '';
-            for await (const event of result) {
+            for await (const event of chatStream) {
                 if (event.type === 'text-delta') {
                     sawContentDelta = true;
                     streamedText += event.text;
                 }
             }
 
-            const response = await result.toResponse();
+            const response = await chatStream.result;
+            const events = await chatStream.events;
             expect(sawContentDelta).toBe(true);
             expect(streamedText.trim().length).toBeGreaterThan(0);
+            expect(events.length).toBeGreaterThan(0);
             expect(response.content).toBeTypeOf('string');
             expect(response.content?.trim().length ?? 0).toBeGreaterThan(0);
             assertChatUsage(response.usage);
@@ -143,7 +145,7 @@ export const providerCases: ProviderContractCase[] = [
                 );
             }
 
-            const result = await stream({
+            const chatStream = await stream({
                 model,
                 messages: [
                     {
@@ -157,7 +159,7 @@ export const providerCases: ProviderContractCase[] = [
 
             let sawTextDelta = false;
             let sawReasoningDelta = false;
-            for await (const event of result) {
+            for await (const event of chatStream) {
                 if (event.type === 'text-delta') {
                     sawTextDelta = true;
                 }
@@ -166,8 +168,10 @@ export const providerCases: ProviderContractCase[] = [
                 }
             }
 
-            const response = await result.toResponse();
+            const response = await chatStream.result;
+            const events = await chatStream.events;
             expect(sawTextDelta).toBe(true);
+            expect(events.length).toBeGreaterThan(0);
             expect(
                 sawReasoningDelta ||
                     response.parts.some((part) => part.type === 'reasoning') ||

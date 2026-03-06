@@ -7,7 +7,7 @@ import type {
     GenerateObjectResult,
     ObjectStreamEvent,
     StreamObjectOptions,
-    StreamObjectResult,
+    ObjectStream,
 } from './types.ts';
 
 export type StreamObjectParams<TSchema extends z.ZodType> =
@@ -17,7 +17,7 @@ export type StreamObjectParams<TSchema extends z.ZodType> =
 
 export async function streamObject<TSchema extends z.ZodType>(
     params: StreamObjectParams<TSchema>
-): Promise<StreamObjectResult<TSchema>> {
+): Promise<ObjectStream<TSchema>> {
     assertNonEmptyMessages(params.messages);
 
     const { model, ...options } = params;
@@ -25,68 +25,47 @@ export async function streamObject<TSchema extends z.ZodType>(
 }
 
 export function createObjectStreamResult<TSchema extends z.ZodType>(
-    source: AsyncIterable<ObjectStreamEvent<TSchema>>
-): StreamObjectResult<TSchema> {
-    let resolveResponse:
-        | ((result: GenerateObjectResult<TSchema>) => void)
-        | undefined;
-    let rejectResponse: ((error: unknown) => void) | undefined;
-    const responsePromise = new Promise<GenerateObjectResult<TSchema>>(
-        (resolve, reject) => {
-            resolveResponse = resolve;
-            rejectResponse = reject;
-        }
-    );
+    source: AsyncIterable<ObjectStreamEvent<TSchema>>,
+    options: {
+        abort?: () => void;
+    } = {}
+): ObjectStream<TSchema> {
+    const { abort } = options;
+    let objectResult: z.infer<TSchema> | undefined;
+    let finishReason: GenerateObjectResult<TSchema>['finishReason'] = 'unknown';
+    let usage: GenerateObjectResult<TSchema>['usage'] = {
+        inputTokens: 0,
+        outputTokens: 0,
+        inputTokenDetails: {
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+        },
+        outputTokenDetails: {},
+    };
 
-    async function* iterate(): AsyncGenerator<ObjectStreamEvent<TSchema>> {
-        let objectResult: z.infer<TSchema> | undefined;
-        let finishReason: GenerateObjectResult<TSchema>['finishReason'] =
-            'unknown';
-        let usage: GenerateObjectResult<TSchema>['usage'] = {
-            inputTokens: 0,
-            outputTokens: 0,
-            inputTokenDetails: {
-                cacheReadTokens: 0,
-                cacheWriteTokens: 0,
-            },
-            outputTokenDetails: {},
-        };
-
-        try {
-            for await (const event of source) {
-                if (event.type === 'object') {
-                    objectResult = event.object;
-                } else if (event.type === 'finish') {
-                    finishReason = event.finishReason;
-                    usage = event.usage;
-                }
-
-                yield event;
+    return createSingleUseStreamResult({
+        source,
+        abort,
+        reduceEvent(event) {
+            if (event.type === 'object') {
+                objectResult = event.object;
+            } else if (event.type === 'finish') {
+                finishReason = event.finishReason;
+                usage = event.usage;
             }
-
+        },
+        finalizeResult() {
             if (objectResult === undefined) {
                 throw new LLMError(
                     'object stream completed without emitting a final object'
                 );
             }
 
-            resolveResponse?.({
+            return {
                 object: objectResult,
                 finishReason,
                 usage,
-            });
-        } catch (error) {
-            rejectResponse?.(error);
-            throw error;
-        }
-    }
-
-    const generator = iterate();
-    return createSingleUseStreamResult({
-        generator,
-        responsePromise,
-        onAutoConsumeError: () => {
-            // The rejection is handled by rejectResponse.
+            };
         },
     });
 }

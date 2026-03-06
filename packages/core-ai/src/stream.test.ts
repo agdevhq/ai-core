@@ -1,7 +1,73 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { toAsyncIterable } from '@core-ai/testing';
+import { StreamAbortedError } from './errors.ts';
 import { createStreamResult } from './stream.ts';
 import type { StreamEvent } from './types.ts';
+
+type PushableEntry<T> =
+    | { type: 'value'; value: T }
+    | { type: 'finish' }
+    | { type: 'error'; error: unknown };
+
+function createPushableAsyncIterable<T>(): {
+    iterable: AsyncIterable<T>;
+    push(value: T): void;
+    finish(): void;
+    fail(error: unknown): void;
+} {
+    const queue: PushableEntry<T>[] = [];
+    let resolveNext: ((entry: PushableEntry<T>) => void) | undefined;
+
+    function enqueue(entry: PushableEntry<T>): void {
+        if (resolveNext) {
+            const resolve = resolveNext;
+            resolveNext = undefined;
+            resolve(entry);
+            return;
+        }
+        queue.push(entry);
+    }
+
+    return {
+        iterable: {
+            async *[Symbol.asyncIterator]() {
+                while (true) {
+                    const entry =
+                        queue.shift() ??
+                        (await new Promise<PushableEntry<T>>((resolve) => {
+                            resolveNext = resolve;
+                        }));
+
+                    if (entry.type === 'value') {
+                        yield entry.value;
+                        continue;
+                    }
+
+                    if (entry.type === 'finish') {
+                        return;
+                    }
+
+                    throw entry.error;
+                }
+            },
+        },
+        push(value) {
+            enqueue({
+                type: 'value',
+                value,
+            });
+        },
+        finish() {
+            enqueue({ type: 'finish' });
+        },
+        fail(error) {
+            enqueue({
+                type: 'error',
+                error,
+            });
+        },
+    };
+}
 
 describe('createStreamResult', () => {
     it('should iterate over all events', async () => {
@@ -22,17 +88,17 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const result = createStreamResult(toAsyncIterable(events));
+        const chatStream = createStreamResult(toAsyncIterable(events));
         const collected: StreamEvent[] = [];
 
-        for await (const event of result) {
+        for await (const event of chatStream) {
             collected.push(event);
         }
 
         expect(collected).toEqual(events);
     });
 
-    it('should aggregate content via toResponse()', async () => {
+    it('should aggregate content via result', async () => {
         const events: StreamEvent[] = [
             { type: 'reasoning-start' },
             { type: 'reasoning-delta', text: 'Thinking...' },
@@ -53,8 +119,8 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const result = createStreamResult(toAsyncIterable(events));
-        const response = await result.toResponse();
+        const chatStream = createStreamResult(toAsyncIterable(events));
+        const response = await chatStream.result;
 
         expect(response.content).toBe('Hello world');
         expect(response.reasoning).toBe('Thinking...');
@@ -115,8 +181,8 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const result = createStreamResult(toAsyncIterable(events));
-        const response = await result.toResponse();
+        const chatStream = createStreamResult(toAsyncIterable(events));
+        const response = await chatStream.result;
 
         expect(response.parts).toEqual([
             {
@@ -160,8 +226,8 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const result = createStreamResult(toAsyncIterable(events));
-        const response = await result.toResponse();
+        const chatStream = createStreamResult(toAsyncIterable(events));
+        const response = await chatStream.result;
 
         expect(response.parts).toEqual([
             {
@@ -172,7 +238,7 @@ describe('createStreamResult', () => {
         ]);
     });
 
-    it('should auto-consume stream when toResponse called without iteration', async () => {
+    it('should resolve result without iteration', async () => {
         const events: StreamEvent[] = [
             { type: 'text-delta', text: 'auto' },
             {
@@ -189,10 +255,182 @@ describe('createStreamResult', () => {
                 },
             },
         ];
-        const result = createStreamResult(toAsyncIterable(events));
-        const response = await result.toResponse();
+        const chatStream = createStreamResult(toAsyncIterable(events));
+        const response = await chatStream.result;
 
         expect(response.content).toBe('auto');
         expect(response.reasoning).toBeNull();
+    });
+
+    it('should replay all events after completion', async () => {
+        const events: StreamEvent[] = [
+            { type: 'text-delta', text: 'Hello' },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 1,
+                    outputTokens: 1,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ];
+        const chatStream = createStreamResult(toAsyncIterable(events));
+        const firstPass: StreamEvent[] = [];
+        const secondPass: StreamEvent[] = [];
+
+        for await (const event of chatStream) {
+            firstPass.push(event);
+        }
+        for await (const event of chatStream) {
+            secondPass.push(event);
+        }
+
+        expect(firstPass).toEqual(events);
+        expect(secondPass).toEqual(events);
+    });
+
+    it('should replay buffered events for late iterators and continue live', async () => {
+        const source = createPushableAsyncIterable<StreamEvent>();
+        const chatStream = createStreamResult(source.iterable);
+        const finishEvent: StreamEvent = {
+            type: 'finish',
+            finishReason: 'stop',
+            usage: {
+                inputTokens: 1,
+                outputTokens: 1,
+                inputTokenDetails: {
+                    cacheReadTokens: 0,
+                    cacheWriteTokens: 0,
+                },
+                outputTokenDetails: {},
+            },
+        };
+
+        source.push({ type: 'text-delta', text: 'Hello' });
+        await Promise.resolve();
+
+        const iterator = chatStream[Symbol.asyncIterator]();
+
+        expect(await iterator.next()).toEqual({
+            done: false,
+            value: { type: 'text-delta', text: 'Hello' },
+        });
+
+        source.push({ type: 'text-delta', text: ' world' });
+        source.push(finishEvent);
+        source.finish();
+
+        expect(await iterator.next()).toEqual({
+            done: false,
+            value: { type: 'text-delta', text: ' world' },
+        });
+        expect(await iterator.next()).toEqual({
+            done: false,
+            value: finishEvent,
+        });
+        expect(await iterator.next()).toEqual({
+            done: true,
+            value: undefined,
+        });
+        await expect(chatStream.result).resolves.toMatchObject({
+            content: 'Hello world',
+        });
+    });
+
+    it('should resolve events with full history on success', async () => {
+        const events: StreamEvent[] = [
+            { type: 'text-delta', text: 'history' },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 1,
+                    outputTokens: 1,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ];
+        const chatStream = createStreamResult(toAsyncIterable(events));
+
+        await expect(chatStream.events).resolves.toEqual(events);
+    });
+
+    it('should resolve events and reject result on upstream failure', async () => {
+        const source = createPushableAsyncIterable<StreamEvent>();
+        const chatStream = createStreamResult(source.iterable);
+        const failure = new Error('stream failed');
+
+        source.push({ type: 'text-delta', text: 'partial' });
+        source.fail(failure);
+
+        await expect(chatStream.result).rejects.toBe(failure);
+        await expect(chatStream.events).resolves.toEqual([
+            { type: 'text-delta', text: 'partial' },
+        ]);
+    });
+
+    it('should reject active iterators on upstream failure', async () => {
+        const source = createPushableAsyncIterable<StreamEvent>();
+        const chatStream = createStreamResult(source.iterable);
+        const iterator = chatStream[Symbol.asyncIterator]();
+        const failure = new Error('boom');
+
+        source.push({ type: 'text-delta', text: 'partial' });
+
+        expect(await iterator.next()).toEqual({
+            done: false,
+            value: { type: 'text-delta', text: 'partial' },
+        });
+
+        source.fail(failure);
+
+        await expect(chatStream.result).rejects.toBe(failure);
+        await expect(iterator.next()).rejects.toBe(failure);
+    });
+
+    it('should reject result and iterators with StreamAbortedError on abort', async () => {
+        const source = createPushableAsyncIterable<StreamEvent>();
+        const abort = vi.fn();
+        const chatStream = createStreamResult(source.iterable, { abort });
+        const iterator = chatStream[Symbol.asyncIterator]();
+
+        source.push({ type: 'text-delta', text: 'partial' });
+
+        expect(await iterator.next()).toEqual({
+            done: false,
+            value: { type: 'text-delta', text: 'partial' },
+        });
+
+        chatStream.abort();
+        chatStream.abort();
+
+        await expect(chatStream.result).rejects.toBeInstanceOf(
+            StreamAbortedError
+        );
+        await expect(chatStream.events).resolves.toEqual([
+            { type: 'text-delta', text: 'partial' },
+        ]);
+        await expect(iterator.next()).rejects.toBeInstanceOf(
+            StreamAbortedError
+        );
+
+        const replayIterator = chatStream[Symbol.asyncIterator]();
+        expect(await replayIterator.next()).toEqual({
+            done: false,
+            value: { type: 'text-delta', text: 'partial' },
+        });
+        await expect(replayIterator.next()).rejects.toBeInstanceOf(
+            StreamAbortedError
+        );
+        expect(abort).toHaveBeenCalledTimes(1);
     });
 });

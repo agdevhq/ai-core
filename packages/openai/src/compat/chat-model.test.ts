@@ -394,19 +394,19 @@ describe('stream', () => {
             'gpt-5-mini'
         );
 
-        const streamResult = await model.stream({
+        const chatStream = await model.stream({
             messages: [{ role: 'user', content: 'hello' }],
         });
 
         const events: string[] = [];
-        for await (const event of streamResult) {
+        for await (const event of chatStream) {
             if (event.type === 'text-delta') {
                 events.push(event.text);
             }
         }
 
         expect(events.join('')).toBe('Hello world');
-        const response = await streamResult.toResponse();
+        const response = await chatStream.result;
         expect(response.content).toBe('Hello world');
         expect(response.finishReason).toBe('stop');
         expect(response.usage).toEqual({
@@ -464,15 +464,15 @@ describe('stream', () => {
             'gpt-5-mini'
         );
 
-        const streamResult = await model.stream({
+        const chatStream = await model.stream({
             messages: [{ role: 'user', content: 'cached stream' }],
         });
 
-        for await (const _event of streamResult) {
+        for await (const _event of chatStream) {
             // Consume stream.
         }
 
-        const response = await streamResult.toResponse();
+        const response = await chatStream.result;
         expect(response.usage).toEqual({
             inputTokens: 90,
             outputTokens: 4,
@@ -546,21 +546,21 @@ describe('stream', () => {
             temperatureC: z.number(),
         });
 
-        const streamResult = await model.streamObject({
+        const objectStream = await model.streamObject({
             messages: [{ role: 'user', content: 'Return weather JSON' }],
             schema,
             schemaName: 'weather_schema',
         });
 
         const objects: Array<{ city: string; temperatureC: number }> = [];
-        for await (const event of streamResult) {
+        for await (const event of objectStream) {
             if (event.type === 'object') {
                 objects.push(event.object);
             }
         }
 
         expect(objects).toEqual([{ city: 'Berlin', temperatureC: 21 }]);
-        const response = await streamResult.toResponse();
+        const response = await objectStream.result;
         expect(response.object).toEqual({
             city: 'Berlin',
             temperatureC: 21,
@@ -598,24 +598,27 @@ describe('stream', () => {
             'gpt-5-mini'
         );
 
-        const streamResult = await model.stream({
+        const chatStream = await model.stream({
             messages: [{ role: 'user', content: 'Explain' }],
             reasoning: { effort: 'medium' },
         });
 
         const seenEventTypes: string[] = [];
-        for await (const event of streamResult) {
+        for await (const event of chatStream) {
             seenEventTypes.push(event.type);
         }
 
         expect(seenEventTypes).not.toContain('reasoning-start');
         expect(seenEventTypes).toEqual(['text-delta', 'finish']);
 
-        const response = await streamResult.toResponse();
+        const response = await chatStream.result;
         expect(response.reasoning).toBeNull();
         expect(create).toHaveBeenCalledWith(
             expect.objectContaining({
                 reasoning_effort: 'medium',
+            }),
+            expect.objectContaining({
+                signal: expect.any(AbortSignal),
             })
         );
     });
