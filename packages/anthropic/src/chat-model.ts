@@ -63,7 +63,7 @@ export function createAnthropicChatModel(
         const response =
             await callAnthropicMessagesApi<
                 Parameters<typeof mapGenerateResponse>[0]
-            >(request);
+            >(request, options.signal);
         return mapGenerateResponse(response);
     }
 

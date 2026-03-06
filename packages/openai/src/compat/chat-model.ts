@@ -64,7 +64,7 @@ export function createOpenAICompatChatModel(
         const response =
             await callOpenAIChatCompletionsApi<
                 Parameters<typeof mapGenerateResponse>[0]
-            >(request);
+            >(request, options.signal);
         return mapGenerateResponse(response);
     }
 

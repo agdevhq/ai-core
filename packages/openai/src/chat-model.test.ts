@@ -75,6 +75,38 @@ describe('generate', () => {
         );
     });
 
+    it('should pass the caller abort signal to generate requests', async () => {
+        const create = vi.fn(async () =>
+            asResponse({
+                output: [
+                    {
+                        type: 'message',
+                        role: 'assistant',
+                        content: [{ type: 'output_text', text: 'Hello!' }],
+                    },
+                ],
+                status: 'completed',
+            })
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const controller = new AbortController();
+
+        await model.generate({
+            messages: [{ role: 'user', content: 'Hi' }],
+            signal: controller.signal,
+        });
+
+        expect(create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
+            })
+        );
+    });
+
     it('should preserve encrypted reasoning content across turns', async () => {
         const create = vi.fn(async (_request: unknown) =>
             asResponse({
@@ -173,6 +205,45 @@ describe('generate', () => {
                     type: 'function',
                     name: 'weather_schema',
                 },
+            })
+        );
+    });
+
+    it('should pass the caller abort signal to generateObject requests', async () => {
+        const create = vi.fn(async (_request: unknown) =>
+            asResponse({
+                output: [
+                    {
+                        type: 'function_call',
+                        call_id: 'tc_1',
+                        name: 'weather_schema',
+                        arguments: '{"city":"Berlin","temperatureC":21}',
+                    },
+                ],
+                status: 'completed',
+            })
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const controller = new AbortController();
+
+        await model.generateObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+            signal: controller.signal,
+        });
+
+        expect(create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
             })
         );
     });
@@ -362,7 +433,7 @@ describe('streamObject', () => {
 });
 
 function createMockClient(
-    create?: (options: unknown) => Promise<unknown>
+    create?: (options: unknown, requestOptions?: unknown) => Promise<unknown>
 ): Pick<OpenAI, 'responses'> {
     return {
         responses: {

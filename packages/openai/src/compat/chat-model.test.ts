@@ -77,6 +77,42 @@ describe('generate', () => {
         );
     });
 
+    it('should pass the caller abort signal to generate requests', async () => {
+        const create = vi.fn(async () =>
+            asChatCompletion({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: 'stop',
+                        logprobs: null,
+                        message: {
+                            role: 'assistant',
+                            content: 'Hello!',
+                            refusal: null,
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const controller = new AbortController();
+
+        await model.generate({
+            messages: [{ role: 'user', content: 'Hi' }],
+            signal: controller.signal,
+        });
+
+        expect(create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
+            })
+        );
+    });
+
     it('should map cached and reasoning token usage', async () => {
         const create = vi.fn(async () => {
             return asChatCompletion({
@@ -243,6 +279,59 @@ describe('generate', () => {
                         name: 'weather_schema',
                     },
                 },
+            })
+        );
+    });
+
+    it('should pass the caller abort signal to generateObject requests', async () => {
+        const create = vi.fn(async () =>
+            asChatCompletion({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: 'tool_calls',
+                        logprobs: null,
+                        message: {
+                            role: 'assistant',
+                            content: null,
+                            refusal: null,
+                            tool_calls: [
+                                {
+                                    id: 'tc_1',
+                                    type: 'function',
+                                    function: {
+                                        name: 'weather_schema',
+                                        arguments:
+                                            '{"city":"Berlin","temperatureC":21}',
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const controller = new AbortController();
+
+        await model.generateObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+            signal: controller.signal,
+        });
+
+        expect(create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
             })
         );
     });
@@ -624,7 +713,7 @@ describe('stream', () => {
 });
 
 function createMockClient(
-    create?: (options: unknown) => Promise<unknown>
+    create?: (options: unknown, requestOptions?: unknown) => Promise<unknown>
 ): Pick<OpenAI, 'chat'> {
     return {
         chat: {

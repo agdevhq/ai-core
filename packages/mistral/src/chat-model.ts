@@ -54,7 +54,11 @@ export function createMistralChatModel(
     ): Promise<GenerateResult> {
         const request = createGenerateRequest(modelId, options);
         const response = await callMistralChatApi(() =>
-            client.chat.complete(request)
+            options.signal
+                ? client.chat.complete(request, {
+                      signal: options.signal,
+                  })
+                : client.chat.complete(request)
         );
         return mapGenerateResponse(response);
     }

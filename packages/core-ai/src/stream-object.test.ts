@@ -220,6 +220,48 @@ describe('createObjectStream', () => {
         await expect(objectStream.events).resolves.toEqual(events);
     });
 
+    it('should not emit unhandledRejection when finalizeResult fails and callers only iterate', async () => {
+        const events: ObjectStreamEvent<typeof weatherSchema>[] = [
+            { type: 'object-delta', text: '{"city":"Berlin"}' },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 10,
+                    outputTokens: 5,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ];
+        const objectStream = createObjectStream(toAsyncIterable(events));
+        const unhandledRejections: unknown[] = [];
+        const handleUnhandledRejection = (reason: unknown) => {
+            unhandledRejections.push(reason);
+        };
+        process.on('unhandledRejection', handleUnhandledRejection);
+
+        try {
+            const seenEvents: ObjectStreamEvent<typeof weatherSchema>[] = [];
+            await expect(
+                (async () => {
+                    for await (const event of objectStream) {
+                        seenEvents.push(event);
+                    }
+                })()
+            ).rejects.toBeInstanceOf(LLMError);
+
+            expect(seenEvents).toEqual(events);
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            expect(unhandledRejections).toEqual([]);
+        } finally {
+            process.off('unhandledRejection', handleUnhandledRejection);
+        }
+    });
+
     it('should replay events after completion', async () => {
         const events: ObjectStreamEvent<typeof weatherSchema>[] = [
             {

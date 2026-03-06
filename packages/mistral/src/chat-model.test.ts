@@ -75,6 +75,40 @@ describe('generate', () => {
         );
     });
 
+    it('should pass the caller abort signal to generate requests', async () => {
+        const complete = vi.fn(async () =>
+            asChatCompletionResponse({
+                choices: [
+                    {
+                        index: 0,
+                        finishReason: 'stop',
+                        message: {
+                            role: 'assistant',
+                            content: 'Hello!',
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createMistralChatModel(
+            createMockClient({ complete }),
+            'mistral-large-latest'
+        );
+        const controller = new AbortController();
+
+        await model.generate({
+            messages: [{ role: 'user', content: 'Hi' }],
+            signal: controller.signal,
+        });
+
+        expect(complete).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
+            })
+        );
+    });
+
     it('should keep cache token details at zero (no provider cache fields)', async () => {
         const complete = vi.fn(async () => {
             return asChatCompletionResponse({
@@ -215,6 +249,57 @@ describe('generate', () => {
             temperatureC: 21,
         });
         expect(result.finishReason).toBe('tool-calls');
+    });
+
+    it('should pass the caller abort signal to generateObject requests', async () => {
+        const complete = vi.fn(async () =>
+            asChatCompletionResponse({
+                choices: [
+                    {
+                        index: 0,
+                        finishReason: 'tool_calls',
+                        message: {
+                            role: 'assistant',
+                            content: null,
+                            toolCalls: [
+                                {
+                                    id: 'tc_1',
+                                    type: 'function',
+                                    function: {
+                                        name: 'weather_schema',
+                                        arguments:
+                                            '{"city":"Berlin","temperatureC":21}',
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createMistralChatModel(
+            createMockClient({ complete }),
+            'mistral-large-latest'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const controller = new AbortController();
+
+        await model.generateObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+            signal: controller.signal,
+        });
+
+        expect(complete).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
+            })
+        );
     });
 
     it('should throw validation error for invalid structured output', async () => {
@@ -597,8 +682,8 @@ describe('stream', () => {
 });
 
 function createMockClient(overrides?: {
-    complete?: (options: unknown) => Promise<unknown>;
-    stream?: (options: unknown) => Promise<unknown>;
+    complete?: (options: unknown, requestOptions?: unknown) => Promise<unknown>;
+    stream?: (options: unknown, requestOptions?: unknown) => Promise<unknown>;
 }): Pick<Mistral, 'chat'> {
     const complete =
         overrides?.complete ??

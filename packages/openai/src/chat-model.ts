@@ -67,7 +67,10 @@ export function createOpenAIChatModel(
         options: GenerateOptions
     ): Promise<GenerateResult> {
         const request = createGenerateRequest(modelId, options);
-        const response = await callOpenAIResponsesApi<Response>(request);
+        const response = await callOpenAIResponsesApi<Response>(
+            request,
+            options.signal
+        );
         return mapGenerateResponse(response);
     }
 

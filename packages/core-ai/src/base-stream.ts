@@ -31,6 +31,7 @@ export function createStream<TEvent, TResult>(
         resolveResult = resolve;
         rejectResult = reject;
     });
+    void result.catch(() => {});
     const events = new Promise<readonly TEvent[]>((resolve) => {
         resolveEvents = resolve;
     });
@@ -139,9 +140,17 @@ export function createStream<TEvent, TResult>(
     return {
         [Symbol.asyncIterator]() {
             let index = 0;
+            let closed = false;
             return {
                 async next(): Promise<IteratorResult<TEvent>> {
-                    while (index >= bufferedEvents.length) {
+                    if (closed) {
+                        return {
+                            done: true,
+                            value: undefined,
+                        };
+                    }
+
+                    while (!closed && index >= bufferedEvents.length) {
                         if (terminalState.status === 'completed') {
                             return {
                                 done: true,
@@ -154,6 +163,13 @@ export function createStream<TEvent, TResult>(
                         await resolveWhenUpdated();
                     }
 
+                    if (closed) {
+                        return {
+                            done: true,
+                            value: undefined,
+                        };
+                    }
+
                     const value = bufferedEvents[index]!;
                     index += 1;
                     return {
@@ -162,6 +178,8 @@ export function createStream<TEvent, TResult>(
                     };
                 },
                 async return(): Promise<IteratorResult<TEvent>> {
+                    closed = true;
+                    notifyWaiters();
                     return {
                         done: true,
                         value: undefined,

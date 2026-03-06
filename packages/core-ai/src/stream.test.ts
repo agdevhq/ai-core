@@ -342,6 +342,53 @@ describe('createChatStream', () => {
         });
     });
 
+    it('should close only the returning iterator and wake pending next calls', async () => {
+        const source = createPushableAsyncIterable<StreamEvent>();
+        const chatStream = createChatStream(source.iterable);
+        const iterator = chatStream[Symbol.asyncIterator]();
+        const pendingNext = iterator.next();
+        const finishEvent: StreamEvent = {
+            type: 'finish',
+            finishReason: 'stop',
+            usage: {
+                inputTokens: 1,
+                outputTokens: 1,
+                inputTokenDetails: {
+                    cacheReadTokens: 0,
+                    cacheWriteTokens: 0,
+                },
+                outputTokenDetails: {},
+            },
+        };
+
+        await Promise.resolve();
+
+        const closeIterator = iterator.return?.bind(iterator);
+
+        expect(closeIterator).toBeDefined();
+        expect(await closeIterator!()).toEqual({
+            done: true,
+            value: undefined,
+        });
+        expect(await pendingNext).toEqual({
+            done: true,
+            value: undefined,
+        });
+
+        source.push({ type: 'text-delta', text: 'Hello' });
+        source.push(finishEvent);
+        source.finish();
+
+        expect(await iterator.next()).toEqual({
+            done: true,
+            value: undefined,
+        });
+        await expect(chatStream.result).resolves.toMatchObject({
+            content: 'Hello',
+            finishReason: 'stop',
+        });
+    });
+
     it('should resolve events with full history on success', async () => {
         const events: StreamEvent[] = [
             { type: 'text-delta', text: 'history' },
@@ -395,6 +442,34 @@ describe('createChatStream', () => {
 
         await expect(chatStream.result).rejects.toBe(failure);
         await expect(iterator.next()).rejects.toBe(failure);
+    });
+
+    it('should not emit unhandledRejection when callers only iterate a failing stream', async () => {
+        const source = createPushableAsyncIterable<StreamEvent>();
+        const chatStream = createChatStream(source.iterable);
+        const unhandledRejections: unknown[] = [];
+        const handleUnhandledRejection = (reason: unknown) => {
+            unhandledRejections.push(reason);
+        };
+        process.on('unhandledRejection', handleUnhandledRejection);
+
+        try {
+            source.push({ type: 'text-delta', text: 'partial' });
+            source.fail(new Error('boom'));
+
+            await expect(
+                (async () => {
+                    for await (const _event of chatStream) {
+                        // Consume stream without touching .result.
+                    }
+                })()
+            ).rejects.toThrow('boom');
+
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            expect(unhandledRejections).toEqual([]);
+        } finally {
+            process.off('unhandledRejection', handleUnhandledRejection);
+        }
     });
 
     it('should reject result and iterators with StreamAbortedError on signal abort', async () => {

@@ -96,6 +96,37 @@ describe('generate', () => {
         });
     });
 
+    it('should pass the caller abort signal to generate requests', async () => {
+        const create = vi.fn(async () =>
+            asMessage({
+                content: [{ type: 'text', text: 'Hello!', citations: null }],
+                stop_reason: 'end_turn',
+                usage: {
+                    input_tokens: 10,
+                    output_tokens: 5,
+                },
+            })
+        );
+        const model = createAnthropicChatModel(
+            createMockClient(create),
+            'claude-sonnet-4',
+            4096
+        );
+        const controller = new AbortController();
+
+        await model.generate({
+            messages: [{ role: 'user', content: 'Hi' }],
+            signal: controller.signal,
+        });
+
+        expect(create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
+            })
+        );
+    });
+
     it('should map tool use response', async () => {
         const create = vi.fn(async () =>
             asMessage({
@@ -173,6 +204,49 @@ describe('generate', () => {
             temperatureC: 21,
         });
         expect(result.finishReason).toBe('stop');
+    });
+
+    it('should pass the caller abort signal to generateObject requests', async () => {
+        const create = vi.fn(async () =>
+            asMessage({
+                content: [
+                    {
+                        type: 'text',
+                        text: '{"city":"Berlin","temperatureC":21}',
+                        citations: null,
+                    },
+                ],
+                stop_reason: 'end_turn',
+                usage: {
+                    input_tokens: 12,
+                    output_tokens: 8,
+                },
+            })
+        );
+        const model = createAnthropicChatModel(
+            createMockClient(create),
+            'claude-sonnet-4',
+            4096
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const controller = new AbortController();
+
+        await model.generateObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+            signal: controller.signal,
+        });
+
+        expect(create).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                signal: controller.signal,
+            })
+        );
     });
 
     it('should throw validation error for invalid structured output', async () => {
