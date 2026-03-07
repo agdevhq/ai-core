@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./logo.svg" alt="core-ai logo" width="320" />
+</p>
+
 # core-ai
 
 [![CI](https://github.com/agdevhq/core-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/agdevhq/core-ai/actions/workflows/ci.yml)
