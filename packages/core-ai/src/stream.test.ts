@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { toAsyncIterable } from '@core-ai/testing';
 import { StreamAbortedError } from './errors.ts';
+import { createStream } from './base-stream.ts';
 import { createChatStream } from './stream.ts';
 import type { StreamEvent } from './types.ts';
 
@@ -444,6 +445,44 @@ describe('createChatStream', () => {
         await expect(iterator.next()).rejects.toBe(failure);
     });
 
+    it('should close the upstream iterator when reduceEvent throws', async () => {
+        const controller = new AbortController();
+        const removeEventListenerSpy = vi.spyOn(
+            controller.signal,
+            'removeEventListener'
+        );
+        const returnSpy = vi.fn(async () => ({
+            done: true as const,
+            value: undefined,
+        }));
+        const stream = createStream<string, string>({
+            source: {
+                [Symbol.asyncIterator]() {
+                    return {
+                        async next() {
+                            return {
+                                done: false as const,
+                                value: 'event',
+                            };
+                        },
+                        return: returnSpy,
+                    };
+                },
+            },
+            reduceEvent() {
+                throw new Error('reduce failed');
+            },
+            finalizeResult() {
+                return 'done';
+            },
+            signal: controller.signal,
+        });
+
+        await expect(stream.result).rejects.toThrow('reduce failed');
+        expect(returnSpy).toHaveBeenCalledTimes(1);
+        expect(removeEventListenerSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('should not emit unhandledRejection when callers only iterate a failing stream', async () => {
         const source = createPushableAsyncIterable<StreamEvent>();
         const chatStream = createChatStream(source.iterable);
@@ -470,6 +509,38 @@ describe('createChatStream', () => {
         } finally {
             process.off('unhandledRejection', handleUnhandledRejection);
         }
+    });
+
+    it('should remove the abort listener after successful completion', async () => {
+        const controller = new AbortController();
+        const removeEventListenerSpy = vi.spyOn(
+            controller.signal,
+            'removeEventListener'
+        );
+        const events: StreamEvent[] = [
+            { type: 'text-delta', text: 'done' },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 1,
+                    outputTokens: 1,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ];
+        const chatStream = createChatStream(toAsyncIterable(events), {
+            signal: controller.signal,
+        });
+
+        await expect(chatStream.result).resolves.toMatchObject({
+            content: 'done',
+        });
+        expect(removeEventListenerSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should reject result and iterators with StreamAbortedError on signal abort', async () => {

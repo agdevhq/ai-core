@@ -53,6 +53,14 @@ export function createStream<TEvent, TResult>(
         });
     }
 
+    const handleAbort = () => {
+        abortStream();
+    };
+
+    function cleanupSignalListener(): void {
+        signal?.removeEventListener('abort', handleAbort);
+    }
+
     function settleCompleted(finalResult: TResult): void {
         if (terminalState.status !== 'running') {
             return;
@@ -61,6 +69,7 @@ export function createStream<TEvent, TResult>(
             status: 'completed',
             result: finalResult,
         };
+        cleanupSignalListener();
         resolveResult?.(finalResult);
         resolveEvents?.(bufferedEvents);
         notifyWaiters();
@@ -74,6 +83,7 @@ export function createStream<TEvent, TResult>(
             status: 'rejected',
             error,
         };
+        cleanupSignalListener();
         rejectResult?.(error);
         resolveEvents?.(bufferedEvents);
         notifyWaiters();
@@ -99,13 +109,7 @@ export function createStream<TEvent, TResult>(
         if (signal.aborted) {
             abortStream();
         } else {
-            signal.addEventListener(
-                'abort',
-                () => {
-                    abortStream();
-                },
-                { once: true }
-            );
+            signal.addEventListener('abort', handleAbort, { once: true });
         }
     }
 
@@ -132,6 +136,7 @@ export function createStream<TEvent, TResult>(
             }
         } catch (error) {
             settleRejected(error);
+            await closeSourceIterator();
         }
     }
 

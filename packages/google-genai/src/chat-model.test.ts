@@ -111,6 +111,36 @@ describe('generate', () => {
         });
     });
 
+    it('should reject raw google config on generate', async () => {
+        const generateContent = vi.fn(async () =>
+            asGenerateContentResponse({
+                text: 'Hello!',
+                candidates: [{ finishReason: GoogleFinishReason.STOP }],
+            })
+        );
+        const model = createGoogleGenAIChatModel(
+            createMockClient({ generateContent }),
+            'gemini-2.5-flash'
+        );
+        const invalidProviderOptions = {
+            google: {
+                config: {
+                    thinkingConfig: {
+                        thinkingLevel: 'LOW',
+                    },
+                },
+            },
+        } as unknown as Parameters<typeof model.generate>[0]['providerOptions'];
+
+        await expect(
+            model.generate({
+                messages: [{ role: 'user', content: 'Hi' }],
+                providerOptions: invalidProviderOptions,
+            })
+        ).rejects.toThrow(/Unrecognized key\(s\) in object: 'config'/);
+        expect(generateContent).not.toHaveBeenCalled();
+    });
+
     it('should map tool call responses', async () => {
         const generateContent = vi.fn(async () => {
             return asGenerateContentResponse({
@@ -197,6 +227,51 @@ describe('generate', () => {
             temperatureC: 21,
         });
         expect(result.finishReason).toBe('tool-calls');
+    });
+
+    it('should reject raw google config on generateObject', async () => {
+        const generateContent = vi.fn(async () =>
+            asGenerateContentResponse({
+                functionCalls: [
+                    {
+                        id: 'tc_1',
+                        name: 'weather_schema',
+                        args: {
+                            city: 'Berlin',
+                            temperatureC: 21,
+                        },
+                    },
+                ],
+                candidates: [{ finishReason: GoogleFinishReason.STOP }],
+            })
+        );
+        const model = createGoogleGenAIChatModel(
+            createMockClient({ generateContent }),
+            'gemini-2.5-flash'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const invalidProviderOptions = {
+            google: {
+                config: {
+                    thinkingConfig: {
+                        thinkingLevel: 'LOW',
+                    },
+                },
+            },
+        } as unknown as Parameters<typeof model.generateObject<typeof schema>>[0]['providerOptions'];
+
+        await expect(
+            model.generateObject({
+                messages: [{ role: 'user', content: 'Return weather JSON' }],
+                schema,
+                schemaName: 'weather_schema',
+                providerOptions: invalidProviderOptions,
+            })
+        ).rejects.toThrow(/Unrecognized key\(s\) in object: 'config'/);
+        expect(generateContent).not.toHaveBeenCalled();
     });
 
     it('should throw validation error for invalid structured output', async () => {
