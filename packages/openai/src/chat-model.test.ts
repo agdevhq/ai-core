@@ -12,73 +12,10 @@ import {
     resultToMessage,
 } from '@core-ai/core-ai';
 import { createOpenAIChatModel } from './chat-model.js';
-import { toAsyncIterable } from '@core-ai/testing';
-
-type PushableEntry<T> =
-    | { type: 'value'; value: T }
-    | { type: 'finish' }
-    | { type: 'error'; error: unknown };
-
-function createPushableAsyncIterable<T>(): {
-    iterable: AsyncIterable<T>;
-    push(value: T): void;
-    finish(): void;
-    fail(error: unknown): void;
-} {
-    const queue: PushableEntry<T>[] = [];
-    let resolveNext: ((entry: PushableEntry<T>) => void) | undefined;
-
-    function enqueue(entry: PushableEntry<T>): void {
-        if (resolveNext) {
-            const resolve = resolveNext;
-            resolveNext = undefined;
-            resolve(entry);
-            return;
-        }
-
-        queue.push(entry);
-    }
-
-    return {
-        iterable: {
-            async *[Symbol.asyncIterator]() {
-                while (true) {
-                    const entry =
-                        queue.shift() ??
-                        (await new Promise<PushableEntry<T>>((resolve) => {
-                            resolveNext = resolve;
-                        }));
-
-                    if (entry.type === 'value') {
-                        yield entry.value;
-                        continue;
-                    }
-
-                    if (entry.type === 'finish') {
-                        return;
-                    }
-
-                    throw entry.error;
-                }
-            },
-        },
-        push(value) {
-            enqueue({
-                type: 'value',
-                value,
-            });
-        },
-        finish() {
-            enqueue({ type: 'finish' });
-        },
-        fail(error) {
-            enqueue({
-                type: 'error',
-                error,
-            });
-        },
-    };
-}
+import {
+    toAsyncIterable,
+    createPushableAsyncIterable,
+} from '@core-ai/testing';
 
 describe('createOpenAIChatModel', () => {
     it('should create model metadata', () => {
@@ -138,7 +75,8 @@ describe('generate', () => {
             expect.objectContaining({
                 model: 'gpt-5-mini',
                 input: [{ role: 'user', content: 'Hi' }],
-            })
+            }),
+            expect.anything()
         );
     });
 
@@ -272,7 +210,8 @@ describe('generate', () => {
                     type: 'function',
                     name: 'weather_schema',
                 },
-            })
+            }),
+            expect.anything()
         );
     });
 

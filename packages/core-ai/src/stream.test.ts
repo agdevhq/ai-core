@@ -1,74 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { toAsyncIterable } from '@core-ai/testing';
+import {
+    toAsyncIterable,
+    createPushableAsyncIterable,
+} from '@core-ai/testing';
 import { StreamAbortedError } from './errors.ts';
 import { createStream } from './base-stream.ts';
 import { createChatStream } from './stream.ts';
 import type { StreamEvent } from './types.ts';
-
-type PushableEntry<T> =
-    | { type: 'value'; value: T }
-    | { type: 'finish' }
-    | { type: 'error'; error: unknown };
-
-function createPushableAsyncIterable<T>(): {
-    iterable: AsyncIterable<T>;
-    push(value: T): void;
-    finish(): void;
-    fail(error: unknown): void;
-} {
-    const queue: PushableEntry<T>[] = [];
-    let resolveNext: ((entry: PushableEntry<T>) => void) | undefined;
-
-    function enqueue(entry: PushableEntry<T>): void {
-        if (resolveNext) {
-            const resolve = resolveNext;
-            resolveNext = undefined;
-            resolve(entry);
-            return;
-        }
-        queue.push(entry);
-    }
-
-    return {
-        iterable: {
-            async *[Symbol.asyncIterator]() {
-                while (true) {
-                    const entry =
-                        queue.shift() ??
-                        (await new Promise<PushableEntry<T>>((resolve) => {
-                            resolveNext = resolve;
-                        }));
-
-                    if (entry.type === 'value') {
-                        yield entry.value;
-                        continue;
-                    }
-
-                    if (entry.type === 'finish') {
-                        return;
-                    }
-
-                    throw entry.error;
-                }
-            },
-        },
-        push(value) {
-            enqueue({
-                type: 'value',
-                value,
-            });
-        },
-        finish() {
-            enqueue({ type: 'finish' });
-        },
-        fail(error) {
-            enqueue({
-                type: 'error',
-                error,
-            });
-        },
-    };
-}
 
 describe('createChatStream', () => {
     it('should iterate over all events', async () => {

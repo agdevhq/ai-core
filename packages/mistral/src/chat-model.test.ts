@@ -71,7 +71,8 @@ describe('generate', () => {
             expect.objectContaining({
                 model: 'mistral-large-latest',
                 messages: [{ role: 'user', content: 'Hi' }],
-            })
+            }),
+            expect.anything()
         );
     });
 
@@ -411,7 +412,8 @@ describe('generate', () => {
         expect(complete).toHaveBeenCalledWith(
             expect.objectContaining({
                 model: 'magistral-medium-latest',
-            })
+            }),
+            expect.anything()
         );
     });
 });

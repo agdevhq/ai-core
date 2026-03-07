@@ -54,11 +54,7 @@ export function createMistralChatModel(
     ): Promise<GenerateResult> {
         const request = createGenerateRequest(modelId, options);
         const response = await callMistralChatApi(() =>
-            options.signal
-                ? client.chat.complete(request, {
-                      signal: options.signal,
-                  })
-                : client.chat.complete(request)
+            client.chat.complete(request, { signal: options.signal })
         );
         return mapGenerateResponse(response);
     }
@@ -66,11 +62,7 @@ export function createMistralChatModel(
     async function streamChat(options: GenerateOptions): Promise<ChatStream> {
         const request = createStreamRequest(modelId, options);
         const stream = (await callMistralChatApi(() =>
-            options.signal
-                ? client.chat.stream(request, {
-                      signal: options.signal,
-                  })
-                : client.chat.stream(request)
+            client.chat.stream(request, { signal: options.signal })
         )) as unknown as AsyncIterable<CompletionEvent>;
         return createChatStream(transformStream(stream), {
             signal: options.signal,

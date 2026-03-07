@@ -51,14 +51,9 @@ export function createOpenAIChatModel(
         signal?: AbortSignal
     ): Promise<TResponse> {
         try {
-            if (signal) {
-                return (await client.responses.create(request as never, {
-                    signal,
-                })) as TResponse;
-            }
-            return (await client.responses.create(
-                request as never
-            )) as TResponse;
+            return (await client.responses.create(request as never, {
+                signal,
+            })) as TResponse;
         } catch (error) {
             throw wrapOpenAIError(error);
         }

@@ -44,14 +44,9 @@ export function createOpenAICompatChatModel(
         signal?: AbortSignal
     ): Promise<TResponse> {
         try {
-            if (signal) {
-                return (await client.chat.completions.create(
-                    request as never,
-                    { signal }
-                )) as TResponse;
-            }
             return (await client.chat.completions.create(
-                request as never
+                request as never,
+                { signal }
             )) as TResponse;
         } catch (error) {
             throw wrapOpenAIError(error);
