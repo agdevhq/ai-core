@@ -1,6 +1,9 @@
+<br>
 <p align="center">
-  <img src="./logo.svg" alt="core-ai logo" width="128" style="padding: 16px 0;" />
+  <img src="./logo.svg" alt="core-ai logo" width="128" />
 </p>
+
+<br>
 
 <p align="center">
   <a href="https://github.com/agdevhq/core-ai/actions/workflows/ci.yml"><img src="https://github.com/agdevhq/core-ai/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
