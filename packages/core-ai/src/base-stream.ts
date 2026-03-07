@@ -36,6 +36,7 @@ export function createStream<TEvent, TResult>(
         resolveEvents = resolve;
     });
     const waiters = new Set<() => void>();
+    let closeSourceIteratorPromise: Promise<void> | undefined;
 
     function notifyWaiters(): void {
         for (const waiter of waiters) {
@@ -89,12 +90,20 @@ export function createStream<TEvent, TResult>(
         notifyWaiters();
     }
 
-    async function closeSourceIterator(): Promise<void> {
-        try {
-            await iterator.return?.();
-        } catch {
-            // Ignore cleanup failures once the stream has already settled.
+    function closeSourceIterator(): Promise<void> {
+        if (closeSourceIteratorPromise) {
+            return closeSourceIteratorPromise;
         }
+
+        closeSourceIteratorPromise = (async () => {
+            try {
+                await iterator.return?.();
+            } catch {
+                // Ignore cleanup failures once the stream has already settled.
+            }
+        })();
+
+        return closeSourceIteratorPromise;
     }
 
     function abortStream(): void {

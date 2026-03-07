@@ -7,10 +7,77 @@ import type {
 } from 'openai/resources/chat/completions/completions';
 import {
     ProviderError,
+    StreamAbortedError,
     StructuredOutputValidationError,
 } from '@core-ai/core-ai';
 import { createOpenAICompatChatModel } from './chat-model.js';
 import { toAsyncIterable } from '@core-ai/testing';
+
+type PushableEntry<T> =
+    | { type: 'value'; value: T }
+    | { type: 'finish' }
+    | { type: 'error'; error: unknown };
+
+function createPushableAsyncIterable<T>(): {
+    iterable: AsyncIterable<T>;
+    push(value: T): void;
+    finish(): void;
+    fail(error: unknown): void;
+} {
+    const queue: PushableEntry<T>[] = [];
+    let resolveNext: ((entry: PushableEntry<T>) => void) | undefined;
+
+    function enqueue(entry: PushableEntry<T>): void {
+        if (resolveNext) {
+            const resolve = resolveNext;
+            resolveNext = undefined;
+            resolve(entry);
+            return;
+        }
+
+        queue.push(entry);
+    }
+
+    return {
+        iterable: {
+            async *[Symbol.asyncIterator]() {
+                while (true) {
+                    const entry =
+                        queue.shift() ??
+                        (await new Promise<PushableEntry<T>>((resolve) => {
+                            resolveNext = resolve;
+                        }));
+
+                    if (entry.type === 'value') {
+                        yield entry.value;
+                        continue;
+                    }
+
+                    if (entry.type === 'finish') {
+                        return;
+                    }
+
+                    throw entry.error;
+                }
+            },
+        },
+        push(value) {
+            enqueue({
+                type: 'value',
+                value,
+            });
+        },
+        finish() {
+            enqueue({ type: 'finish' });
+        },
+        fail(error) {
+            enqueue({
+                type: 'error',
+                error,
+            });
+        },
+    };
+}
 
 describe('createOpenAICompatChatModel', () => {
     it('should create model metadata', () => {
@@ -575,6 +642,53 @@ describe('stream', () => {
         });
     });
 
+    it('should reject iteration and result on abort while preserving partial events', async () => {
+        const source = createPushableAsyncIterable<ChatCompletionChunk>();
+        const create = vi.fn(async () => source.iterable);
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const controller = new AbortController();
+        const chatStream = await model.stream({
+            messages: [{ role: 'user', content: 'hello' }],
+            signal: controller.signal,
+        });
+        const resultRejection = expect(chatStream.result).rejects.toBeInstanceOf(
+            StreamAbortedError
+        );
+
+        const consumeStream = (async () => {
+            for await (const event of chatStream) {
+                if (event.type === 'text-delta') {
+                    controller.abort();
+                }
+            }
+        })();
+
+        source.push(
+            asChunk({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: null,
+                        delta: { content: 'partial' },
+                    },
+                ],
+                usage: null,
+            })
+        );
+
+        await expect(consumeStream).rejects.toBeInstanceOf(StreamAbortedError);
+        await resultRejection;
+        await expect(chatStream.events).resolves.toEqual([
+            {
+                type: 'text-delta',
+                text: 'partial',
+            },
+        ]);
+    });
+
     it('should stream and aggregate structured object output', async () => {
         const create = vi.fn(async () => {
             return toAsyncIterable<ChatCompletionChunk>([
@@ -655,6 +769,71 @@ describe('stream', () => {
             temperatureC: 21,
         });
         expect(response.finishReason).toBe('tool-calls');
+    });
+
+    it('should reject object stream iteration and result on abort while preserving partial events', async () => {
+        const source = createPushableAsyncIterable<ChatCompletionChunk>();
+        const create = vi.fn(async () => source.iterable);
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const controller = new AbortController();
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+            signal: controller.signal,
+        });
+        const resultRejection = expect(
+            objectStream.result
+        ).rejects.toBeInstanceOf(StreamAbortedError);
+
+        const consumeStream = (async () => {
+            for await (const event of objectStream) {
+                if (event.type === 'object-delta') {
+                    controller.abort();
+                }
+            }
+        })();
+
+        source.push(
+            asChunk({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: null,
+                        delta: {
+                            tool_calls: [
+                                {
+                                    index: 0,
+                                    id: 'tc_1',
+                                    type: 'function',
+                                    function: {
+                                        name: 'weather_schema',
+                                        arguments: '{"city":"Berlin"',
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+                usage: null,
+            })
+        );
+
+        await expect(consumeStream).rejects.toBeInstanceOf(StreamAbortedError);
+        await resultRejection;
+        await expect(objectStream.events).resolves.toEqual([
+            {
+                type: 'object-delta',
+                text: '{"city":"Berlin"',
+            },
+        ]);
     });
 
     it('should pass reasoning effort in stream request (Chat Completions API)', async () => {

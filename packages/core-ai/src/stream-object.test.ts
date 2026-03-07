@@ -196,6 +196,44 @@ describe('createObjectStream', () => {
         expect(response.finishReason).toBe('stop');
     });
 
+    it('should allow undefined as a valid final object value', async () => {
+        const events: ObjectStreamEvent<z.ZodUndefined>[] = [
+            {
+                type: 'object',
+                object: undefined,
+            },
+            {
+                type: 'finish',
+                finishReason: 'stop',
+                usage: {
+                    inputTokens: 1,
+                    outputTokens: 0,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ];
+
+        const objectStream = createObjectStream(toAsyncIterable(events));
+
+        await expect(objectStream.result).resolves.toEqual({
+            object: undefined,
+            finishReason: 'stop',
+            usage: {
+                inputTokens: 1,
+                outputTokens: 0,
+                inputTokenDetails: {
+                    cacheReadTokens: 0,
+                    cacheWriteTokens: 0,
+                },
+                outputTokenDetails: {},
+            },
+        });
+    });
+
     it('should reject result when no object is emitted', async () => {
         const events: ObjectStreamEvent<typeof weatherSchema>[] = [
             { type: 'object-delta', text: '{"city":"Berlin"}' },

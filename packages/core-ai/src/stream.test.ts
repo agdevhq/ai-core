@@ -483,6 +483,49 @@ describe('createChatStream', () => {
         expect(removeEventListenerSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('should close the upstream iterator at most once when abort races with next resolution', async () => {
+        const controller = new AbortController();
+        let resolveNext: ((value: IteratorResult<string>) => void) | undefined;
+        const returnSpy = vi.fn(async () => ({
+            done: true as const,
+            value: undefined,
+        }));
+        const stream = createStream<string, string>({
+            source: {
+                [Symbol.asyncIterator]() {
+                    return {
+                        next() {
+                            return new Promise<IteratorResult<string>>((resolve) => {
+                                resolveNext = resolve;
+                            });
+                        },
+                        return: returnSpy,
+                    };
+                },
+            },
+            reduceEvent() {},
+            finalizeResult() {
+                return 'done';
+            },
+            signal: controller.signal,
+        });
+
+        await Promise.resolve();
+
+        if (!resolveNext) {
+            throw new Error('expected next() to be pending');
+        }
+
+        controller.abort();
+        resolveNext({
+            done: true,
+            value: undefined,
+        });
+
+        await expect(stream.result).rejects.toBeInstanceOf(StreamAbortedError);
+        expect(returnSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('should not emit unhandledRejection when callers only iterate a failing stream', async () => {
         const source = createPushableAsyncIterable<StreamEvent>();
         const chatStream = createChatStream(source.iterable);

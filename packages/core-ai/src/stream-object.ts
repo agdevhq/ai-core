@@ -31,7 +31,11 @@ export function createObjectStream<TSchema extends z.ZodType>(
     } = {}
 ): ObjectStream<TSchema> {
     const { signal } = options;
-    let objectResult: z.infer<TSchema> | undefined;
+    let objectState:
+        | { status: 'pending' }
+        | { status: 'ready'; object: z.infer<TSchema> } = {
+        status: 'pending',
+    };
     let finishReason: GenerateObjectResult<TSchema>['finishReason'] = 'unknown';
     let usage: GenerateObjectResult<TSchema>['usage'] = {
         inputTokens: 0,
@@ -48,21 +52,24 @@ export function createObjectStream<TSchema extends z.ZodType>(
         signal,
         reduceEvent(event) {
             if (event.type === 'object') {
-                objectResult = event.object;
+                objectState = {
+                    status: 'ready',
+                    object: event.object,
+                };
             } else if (event.type === 'finish') {
                 finishReason = event.finishReason;
                 usage = event.usage;
             }
         },
         finalizeResult() {
-            if (objectResult === undefined) {
+            if (objectState.status !== 'ready') {
                 throw new LLMError(
                     'object stream completed without emitting a final object'
                 );
             }
 
             return {
-                object: objectResult,
+                object: objectState.object,
                 finishReason,
                 usage,
             };
