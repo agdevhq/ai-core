@@ -1,7 +1,16 @@
-# core-ai
+<br>
+<p align="center">
+  <img src="./logo.svg" alt="core-ai logo" width="128" />
+</p>
 
-[![CI](https://github.com/agdevhq/core-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/agdevhq/core-ai/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@core-ai/core-ai.svg)](https://www.npmjs.com/package/@core-ai/core-ai)
+<br>
+
+<p align="center">
+  <a href="https://github.com/agdevhq/core-ai/actions/workflows/ci.yml"><img src="https://github.com/agdevhq/core-ai/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://www.npmjs.com/package/@core-ai/core-ai"><img src="https://img.shields.io/npm/v/@core-ai/core-ai.svg" alt="npm" /></a>
+</p>
+
+# core-ai
 
 A type-safe abstraction layer over LLM provider SDKs for TypeScript. Write provider-agnostic code with a unified API for chat completion, streaming, embeddings, image generation, and tool calling.
 
