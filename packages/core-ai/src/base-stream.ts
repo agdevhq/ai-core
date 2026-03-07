@@ -54,12 +54,8 @@ export function createStream<TEvent, TResult>(
         });
     }
 
-    const handleAbort = () => {
-        abortStream();
-    };
-
     function cleanupSignalListener(): void {
-        signal?.removeEventListener('abort', handleAbort);
+        signal?.removeEventListener('abort', abortStream);
     }
 
     function settleCompleted(finalResult: TResult): void {
@@ -118,7 +114,7 @@ export function createStream<TEvent, TResult>(
         if (signal.aborted) {
             abortStream();
         } else {
-            signal.addEventListener('abort', handleAbort, { once: true });
+            signal.addEventListener('abort', abortStream, { once: true });
         }
     }
 

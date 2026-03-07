@@ -68,9 +68,7 @@ export function createAnthropicChatModel(
     }
 
     async function streamChat(options: GenerateOptions): Promise<ChatStream> {
-        const request = createStreamRequest(modelId, defaultMaxTokens, {
-            ...options,
-        });
+        const request = createStreamRequest(modelId, defaultMaxTokens, options);
         const stream =
             await callAnthropicMessagesApi<
                 AsyncIterable<RawMessageStreamEvent>

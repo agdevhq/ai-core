@@ -64,9 +64,7 @@ export function createMistralChatModel(
     }
 
     async function streamChat(options: GenerateOptions): Promise<ChatStream> {
-        const request = createStreamRequest(modelId, {
-            ...options,
-        });
+        const request = createStreamRequest(modelId, options);
         const stream = (await callMistralChatApi(() =>
             options.signal
                 ? client.chat.stream(request, {

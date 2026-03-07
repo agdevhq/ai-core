@@ -66,9 +66,7 @@ export function createGoogleGenAIChatModel(
     }
 
     async function streamChat(options: GenerateOptions): Promise<ChatStream> {
-        const request = createGenerateRequest(modelId, {
-            ...options,
-        });
+        const request = createGenerateRequest(modelId, options);
         const stream = await callGenerateContentStreamApi(request);
         return createChatStream(transformStream(stream), {
             signal: options.signal,

@@ -45,9 +45,10 @@ export function createOpenAICompatChatModel(
     ): Promise<TResponse> {
         try {
             if (signal) {
-                return (await client.chat.completions.create(request as never, {
-                    signal,
-                })) as TResponse;
+                return (await client.chat.completions.create(
+                    request as never,
+                    { signal }
+                )) as TResponse;
             }
             return (await client.chat.completions.create(
                 request as never
@@ -69,9 +70,7 @@ export function createOpenAICompatChatModel(
     }
 
     async function streamChat(options: GenerateOptions): Promise<ChatStream> {
-        const request = createStreamRequest(modelId, {
-            ...options,
-        });
+        const request = createStreamRequest(modelId, options);
         const stream =
             await callOpenAIChatCompletionsApi<
                 AsyncIterable<ChatCompletionChunk>

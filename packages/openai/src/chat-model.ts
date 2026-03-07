@@ -47,8 +47,7 @@ export function createOpenAIChatModel(
     async function callOpenAIResponsesApi<TResponse>(
         request:
             | ResponseCreateParamsNonStreaming
-            | ResponseCreateParamsStreaming
-        ,
+            | ResponseCreateParamsStreaming,
         signal?: AbortSignal
     ): Promise<TResponse> {
         try {
@@ -57,7 +56,9 @@ export function createOpenAIChatModel(
                     signal,
                 })) as TResponse;
             }
-            return (await client.responses.create(request as never)) as TResponse;
+            return (await client.responses.create(
+                request as never
+            )) as TResponse;
         } catch (error) {
             throw wrapOpenAIError(error);
         }
@@ -75,9 +76,7 @@ export function createOpenAIChatModel(
     }
 
     async function streamChat(options: GenerateOptions): Promise<ChatStream> {
-        const request = createStreamRequest(modelId, {
-            ...options,
-        });
+        const request = createStreamRequest(modelId, options);
         const stream =
             await callOpenAIResponsesApi<AsyncIterable<ResponseStreamEvent>>(
                 request,
