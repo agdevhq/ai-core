@@ -68,41 +68,78 @@ export function createChatStream(
         reasoningProviderMetadata = undefined;
     };
 
+    const startReasoning = () => {
+        flushText();
+        flushReasoning();
+        insideReasoning = true;
+    };
+
+    const appendReasoning = (text: string) => {
+        if (!insideReasoning) {
+            flushText();
+            insideReasoning = true;
+        }
+        reasoningBuffer += text;
+    };
+
+    const endReasoning = (
+        providerMetadata?: Record<string, Record<string, unknown>>
+    ) => {
+        reasoningProviderMetadata = providerMetadata;
+        flushReasoning();
+        insideReasoning = false;
+    };
+
+    const appendText = (text: string) => {
+        if (insideReasoning) {
+            flushReasoning();
+            insideReasoning = false;
+        }
+        textBuffer += text;
+    };
+
+    const appendToolCall = (
+        toolCall: Extract<StreamEvent, { type: 'tool-call-end' }>['toolCall']
+    ) => {
+        flushText();
+        flushReasoning();
+        insideReasoning = false;
+        parts.push({
+            type: 'tool-call',
+            toolCall,
+        });
+    };
+
+    const setFinish = (event: Extract<StreamEvent, { type: 'finish' }>) => {
+        finishReason = event.finishReason;
+        usage = event.usage;
+    };
+
     return createStream({
         source: resolvedSource,
         signal,
         reduceEvent(event) {
-            if (event.type === 'reasoning-start') {
-                flushText();
-                flushReasoning();
-                insideReasoning = true;
-            } else if (event.type === 'reasoning-delta') {
-                if (!insideReasoning) {
-                    flushText();
-                    insideReasoning = true;
-                }
-                reasoningBuffer += event.text;
-            } else if (event.type === 'reasoning-end') {
-                reasoningProviderMetadata = event.providerMetadata;
-                flushReasoning();
-                insideReasoning = false;
-            } else if (event.type === 'text-delta') {
-                if (insideReasoning) {
-                    flushReasoning();
-                    insideReasoning = false;
-                }
-                textBuffer += event.text;
-            } else if (event.type === 'tool-call-end') {
-                flushText();
-                flushReasoning();
-                insideReasoning = false;
-                parts.push({
-                    type: 'tool-call',
-                    toolCall: event.toolCall,
-                });
-            } else if (event.type === 'finish') {
-                finishReason = event.finishReason;
-                usage = event.usage;
+            switch (event.type) {
+                case 'reasoning-start':
+                    startReasoning();
+                    break;
+                case 'reasoning-delta':
+                    appendReasoning(event.text);
+                    break;
+                case 'reasoning-end':
+                    endReasoning(event.providerMetadata);
+                    break;
+                case 'text-delta':
+                    appendText(event.text);
+                    break;
+                case 'tool-call-end':
+                    appendToolCall(event.toolCall);
+                    break;
+                case 'finish':
+                    setFinish(event);
+                    break;
+                default:
+                    break;
             }
         },
         finalizeResult() {
