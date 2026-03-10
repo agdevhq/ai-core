@@ -1,4 +1,5 @@
-import { LLMError } from './errors.ts';
+import { assertNonEmptyPrompt } from './assertions.ts';
+import { splitModelFromParams } from './model-options.ts';
 import type {
     ImageGenerateOptions,
     ImageGenerateResult,
@@ -12,10 +13,8 @@ export type GenerateImageParams = ImageGenerateOptions & {
 export async function generateImage(
     params: GenerateImageParams
 ): Promise<ImageGenerateResult> {
-    if (params.prompt.length === 0) {
-        throw new LLMError('prompt must not be empty');
-    }
+    assertNonEmptyPrompt(params.prompt);
 
-    const { model, ...options } = params;
+    const { model, options } = splitModelFromParams(params);
     return model.generate(options);
 }

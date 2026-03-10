@@ -1,4 +1,5 @@
 import { assertNonEmptyMessages } from './assertions.ts';
+import { splitModelFromParams } from './model-options.ts';
 import type { ChatModel, GenerateOptions, GenerateResult } from './types.ts';
 
 export type GenerateParams = GenerateOptions & {
@@ -10,6 +11,6 @@ export async function generate(
 ): Promise<GenerateResult> {
     assertNonEmptyMessages(params.messages);
 
-    const { model, ...options } = params;
+    const { model, options } = splitModelFromParams(params);
     return model.generate(options);
 }

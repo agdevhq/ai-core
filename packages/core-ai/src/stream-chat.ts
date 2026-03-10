@@ -1,4 +1,5 @@
 import { assertNonEmptyMessages } from './assertions.ts';
+import { splitModelFromParams } from './model-options.ts';
 import type { ChatModel, GenerateOptions, ChatStream } from './types.ts';
 
 export type StreamParams = GenerateOptions & {
@@ -8,6 +9,6 @@ export type StreamParams = GenerateOptions & {
 export async function stream(params: StreamParams): Promise<ChatStream> {
     assertNonEmptyMessages(params.messages);
 
-    const { model, ...options } = params;
+    const { model, options } = splitModelFromParams(params);
     return model.stream(options);
 }
