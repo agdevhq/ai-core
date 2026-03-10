@@ -1,0 +1,322 @@
+---
+title: 'generateImage()'
+description: 'Generate images from text prompts using image models'
+icon: 'image'
+---
+
+## Overview
+
+The `generateImage()` function generates images from text prompts using image generation models like DALL-E. It supports generating multiple images, different sizes, and provides both base64 and URL outputs.
+
+## Function Signature
+
+```typescript
+export async function generateImage(
+    params: GenerateImageParams
+): Promise<ImageGenerateResult>
+
+export type GenerateImageParams = ImageGenerateOptions & {
+    model: ImageModel;
+};
+```
+
+## Parameters
+
+<ParamField path="model" type="ImageModel" required>
+  The image generation model instance to use.
+</ParamField>
+
+<ParamField path="prompt" type="string" required>
+  The text description of the image to generate. Must not be empty.
+</ParamField>
+
+<ParamField path="n" type="number">
+  Number of images to generate. Defaults to 1.
+</ParamField>
+
+<ParamField path="size" type="string">
+  Image dimensions. Format and available sizes depend on the provider.
+  
+  Common sizes:
+  - `'1024x1024'` (square)
+  - `'1792x1024'` (landscape)
+  - `'1024x1792'` (portrait)
+</ParamField>
+
+<ParamField path="providerOptions" type="Record<string, unknown>">
+  Provider-specific options that are passed through to the underlying model.
+</ParamField>
+
+## Return Value
+
+Returns a `Promise<ImageGenerateResult>` with the following properties:
+
+<ResponseField name="images" type="GeneratedImage[]">
+  Array of generated images. Length matches the `n` parameter.
+  
+  <Expandable title="GeneratedImage">
+    <ResponseField name="base64" type="string | undefined">
+      Base64-encoded image data (if requested/available).
+    </ResponseField>
+    
+    <ResponseField name="url" type="string | undefined">
+      URL to the generated image (if available).
+    </ResponseField>
+    
+    <ResponseField name="revisedPrompt" type="string | undefined">
+      The actual prompt used by the model after any modifications or safety filtering.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+### Basic Image Generation
+
+```typescript
+import { generateImage } from '@coreai/core';
+import { openai } from '@coreai/openai';
+
+const result = await generateImage({
+  model: openai.image('dall-e-3'),
+  prompt: 'A serene landscape with mountains and a lake at sunset'
+});
+
+console.log(result.images[0].url);
+// Save or display the image URL
+```
+
+### Generate Multiple Images
+
+```typescript
+const result = await generateImage({
+  model: openai.image('dall-e-2'),
+  prompt: 'A cute robot playing guitar',
+  n: 4 // Generate 4 variations
+});
+
+console.log(`Generated ${result.images.length} images`);
+result.images.forEach((image, i) => {
+  console.log(`Image ${i + 1}: ${image.url}`);
+});
+```
+
+### Custom Size
+
+```typescript
+const result = await generateImage({
+  model: openai.image('dall-e-3'),
+  prompt: 'A futuristic city skyline',
+  size: '1792x1024' // Wide landscape format
+});
+
+console.log('Generated landscape image:', result.images[0].url);
+```
+
+### Get Base64 Image Data
+
+```typescript
+const result = await generateImage({
+  model: openai.image('dall-e-3'),
+  prompt: 'A detailed illustration of a dragon',
+  providerOptions: {
+    response_format: 'b64_json' // OpenAI-specific
+  }
+});
+
+const base64Data = result.images[0].base64;
+if (base64Data) {
+  // Save to file
+  const fs = await import('fs/promises');
+  const buffer = Buffer.from(base64Data, 'base64');
+  await fs.writeFile('dragon.png', buffer);
+}
+```
+
+### Check Revised Prompt
+
+```typescript
+const result = await generateImage({
+  model: openai.image('dall-e-3'),
+  prompt: 'cat'
+});
+
+if (result.images[0].revisedPrompt) {
+  console.log('Original:', 'cat');
+  console.log('Revised:', result.images[0].revisedPrompt);
+  // Revised might be: "A fluffy orange tabby cat sitting on a windowsill..."
+}
+```
+
+### Save Image to File
+
+```typescript
+import { writeFile } from 'fs/promises';
+
+const result = await generateImage({
+  model: openai.image('dall-e-3'),
+  prompt: 'Abstract art with vibrant colors'
+});
+
+const imageUrl = result.images[0].url;
+if (imageUrl) {
+  // Download and save
+  const response = await fetch(imageUrl);
+  const buffer = await response.arrayBuffer();
+  await writeFile('abstract-art.png', Buffer.from(buffer));
+  console.log('Image saved!');
+}
+```
+
+### Generate with Style Instructions
+
+```typescript
+const result = await generateImage({
+  model: openai.image('dall-e-3'),
+  prompt: 'A portrait of a wise old wizard, oil painting style, ' +
+          'detailed brushstrokes, warm lighting, fantasy art'
+});
+
+console.log(result.images[0].url);
+```
+
+### Error Handling
+
+```typescript
+import { LLMError } from '@coreai/core';
+
+try {
+  const result = await generateImage({
+    model: openai.image('dall-e-3'),
+    prompt: '' // Empty prompt
+  });
+} catch (error) {
+  if (error instanceof LLMError) {
+    console.error('Image generation failed:', error.message);
+    // Output: "prompt must not be empty"
+  }
+}
+```
+
+### Generate Portrait and Landscape Variants
+
+```typescript
+const prompt = 'A magical forest with glowing mushrooms';
+
+const [portrait, landscape, square] = await Promise.all([
+  generateImage({
+    model: openai.image('dall-e-3'),
+    prompt,
+    size: '1024x1792' // Portrait
+  }),
+  generateImage({
+    model: openai.image('dall-e-3'),
+    prompt,
+    size: '1792x1024' // Landscape
+  }),
+  generateImage({
+    model: openai.image('dall-e-3'),
+    prompt,
+    size: '1024x1024' // Square
+  })
+]);
+
+console.log('Portrait:', portrait.images[0].url);
+console.log('Landscape:', landscape.images[0].url);
+console.log('Square:', square.images[0].url);
+```
+
+## Model Support
+
+Different providers offer different image generation models:
+
+```typescript
+import { openai } from '@coreai/openai';
+
+// DALL-E 3: Higher quality, one image at a time
+const dalle3 = openai.image('dall-e-3');
+
+// DALL-E 2: Can generate multiple images
+const dalle2 = openai.image('dall-e-2');
+
+// Usage
+const result = await generateImage({
+  model: dalle3,
+  prompt: 'A beautiful sunset'
+});
+```
+
+## Important Notes
+
+<Warning>
+  DALL-E 3 only supports generating one image at a time (`n: 1`). Use DALL-E 2 for generating multiple variations.
+</Warning>
+
+<Info>
+  The `revisedPrompt` field is particularly useful with DALL-E 3, which automatically enhances short prompts with more detail.
+</Info>
+
+<Tip>
+  For best results, be specific and descriptive in your prompts. Include details about style, composition, lighting, colors, and mood.
+</Tip>
+
+## Provider-Specific Options
+
+### OpenAI
+
+```typescript
+const result = await generateImage({
+  model: openai.image('dall-e-3'),
+  prompt: 'A cat',
+  providerOptions: {
+    quality: 'hd', // 'standard' or 'hd'
+    style: 'vivid', // 'vivid' or 'natural'
+    response_format: 'url' // 'url' or 'b64_json'
+  }
+});
+```
+
+## Common Use Cases
+
+1. **Content Creation**: Generate illustrations for articles and blog posts
+2. **Marketing**: Create social media graphics and ad visuals
+3. **Product Design**: Visualize product concepts and variations
+4. **Game Development**: Generate concept art and textures
+5. **Education**: Create visual aids and diagrams
+6. **Personal Projects**: Generate artwork for presentations or creative projects
+
+## Best Practices
+
+1. **Be Specific**: Detailed prompts produce better results
+2. **Iterate**: Generate multiple variations to find the best result
+3. **Use Style Keywords**: Include art style, medium, and technique terms
+4. **Check Revised Prompts**: Learn what works from DALL-E 3's enhancements
+5. **Handle Errors**: Prompts may be rejected for safety reasons
+
+## Errors
+
+Throws `LLMError` if:
+- Prompt is empty
+- Model encounters an error during generation
+- Prompt violates content policy
+
+```typescript
+import { LLMError, ProviderError } from '@coreai/core';
+
+try {
+  const result = await generateImage({
+    model: openai.image('dall-e-3'),
+    prompt: 'inappropriate content'
+  });
+} catch (error) {
+  if (error instanceof ProviderError) {
+    console.error('Provider error:', error.provider, error.statusCode);
+  } else if (error instanceof LLMError) {
+    console.error('Generation failed:', error.message);
+  }
+}
+```
+
+## Source Location
+
+`~/workspace/source/packages/core-ai/src/generate-image.ts:12`

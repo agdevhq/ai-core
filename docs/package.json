@@ -1,0 +1,12 @@
+{
+    "name": "@core-ai/docs",
+    "private": true,
+    "license": "MIT",
+    "scripts": {
+        "preview": "mint dev",
+        "broken-links": "mint broken-links"
+    },
+    "devDependencies": {
+        "mint": "^4.2.420"
+    }
+}

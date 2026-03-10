@@ -1,0 +1,237 @@
+---
+title: 'generate()'
+description: 'Generate a single response from a chat model'
+icon: 'message'
+---
+
+## Overview
+
+The `generate()` function generates a single response from a chat model. It's the core function for synchronous text generation with support for tool calls, reasoning, and structured conversations.
+
+## Function Signature
+
+```typescript
+export async function generate(
+    params: GenerateParams
+): Promise<GenerateResult>
+
+export type GenerateParams = GenerateOptions & {
+    model: ChatModel;
+};
+```
+
+## Parameters
+
+<ParamField path="model" type="ChatModel" required>
+  The chat model instance to use for generation.
+</ParamField>
+
+<ParamField path="messages" type="Message[]" required>
+  Array of messages in the conversation. Must not be empty.
+</ParamField>
+
+<ParamField path="reasoning" type="ReasoningConfig">
+  Configuration for extended thinking/reasoning capabilities.
+  
+  <Expandable title="ReasoningConfig">
+    <ParamField path="effort" type="ReasoningEffort" required>
+      The effort level for reasoning: `'minimal'`, `'low'`, `'medium'`, `'high'`, or `'max'`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="tools" type="ToolSet">
+  Object mapping tool names to tool definitions. Enables the model to call functions.
+</ParamField>
+
+<ParamField path="toolChoice" type="ToolChoice">
+  Controls how the model uses tools:
+  - `'auto'` - Model decides whether to use tools
+  - `'none'` - Model won't use tools
+  - `'required'` - Model must use a tool
+  - `{ type: 'tool', toolName: string }` - Force specific tool
+</ParamField>
+
+<ParamField path="config" type="ModelConfig">
+  Model configuration parameters.
+  
+  <Expandable title="ModelConfig">
+    <ParamField path="temperature" type="number">
+      Sampling temperature (0-2). Higher values make output more random.
+    </ParamField>
+    
+    <ParamField path="maxTokens" type="number">
+      Maximum number of tokens to generate.
+    </ParamField>
+    
+    <ParamField path="topP" type="number">
+      Nucleus sampling parameter (0-1).
+    </ParamField>
+    
+    <ParamField path="stopSequences" type="string[]">
+      Sequences that will stop generation when encountered.
+    </ParamField>
+    
+    <ParamField path="frequencyPenalty" type="number">
+      Penalty for token frequency (-2 to 2).
+    </ParamField>
+    
+    <ParamField path="presencePenalty" type="number">
+      Penalty for token presence (-2 to 2).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="providerOptions" type="Record<string, unknown>">
+  Provider-specific options that are passed through to the underlying model.
+</ParamField>
+
+<ParamField path="signal" type="AbortSignal">
+  AbortSignal for cancelling the request.
+</ParamField>
+
+## Return Value
+
+Returns a `Promise<GenerateResult>` with the following properties:
+
+<ResponseField name="parts" type="AssistantContentPart[]">
+  Array of content parts in the response (text, reasoning, tool calls).
+</ResponseField>
+
+<ResponseField name="content" type="string | null">
+  Concatenated text content from all text parts. `null` if no text was generated.
+</ResponseField>
+
+<ResponseField name="reasoning" type="string | null">
+  Concatenated reasoning content. `null` if no reasoning was generated.
+</ResponseField>
+
+<ResponseField name="toolCalls" type="ToolCall[]">
+  Array of tool calls made by the model.
+</ResponseField>
+
+<ResponseField name="finishReason" type="FinishReason">
+  Why generation stopped: `'stop'`, `'length'`, `'tool-calls'`, `'content-filter'`, or `'unknown'`.
+</ResponseField>
+
+<ResponseField name="usage" type="ChatUsage">
+  Token usage statistics including input/output tokens and cache details.
+  
+  <Expandable title="ChatUsage">
+    <ResponseField name="inputTokens" type="number">
+      Total input tokens, including cached and cache-write tokens.
+    </ResponseField>
+    
+    <ResponseField name="outputTokens" type="number">
+      Total output tokens, including both visible text and reasoning.
+    </ResponseField>
+    
+    <ResponseField name="inputTokenDetails" type="ChatInputTokenDetails">
+      Breakdown of input token categories (cacheReadTokens, cacheWriteTokens).
+    </ResponseField>
+    
+    <ResponseField name="outputTokenDetails" type="ChatOutputTokenDetails">
+      Breakdown of output token categories (reasoningTokens if available).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+### Basic Text Generation
+
+```typescript
+import { generate } from '@coreai/core';
+import { openai } from '@coreai/openai';
+
+const result = await generate({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'What is the capital of France?' }
+  ]
+});
+
+console.log(result.content); // "Paris"
+```
+
+### With Configuration
+
+```typescript
+const result = await generate({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Write a creative story' }
+  ],
+  config: {
+    temperature: 1.5,
+    maxTokens: 500
+  }
+});
+```
+
+### With Tools
+
+```typescript
+import { defineTool } from '@coreai/core';
+import { z } from 'zod';
+
+const weatherTool = defineTool({
+  name: 'get_weather',
+  description: 'Get weather for a location',
+  parameters: z.object({
+    location: z.string()
+  })
+});
+
+const result = await generate({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'What\'s the weather in Paris?' }
+  ],
+  tools: {
+    get_weather: weatherTool
+  }
+});
+
+if (result.toolCalls.length > 0) {
+  console.log('Tool called:', result.toolCalls[0].name);
+  console.log('Arguments:', result.toolCalls[0].arguments);
+}
+```
+
+### Multi-turn Conversation
+
+```typescript
+const result = await generate({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Hello!' },
+    { role: 'assistant', parts: [{ type: 'text', text: 'Hi! How can I help?' }] },
+    { role: 'user', content: 'Tell me a joke' }
+  ]
+});
+```
+
+## Error Handling
+
+Throws `LLMError` if:
+- Messages array is empty
+- Model encounters an error during generation
+
+```typescript
+try {
+  const result = await generate({
+    model: openai('gpt-4'),
+    messages: []
+  });
+} catch (error) {
+  if (error instanceof LLMError) {
+    console.error('Generation failed:', error.message);
+  }
+}
+```
+
+## Source Location
+
+`~/workspace/source/packages/core-ai/src/generate.ts:12`

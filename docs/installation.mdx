@@ -1,0 +1,187 @@
+---
+title: Installation
+description: Install Core AI with your preferred package manager
+---
+
+# Installation
+
+Core AI is distributed as npm packages. Install the core package along with your preferred provider adapter.
+
+## Requirements
+
+- Node.js 22 or higher
+- TypeScript 5.7+ (recommended)
+
+## Install the core package
+
+<CodeGroup>
+```bash npm
+npm install @core-ai/core-ai
+```
+
+```bash yarn
+yarn add @core-ai/core-ai
+```
+
+```bash pnpm
+pnpm add @core-ai/core-ai
+```
+</CodeGroup>
+
+## Install a provider adapter
+
+You need at least one provider adapter to use Core AI. Install the package for your preferred LLM provider:
+
+<Tabs>
+  <Tab title="OpenAI">
+    <CodeGroup>
+    ```bash npm
+    npm install @core-ai/openai
+    ```
+
+    ```bash yarn
+    yarn add @core-ai/openai
+    ```
+
+    ```bash pnpm
+    pnpm add @core-ai/openai
+    ```
+    </CodeGroup>
+
+    <Note>
+      The OpenAI adapter supports chat completion, streaming, embeddings, and image generation with DALL-E.
+    </Note>
+  </Tab>
+
+  <Tab title="Anthropic">
+    <CodeGroup>
+    ```bash npm
+    npm install @core-ai/anthropic
+    ```
+
+    ```bash yarn
+    yarn add @core-ai/anthropic
+    ```
+
+    ```bash pnpm
+    pnpm add @core-ai/anthropic
+    ```
+    </CodeGroup>
+
+    <Note>
+      The Anthropic adapter supports chat completion and streaming with Claude models.
+    </Note>
+  </Tab>
+
+  <Tab title="Google GenAI">
+    <CodeGroup>
+    ```bash npm
+    npm install @core-ai/google-genai
+    ```
+
+    ```bash yarn
+    yarn add @core-ai/google-genai
+    ```
+
+    ```bash pnpm
+    pnpm add @core-ai/google-genai
+    ```
+    </CodeGroup>
+
+    <Note>
+      The Google GenAI adapter supports Gemini models with chat, streaming, embeddings, and image generation.
+    </Note>
+  </Tab>
+
+  <Tab title="Mistral">
+    <CodeGroup>
+    ```bash npm
+    npm install @core-ai/mistral
+    ```
+
+    ```bash yarn
+    yarn add @core-ai/mistral
+    ```
+
+    ```bash pnpm
+    pnpm add @core-ai/mistral
+    ```
+    </CodeGroup>
+
+    <Note>
+      The Mistral adapter supports chat completion, streaming, and embeddings.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Get API keys
+
+You need an API key from your chosen provider. Set it as an environment variable:
+
+<CodeGroup>
+```bash OpenAI
+export OPENAI_API_KEY="your-api-key-here"
+```
+
+```bash Anthropic
+export ANTHROPIC_API_KEY="your-api-key-here"
+```
+
+```bash Google GenAI
+export GOOGLE_API_KEY="your-api-key-here"
+```
+
+```bash Mistral
+export MISTRAL_API_KEY="your-api-key-here"
+```
+</CodeGroup>
+
+<Tip>
+  Use a `.env` file with `dotenv` to manage your environment variables during development:
+  
+  ```bash
+  npm install dotenv
+  ```
+  
+  Then add `import 'dotenv/config';` at the top of your entry file.
+</Tip>
+
+## Verify installation
+
+Create a simple test file to verify your installation:
+
+```typescript test.ts
+import { generate } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+
+console.log(result.content);
+```
+
+Run it with:
+
+```bash
+npx tsx test.ts
+```
+
+<Note>
+  Core AI uses ES modules (`"type": "module"`). Make sure your `package.json` includes this or use `.mts` file extensions.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Build your first chat completion in 2 minutes
+  </Card>
+  <Card title="Examples" icon="code" href="/examples/overview">
+    Explore real-world implementation examples
+  </Card>
+</CardGroup>

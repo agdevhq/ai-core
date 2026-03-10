@@ -1,0 +1,428 @@
+---
+title: Messages
+description: Understanding message types, content parts, and multi-modal inputs in Core AI
+---
+
+## Overview
+
+Messages are the fundamental building blocks of conversations in Core AI. They represent the dialogue between users, the assistant, and tools.
+
+## Message Types
+
+Core AI supports four message types:
+
+```typescript
+type Message =
+  | SystemMessage
+  | UserMessage
+  | AssistantMessage
+  | ToolResultMessage;
+```
+
+### System Message
+
+System messages set the context and behavior for the assistant.
+
+```typescript
+type SystemMessage = {
+  role: 'system';
+  content: string;
+};
+```
+
+**Example:**
+
+```typescript
+const systemMessage: SystemMessage = {
+  role: 'system',
+  content: 'You are a helpful assistant that always responds in haiku format.',
+};
+```
+
+### User Message
+
+User messages represent input from the user. They can be simple text or multi-modal content with images and files.
+
+```typescript
+type UserMessage = {
+  role: 'user';
+  content: string | UserContentPart[];
+};
+```
+
+**Simple Text:**
+
+```typescript
+const userMessage: UserMessage = {
+  role: 'user',
+  content: 'What is the capital of France?',
+};
+```
+
+**Multi-Modal Content:**
+
+```typescript
+const userMessage: UserMessage = {
+  role: 'user',
+  content: [
+    { type: 'text', text: 'What is in this image?' },
+    {
+      type: 'image',
+      source: {
+        type: 'url',
+        url: 'https://example.com/photo.jpg',
+      },
+    },
+  ],
+};
+```
+
+### Assistant Message
+
+Assistant messages contain the model's responses, including text, reasoning, and tool calls.
+
+```typescript
+type AssistantMessage = {
+  role: 'assistant';
+  parts: AssistantContentPart[];
+};
+
+type AssistantContentPart =
+  | AssistantTextPart
+  | ReasoningPart
+  | ToolCallPart;
+```
+
+**Example:**
+
+```typescript
+const assistantMessage: AssistantMessage = {
+  role: 'assistant',
+  parts: [
+    { type: 'text', text: 'The capital of France is Paris.' },
+  ],
+};
+```
+
+<Note>
+  Assistant messages use a `parts` array to support multiple content types (text, reasoning, tool calls) in a single message.
+</Note>
+
+### Tool Result Message
+
+Tool result messages provide the results of tool calls back to the model.
+
+```typescript
+type ToolResultMessage = {
+  role: 'tool';
+  toolCallId: string;
+  content: string;
+  isError?: boolean;
+};
+```
+
+**Example:**
+
+```typescript
+const toolResult: ToolResultMessage = {
+  role: 'tool',
+  toolCallId: 'call_123',
+  content: JSON.stringify({ temperature: 72, condition: 'sunny' }),
+};
+```
+
+## User Content Parts
+
+User messages can include multiple types of content:
+
+```typescript
+type UserContentPart = TextPart | ImagePart | FilePart;
+```
+
+### Text Part
+
+Simple text content:
+
+```typescript
+type TextPart = {
+  type: 'text';
+  text: string;
+};
+```
+
+**Example:**
+
+```typescript
+const textPart: TextPart = {
+  type: 'text',
+  text: 'Explain this concept in detail.',
+};
+```
+
+### Image Part
+
+Images can be provided as URLs or base64-encoded data:
+
+```typescript
+type ImagePart = {
+  type: 'image';
+  source:
+    | { type: 'base64'; mediaType: string; data: string }
+    | { type: 'url'; url: string };
+};
+```
+
+**URL Image:**
+
+```typescript
+const urlImage: ImagePart = {
+  type: 'image',
+  source: {
+    type: 'url',
+    url: 'https://example.com/diagram.png',
+  },
+};
+```
+
+**Base64 Image:**
+
+```typescript
+import { readFileSync } from 'fs';
+
+const imageBuffer = readFileSync('./photo.jpg');
+const base64Data = imageBuffer.toString('base64');
+
+const base64Image: ImagePart = {
+  type: 'image',
+  source: {
+    type: 'base64',
+    mediaType: 'image/jpeg',
+    data: base64Data,
+  },
+};
+```
+
+### File Part
+
+Files can be attached with mime type information:
+
+```typescript
+type FilePart = {
+  type: 'file';
+  data: string; // Base64-encoded file data
+  mimeType: string;
+  filename?: string;
+};
+```
+
+**Example:**
+
+```typescript
+import { readFileSync } from 'fs';
+
+const pdfBuffer = readFileSync('./document.pdf');
+const base64Data = pdfBuffer.toString('base64');
+
+const filePart: FilePart = {
+  type: 'file',
+  data: base64Data,
+  mimeType: 'application/pdf',
+  filename: 'document.pdf',
+};
+```
+
+<Warning>
+  Not all providers support all content types. Check provider documentation for specific limitations on multi-modal inputs.
+</Warning>
+
+## Assistant Content Parts
+
+Assistant messages can contain text, reasoning, and tool calls:
+
+```typescript
+type AssistantContentPart =
+  | AssistantTextPart
+  | ReasoningPart
+  | ToolCallPart;
+```
+
+### Text Part
+
+Regular text responses:
+
+```typescript
+type AssistantTextPart = {
+  type: 'text';
+  text: string;
+};
+```
+
+### Reasoning Part
+
+Extended thinking and reasoning (supported by some models like Claude):
+
+```typescript
+type ReasoningPart = {
+  type: 'reasoning';
+  text: string;
+  providerMetadata?: Record<string, unknown>;
+};
+```
+
+**Accessing Reasoning:**
+
+```typescript
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Solve this complex problem...' }],
+  reasoning: { effort: 'high' },
+});
+
+if (result.reasoning) {
+  console.log('Internal reasoning:', result.reasoning);
+}
+```
+
+### Tool Call Part
+
+Requests to call external tools:
+
+```typescript
+type ToolCallPart = {
+  type: 'tool-call';
+  toolCall: ToolCall;
+};
+
+type ToolCall = {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+};
+```
+
+## Multi-Turn Conversations
+
+Build conversations by passing message history:
+
+```typescript
+import { generate } from '@core-ai/core-ai';
+
+const messages: Message[] = [
+  { role: 'system', content: 'You are a helpful math tutor.' },
+  { role: 'user', content: 'What is 15 + 27?' },
+];
+
+const result1 = await generate({ model, messages });
+
+// Add assistant response to history
+messages.push({
+  role: 'assistant',
+  parts: result1.parts,
+});
+
+// Continue conversation
+messages.push({
+  role: 'user',
+  content: 'Now multiply that by 2',
+});
+
+const result2 = await generate({ model, messages });
+```
+
+## Helper Functions
+
+Core AI provides utilities for working with messages:
+
+### resultToMessage
+
+Convert a `GenerateResult` to an `AssistantMessage`:
+
+```typescript
+import { resultToMessage } from '@core-ai/core-ai';
+
+const result = await generate({ model, messages });
+const assistantMessage = resultToMessage(result);
+
+messages.push(assistantMessage);
+```
+
+By default, `resultToMessage` includes reasoning content in the message. You can exclude it:
+
+```typescript
+const assistantMessage = resultToMessage(result, { includeReasoning: false });
+```
+
+### assistantMessage
+
+Create a simple assistant message from text:
+
+```typescript
+import { assistantMessage } from '@core-ai/core-ai';
+
+const message = assistantMessage('Hello! How can I help you?');
+```
+
+This is a convenience function that creates an assistant message with a single text part.
+
+## Tool Call Flow
+
+Here's a complete example of handling tool calls:
+
+```typescript
+import { defineTool, generate, resultToMessage } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const tools = {
+  getWeather: defineTool({
+    name: 'getWeather',
+    description: 'Get weather for a location',
+    parameters: z.object({
+      location: z.string(),
+    }),
+  }),
+};
+
+const messages: Message[] = [
+  { role: 'user', content: 'What\'s the weather in Tokyo?' },
+];
+
+// Step 1: Model requests tool call
+const result1 = await generate({ model, messages, tools });
+messages.push(resultToMessage(result1));
+
+if (result1.toolCalls.length > 0) {
+  // Step 2: Execute tool and provide result
+  const toolCall = result1.toolCalls[0];
+  const weatherData = await getWeather(toolCall.arguments.location);
+  
+  messages.push({
+    role: 'tool',
+    toolCallId: toolCall.id,
+    content: JSON.stringify(weatherData),
+  });
+  
+  // Step 3: Model generates final response
+  const result2 = await generate({ model, messages, tools });
+  console.log(result2.content);
+}
+```
+
+## Best Practices
+
+<Tip>
+  **Keep system messages concise:** System messages set the tone but shouldn't contain too much information. For large context, consider using user messages with retrieved content.
+</Tip>
+
+<Tip>
+  **Use `resultToMessage` for history:** Always convert generation results to messages using `resultToMessage()` to maintain proper conversation history with all content parts.
+</Tip>
+
+<Tip>
+  **Multi-modal order matters:** When combining text and images, place the text part first to provide context for what you're asking about the image.
+</Tip>
+
+## Next Steps
+
+- Configure generation with [Configuration](/concepts/configuration) options
+- Learn about [Error Handling](/concepts/error-handling)
+- Explore [Providers](/concepts/providers) for provider-specific features
