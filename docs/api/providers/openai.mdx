@@ -1,0 +1,250 @@
+---
+title: 'OpenAI Provider'
+description: 'Create and configure the OpenAI provider for chat, embeddings, and image generation'
+---
+
+## Overview
+
+The OpenAI provider gives you access to OpenAI's models including GPT-5, GPT-4, o-series reasoning models, embeddings, and DALL-E image generation.
+
+## Installation
+
+```bash
+npm install @core-ai/openai
+```
+
+## createOpenAI()
+
+Create an OpenAI provider instance.
+
+```typescript
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: 'https://api.openai.com/v1' // optional
+});
+```
+
+### Options
+
+<ParamField path="apiKey" type="string" optional>
+  Your OpenAI API key. Defaults to `OPENAI_API_KEY` environment variable.
+</ParamField>
+
+<ParamField path="baseURL" type="string" optional>
+  Custom base URL for API requests. Useful for proxies or OpenAI-compatible APIs.
+</ParamField>
+
+<ParamField path="client" type="OpenAI" optional>
+  Provide your own configured OpenAI client instance.
+</ParamField>
+
+### Returns
+
+`OpenAIProvider` - Provider instance with methods to create models.
+
+## Provider Methods
+
+### chatModel()
+
+Create a chat model instance.
+
+```typescript
+const model = openai.chatModel('gpt-5.2');
+```
+
+<ParamField path="modelId" type="string" required>
+  Model identifier. See [Supported Models](#supported-models) below.
+</ParamField>
+
+### embeddingModel()
+
+Create an embedding model instance.
+
+```typescript
+const embeddings = openai.embeddingModel('text-embedding-3-large');
+```
+
+<ParamField path="modelId" type="string" required>
+  Embedding model identifier (e.g., `text-embedding-3-small`, `text-embedding-3-large`).
+</ParamField>
+
+### imageModel()
+
+Create an image generation model instance.
+
+```typescript
+const imageGen = openai.imageModel('dall-e-3');
+```
+
+<ParamField path="modelId" type="string" required>
+  Image model identifier (e.g., `dall-e-2`, `dall-e-3`).
+</ParamField>
+
+## Supported Models
+
+### Chat Models
+
+<AccordionGroup>
+  <Accordion title="GPT-5 Series" icon="star">
+    - **gpt-5.2** - Latest flagship model with max reasoning effort
+    - **gpt-5.2-codex** - Optimized for code generation
+    - **gpt-5.2-pro** - Enhanced reasoning capabilities
+    - **gpt-5.1** - Previous generation flagship
+    - **gpt-5** - Balanced performance and cost
+    - **gpt-5-mini** - Fast and efficient
+    - **gpt-5-nano** - Lightweight model
+  </Accordion>
+  
+  <Accordion title="o-Series (Reasoning Models)" icon="brain">
+    - **o4-mini** - Latest compact reasoning model
+    - **o3** - Advanced reasoning capabilities
+    - **o3-mini** - Efficient reasoning model
+    - **o1** - First-generation reasoning model
+    - **o1-mini** - Compact reasoning model (no effort control)
+  </Accordion>
+  
+  <Accordion title="GPT-4 Series" icon="circle">
+    - **gpt-4** - Previous flagship model
+    - **gpt-4-turbo** - Faster GPT-4 variant
+    - **gpt-4o** - Optimized GPT-4
+  </Accordion>
+</AccordionGroup>
+
+### Embedding Models
+
+- **text-embedding-3-large** - 3072 dimensions, highest quality
+- **text-embedding-3-small** - 1536 dimensions, faster and cheaper
+- **text-embedding-ada-002** - Legacy embedding model
+
+### Image Models
+
+- **dall-e-3** - Latest image generation model
+- **dall-e-2** - Previous generation
+
+## Capabilities
+
+| Feature | Support |
+|---------|--------|
+| Chat Completion | ✓ |
+| Streaming | ✓ |
+| Function Calling | ✓ |
+| Vision | ✓ |
+| Reasoning Effort | ✓ (model-dependent) |
+| Embeddings | ✓ |
+| Image Generation | ✓ |
+
+## Examples
+
+### Basic Chat
+
+```typescript
+import { createOpenAI } from '@core-ai/openai';
+import { generateText } from '@core-ai/core-ai';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+const result = await generateText({
+  model: openai.chatModel('gpt-5.2'),
+  prompt: 'Explain quantum computing in simple terms'
+});
+
+console.log(result.text);
+```
+
+### Reasoning with Effort Control
+
+```typescript
+const result = await generateText({
+  model: openai.chatModel('gpt-5.2'),
+  prompt: 'Solve this complex mathematical proof...',
+  reasoning: {
+    effort: 'max' // 'minimal' | 'low' | 'medium' | 'high' | 'max'
+  }
+});
+```
+
+### Embeddings
+
+```typescript
+import { embed } from '@core-ai/core-ai';
+
+const result = await embed({
+  model: openai.embeddingModel('text-embedding-3-large'),
+  value: 'Search query text'
+});
+
+console.log(result.embedding); // number[]
+```
+
+### Image Generation
+
+```typescript
+import { generateImage } from '@core-ai/core-ai';
+
+const result = await generateImage({
+  model: openai.imageModel('dall-e-3'),
+  prompt: 'A futuristic city at sunset',
+  size: '1024x1024'
+});
+
+console.log(result.images);
+```
+
+### Custom Base URL (OpenAI-compatible APIs)
+
+```typescript
+const openai = createOpenAI({
+  apiKey: 'your-api-key',
+  baseURL: 'https://your-proxy.com/v1'
+});
+```
+
+## Reasoning Effort
+
+OpenAI models support different reasoning effort levels:
+
+- **minimal** - Fastest, least reasoning
+- **low** - Quick responses with basic reasoning
+- **medium** - Balanced reasoning and speed
+- **high** - Deep reasoning for complex problems
+- **max** - Maximum reasoning effort (GPT-5.2 series only)
+
+<Note>
+  Some models restrict sampling parameters when using reasoning effort. The SDK handles this automatically.
+</Note>
+
+## Error Handling
+
+```typescript
+import { APIError } from '@core-ai/core-ai';
+
+try {
+  const result = await generateText({
+    model: openai.chatModel('gpt-5.2'),
+    prompt: 'Hello!'
+  });
+} catch (error) {
+  if (error instanceof APIError) {
+    console.error('OpenAI API error:', error.message);
+    console.error('Status:', error.statusCode);
+  }
+}
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Anthropic Provider" icon="message" href="/api/providers/anthropic">
+    Claude models with extended thinking
+  </Card>
+  <Card title="Google GenAI Provider" icon="sparkles" href="/api/providers/google-genai">
+    Gemini models with multimodal capabilities
+  </Card>
+  <Card title="Core AI Functions" icon="function" href="/api/core/generate">
+    Learn about generate, stream, and more
+  </Card>
+</CardGroup>

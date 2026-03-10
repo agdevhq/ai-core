@@ -1,0 +1,455 @@
+---
+title: Structured Outputs
+description: Generate type-safe JSON with generateObject() and streamObject() using Zod schemas
+---
+
+Core AI provides strongly-typed structured outputs using Zod schemas, ensuring your responses match expected formats with full TypeScript type inference.
+
+## Generate Structured Objects
+
+Use `generateObject()` to get validated JSON responses:
+
+```typescript
+import { generateObject } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+const weatherSchema = z.object({
+  city: z.string(),
+  temperatureC: z.number(),
+  summary: z.string(),
+});
+
+const result = await generateObject({
+  model,
+  messages: [
+    {
+      role: 'user',
+      content: 'Return a weather report for Berlin as structured JSON.',
+    },
+  ],
+  schema: weatherSchema,
+  schemaName: 'weather_report',
+  schemaDescription: 'A structured weather report object.',
+});
+
+// result.object is fully typed!
+console.log('City:', result.object.city);
+console.log('Temperature:', result.object.temperatureC);
+console.log('Summary:', result.object.summary);
+```
+
+## Stream Structured Objects
+
+Stream JSON as it's being generated:
+
+```typescript
+import { streamObject } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const extractSchema = z.object({
+  headline: z.string(),
+  sentiment: z.enum(['positive', 'neutral', 'negative']),
+  tags: z.array(z.string()),
+});
+
+const result = await streamObject({
+  model,
+  messages: [
+    {
+      role: 'user',
+      content: 'Analyze this sentence and return JSON only: "Core AI makes provider integration easier."',
+    },
+  ],
+  schema: extractSchema,
+  schemaName: 'text_analysis',
+  schemaDescription: 'Structured text analysis output.',
+});
+
+for await (const event of result) {
+  if (event.type === 'object-delta') {
+    process.stdout.write(event.text);
+    continue;
+  }
+
+  if (event.type === 'object') {
+    console.log('\n\nValidated object update:', event.object);
+  }
+}
+
+const response = await result.toResponse();
+console.log('\nFinal object:', response.object);
+console.log('Finish reason:', response.finishReason);
+```
+
+## Object Stream Events
+
+The `streamObject()` function emits these event types:
+
+```typescript
+type ObjectStreamEvent<TSchema extends z.ZodType> =
+  | { type: 'object-delta'; text: string }      // Raw JSON text chunks
+  | { type: 'object'; object: z.infer<TSchema> } // Validated partial object
+  | { type: 'finish'; finishReason: FinishReason; usage: ChatUsage };
+```
+
+<Note>
+  The `object` event is emitted whenever the partial JSON is valid according to your schema. This may happen multiple times as the object is streamed.
+</Note>
+
+## Complex Schema Examples
+
+<Tabs>
+  <Tab title="Nested Objects">
+    ```typescript
+    import { generateObject } from '@core-ai/core-ai';
+    import { z } from 'zod';
+
+    const userProfileSchema = z.object({
+      name: z.string(),
+      age: z.number(),
+      address: z.object({
+        street: z.string(),
+        city: z.string(),
+        country: z.string(),
+      }),
+      skills: z.array(z.string()),
+      metadata: z.record(z.string(), z.unknown()),
+    });
+
+    const result = await generateObject({
+      model,
+      messages: [{
+        role: 'user',
+        content: 'Create a sample user profile for a software engineer in Berlin.',
+      }],
+      schema: userProfileSchema,
+    });
+
+    console.log(result.object.name);
+    console.log(result.object.address.city);
+    console.log(result.object.skills);
+    ```
+  </Tab>
+  <Tab title="Arrays">
+    ```typescript
+    const taskListSchema = z.object({
+      tasks: z.array(
+        z.object({
+          id: z.number(),
+          title: z.string(),
+          priority: z.enum(['low', 'medium', 'high']),
+          completed: z.boolean(),
+          tags: z.array(z.string()),
+        })
+      ),
+      totalCount: z.number(),
+    });
+
+    const result = await generateObject({
+      model,
+      messages: [{
+        role: 'user',
+        content: 'Generate 5 sample tasks for a project management app.',
+      }],
+      schema: taskListSchema,
+    });
+
+    result.object.tasks.forEach((task) => {
+      console.log(`${task.id}. ${task.title} [${task.priority}]`);
+    });
+    ```
+  </Tab>
+  <Tab title="Unions and Discriminated Types">
+    ```typescript
+    const notificationSchema = z.discriminatedUnion('type', [
+      z.object({
+        type: z.literal('email'),
+        to: z.string().email(),
+        subject: z.string(),
+        body: z.string(),
+      }),
+      z.object({
+        type: z.literal('sms'),
+        phoneNumber: z.string(),
+        message: z.string(),
+      }),
+      z.object({
+        type: z.literal('push'),
+        deviceId: z.string(),
+        title: z.string(),
+        body: z.string(),
+      }),
+    ]);
+
+    const result = await generateObject({
+      model,
+      messages: [{
+        role: 'user',
+        content: 'Create an email notification about a password reset.',
+      }],
+      schema: notificationSchema,
+    });
+
+    if (result.object.type === 'email') {
+      console.log('Email to:', result.object.to);
+      console.log('Subject:', result.object.subject);
+    }
+    ```
+  </Tab>
+  <Tab title="Optional and Default Values">
+    ```typescript
+    const configSchema = z.object({
+      name: z.string(),
+      enabled: z.boolean().default(true),
+      timeout: z.number().optional(),
+      settings: z.object({
+        theme: z.enum(['light', 'dark']).default('light'),
+        language: z.string().default('en'),
+      }).optional(),
+    });
+
+    const result = await generateObject({
+      model,
+      messages: [{
+        role: 'user',
+        content: 'Create a configuration for a web application.',
+      }],
+      schema: configSchema,
+    });
+
+    console.log(result.object);
+    ```
+  </Tab>
+</Tabs>
+
+## Schema Descriptions
+
+Add descriptions to help the model understand your schema:
+
+```typescript
+const productSchema = z.object({
+  name: z.string().describe('The product name'),
+  price: z.number().describe('Price in USD'),
+  category: z.enum(['electronics', 'clothing', 'food'])
+    .describe('Product category'),
+  inStock: z.boolean().describe('Whether the product is currently available'),
+  tags: z.array(z.string()).describe('Relevant tags for searching'),
+});
+
+const result = await generateObject({
+  model,
+  messages: [{
+    role: 'user',
+    content: 'Create a product listing for a wireless keyboard.',
+  }],
+  schema: productSchema,
+  schemaName: 'product',
+  schemaDescription: 'A product listing with name, price, and metadata.',
+});
+```
+
+## Type Inference
+
+TypeScript automatically infers types from Zod schemas:
+
+```typescript
+const userSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  email: z.string().email(),
+  role: z.enum(['admin', 'user', 'guest']),
+});
+
+// Type is automatically inferred!
+type User = z.infer<typeof userSchema>;
+// { id: number; name: string; email: string; role: 'admin' | 'user' | 'guest' }
+
+const result = await generateObject({
+  model,
+  messages: [{ role: 'user', content: 'Create a user' }],
+  schema: userSchema,
+});
+
+// result.object is typed as User
+const user: User = result.object;
+```
+
+## Error Handling
+
+Handle validation and parsing errors:
+
+```typescript
+import {
+  StructuredOutputError,
+  StructuredOutputValidationError,
+  StructuredOutputParseError,
+} from '@core-ai/core-ai';
+
+try {
+  const result = await generateObject({
+    model,
+    messages,
+    schema: mySchema,
+  });
+
+  console.log(result.object);
+} catch (error) {
+  if (error instanceof StructuredOutputValidationError) {
+    console.error('Validation failed:', error.message);
+    console.error('Validation errors:', error.issues);
+  } else if (error instanceof StructuredOutputParseError) {
+    console.error('Failed to parse JSON:', error.message);
+    console.error('Raw text:', error.text);
+  } else if (error instanceof StructuredOutputError) {
+    console.error('Structured output error:', error.message);
+  }
+}
+```
+
+## Streaming with UI Updates
+
+Update your UI as the object is built:
+
+```typescript
+import { streamObject } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const recipeSchema = z.object({
+  title: z.string(),
+  ingredients: z.array(z.string()),
+  instructions: z.array(z.string()),
+  prepTime: z.number(),
+  cookTime: z.number(),
+});
+
+const result = await streamObject({
+  model,
+  messages: [{ role: 'user', content: 'Give me a pasta recipe' }],
+  schema: recipeSchema,
+});
+
+for await (const event of result) {
+  if (event.type === 'object') {
+    // event.object contains the validated partial object
+    updateRecipeUI(event.object);
+    
+    // Check which fields are available
+    if (event.object.title) {
+      console.log('Title:', event.object.title);
+    }
+    if (event.object.ingredients && event.object.ingredients.length > 0) {
+      console.log('Ingredients so far:', event.object.ingredients.length);
+    }
+  }
+}
+
+const response = await result.toResponse();
+console.log('Complete recipe:', response.object);
+```
+
+## Configuration Options
+
+Customize structured output generation:
+
+```typescript
+const result = await generateObject({
+  model,
+  messages,
+  schema: mySchema,
+  schemaName: 'my_object',           // Name for the schema
+  schemaDescription: 'A description',  // Help the model understand
+  config: {
+    temperature: 0.3,  // Lower temperature for more consistent structure
+    maxTokens: 2000,
+  },
+});
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use descriptive schema names and descriptions">
+    Help the model understand what you want:
+
+    ```typescript
+    const result = await generateObject({
+      model,
+      messages,
+      schema: z.object({
+        name: z.string().describe('Full name of the person'),
+        age: z.number().describe('Age in years'),
+      }),
+      schemaName: 'person',
+      schemaDescription: 'A person with their basic information',
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Use lower temperature for consistent structure">
+    Reduce temperature for more predictable JSON structure:
+
+    ```typescript
+    const result = await generateObject({
+      model,
+      messages,
+      schema: mySchema,
+      config: {
+        temperature: 0.3, // More deterministic
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Handle partial objects during streaming">
+    Check which fields are available when streaming:
+
+    ```typescript
+    for await (const event of result) {
+      if (event.type === 'object') {
+        // Safely check for fields
+        if (event.object.field1 !== undefined) {
+          console.log('Field 1 is ready:', event.object.field1);
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Validate complex constraints">
+    Add custom validation after generation:
+
+    ```typescript
+    const result = await generateObject({
+      model,
+      messages,
+      schema: mySchema,
+    });
+
+    // Additional business logic validation
+    if (result.object.startDate > result.object.endDate) {
+      throw new Error('Start date must be before end date');
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Chat Completion" icon="message" href="/guides/chat-completion">
+    Generate text responses without structure
+  </Card>
+  <Card title="Tool Calling" icon="wrench" href="/guides/tool-calling">
+    Combine structured outputs with tool calls
+  </Card>
+  <Card title="Streaming" icon="water" href="/guides/streaming">
+    Stream regular text responses
+  </Card>
+  <Card title="Zod Documentation" icon="link" href="https://zod.dev">
+    Learn more about Zod schemas
+  </Card>
+</CardGroup>

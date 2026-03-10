@@ -1,0 +1,85 @@
+---
+title: Introduction
+description: A type-safe abstraction layer over LLM provider SDKs for TypeScript
+---
+
+# Welcome to Core AI
+
+Core AI is a type-safe abstraction layer over LLM provider SDKs for TypeScript. Write provider-agnostic code with a unified API for chat completion, streaming, embeddings, image generation, and tool calling.
+
+## Why Core AI?
+
+Switch between OpenAI, Anthropic, Google Gemini, and Mistral without changing your application code. Core AI provides a consistent interface across all providers while maintaining full type safety and access to provider-specific features when you need them.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get started with npm, yarn, or pnpm
+  </Card>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Build your first chat completion in 2 minutes
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/core/generate">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Examples" icon="lightbulb" href="/examples/overview">
+    See real-world implementation examples
+  </Card>
+</CardGroup>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Unified API" icon="layer-group">
+    Write once, run on any provider. Switch between OpenAI, Anthropic, Mistral, and Google GenAI without code changes.
+  </Card>
+  <Card title="Full type safety" icon="shield-check">
+    Strict TypeScript types, Zod-based tool definitions, and zero `any` types for complete type safety.
+  </Card>
+  <Card title="Streaming support" icon="water">
+    Async iterable-based streaming with optional aggregation via `toResponse()` for both text and structured outputs.
+  </Card>
+  <Card title="Structured outputs" icon="table">
+    Schema-validated object generation and streaming with `z.infer<TSchema>` for type-safe results.
+  </Card>
+  <Card title="Tool calling" icon="wrench">
+    Define tools with Zod schemas that automatically convert to JSON Schema for any provider.
+  </Card>
+  <Card title="Multi-modal" icon="image">
+    Support for text, images (base64 and URL), and file inputs across compatible providers.
+  </Card>
+  <Card title="Embeddings & images" icon="sparkles">
+    First-class support for embeddings and image generation, not just chat completions.
+  </Card>
+  <Card title="Lightweight" icon="feather">
+    Thin wrappers over native SDKs with no heavy runtime dependencies.
+  </Card>
+</CardGroup>
+
+## Supported providers
+
+| Provider | Package | Chat | Streaming | Embeddings | Image Generation |
+| --- | --- | --- | --- | --- | --- |
+| OpenAI | `@core-ai/openai` | ✓ | ✓ | ✓ | ✓ |
+| Anthropic | `@core-ai/anthropic` | ✓ | ✓ | — | — |
+| Google GenAI (Gemini) | `@core-ai/google-genai` | ✓ | ✓ | ✓ | ✓ |
+| Mistral | `@core-ai/mistral` | ✓ | ✓ | ✓ | — |
+
+## Next steps
+
+<Steps>
+  <Step title="Install Core AI">
+    Choose your package manager and install the core package with your preferred provider.
+    
+    [Go to installation →](/installation)
+  </Step>
+  <Step title="Run your first example">
+    Create a simple chat completion in under 10 lines of code.
+    
+    [Go to quickstart →](/quickstart)
+  </Step>
+  <Step title="Explore features">
+    Learn about streaming, structured outputs, tool calling, and more.
+    
+    [Browse examples →](/examples/overview)
+  </Step>
+</Steps>

@@ -1,0 +1,223 @@
+---
+title: Quickstart
+description: Build your first AI chat completion in 2 minutes
+---
+
+# Quickstart
+
+Get up and running with Core AI in just a few minutes. This guide shows you how to create a simple chat completion using OpenAI's GPT model.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- Node.js 22 or higher installed
+- An OpenAI API key ([get one here](https://platform.openai.com/api-keys))
+- Completed the [installation](/installation) steps
+
+## Create your first chat completion
+
+<Steps>
+  <Step title="Set up your project">
+    Create a new file called `chat.ts` in your project:
+
+    ```bash
+    touch chat.ts
+    ```
+
+    Make sure you have your API key set as an environment variable:
+
+    ```bash
+    export OPENAI_API_KEY="your-api-key-here"
+    ```
+  </Step>
+
+  <Step title="Import dependencies">
+    Add the necessary imports to your `chat.ts` file:
+
+    ```typescript chat.ts
+    import { generate } from '@core-ai/core-ai';
+    import { createOpenAI } from '@core-ai/openai';
+    ```
+
+    The `generate` function handles chat completions, while `createOpenAI` initializes the OpenAI provider.
+  </Step>
+
+  <Step title="Initialize the provider and model">
+    Create an OpenAI provider instance and select a chat model:
+
+    ```typescript chat.ts
+    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const model = openai.chatModel('gpt-5-mini');
+    ```
+
+    <Note>
+      You can use any OpenAI model ID like `gpt-5-mini`, `gpt-5`, or `gpt-o3-mini`.
+    </Note>
+  </Step>
+
+  <Step title="Generate a response">
+    Call the `generate` function with your model and messages:
+
+    ```typescript chat.ts
+    const result = await generate({
+      model,
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: 'Explain quantum computing in one sentence.' },
+      ],
+    });
+
+    console.log(result.content);
+    console.log('Usage:', result.usage);
+    ```
+  </Step>
+
+  <Step title="Run your code">
+    Execute your script using `tsx`:
+
+    ```bash
+    npx tsx chat.ts
+    ```
+
+    You should see the AI's response printed to the console along with token usage statistics.
+  </Step>
+</Steps>
+
+## Complete example
+
+Here's the full working example:
+
+```typescript chat.ts
+import { generate } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+const result = await generate({
+  model,
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Explain quantum computing in one sentence.' },
+  ],
+});
+
+console.log('Response:', result.content);
+console.log('Usage:', result.usage);
+// Output:
+// Response: Quantum computing uses quantum mechanical phenomena...
+// Usage: { inputTokens: 25, outputTokens: 18, totalTokens: 43 }
+```
+
+## Try streaming
+
+Core AI makes streaming responses just as easy. Here's how to stream text as it's generated:
+
+```typescript streaming.ts
+import { stream } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+const result = await stream({
+  model,
+  messages: [
+    { role: 'user', content: 'Write a short haiku about TypeScript.' },
+  ],
+});
+
+// Stream each text chunk as it arrives
+for await (const event of result) {
+  if (event.type === 'text-delta') {
+    process.stdout.write(event.text);
+  }
+}
+
+// Get the complete response with metadata
+const response = await result.toResponse();
+console.log('\nFinish reason:', response.finishReason);
+console.log('Usage:', response.usage);
+```
+
+<Tip>
+  The `toResponse()` method aggregates the stream into a complete response object. You can call it after iterating through the stream.
+</Tip>
+
+## Switch providers
+
+One of Core AI's key features is provider portability. Switch from OpenAI to Anthropic with just two lines:
+
+<CodeGroup>
+```typescript OpenAI
+import { generate } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+```typescript Anthropic
+import { generate } from '@core-ai/core-ai';
+import { createAnthropic } from '@core-ai/anthropic';
+
+const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const model = anthropic.chatModel('claude-haiku-4-5');
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+```typescript Google GenAI
+import { generate } from '@core-ai/core-ai';
+import { createGoogleGenAI } from '@core-ai/google-genai';
+
+const google = createGoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+const model = google.chatModel('gemini-3-flash');
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+```typescript Mistral
+import { generate } from '@core-ai/core-ai';
+import { createMistral } from '@core-ai/mistral';
+
+const mistral = createMistral({ apiKey: process.env.MISTRAL_API_KEY });
+const model = mistral.chatModel('mistral-large-latest');
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+</CodeGroup>
+
+## Next steps
+
+Now that you have a working chat completion, explore more advanced features:
+
+<CardGroup cols={2}>
+  <Card title="Structured outputs" icon="table" href="/guides/structured-outputs">
+    Generate type-safe JSON objects with Zod schemas
+  </Card>
+  <Card title="Tool calling" icon="wrench" href="/guides/tool-calling">
+    Let AI call functions with validated parameters
+  </Card>
+  <Card title="Embeddings" icon="vector-square" href="/guides/embeddings">
+    Generate vector embeddings for semantic search
+  </Card>
+  <Card title="Image generation" icon="image" href="/guides/image-generation">
+    Create images from text prompts with DALL-E
+  </Card>
+</CardGroup>

@@ -1,0 +1,369 @@
+---
+title: 'Mistral Provider'
+description: 'Create and configure the Mistral AI provider for chat and embeddings'
+---
+
+## Overview
+
+The Mistral provider gives you access to Mistral AI's models for chat completion and embeddings, optimized for European languages and multilingual tasks.
+
+## Installation
+
+```bash
+npm install @core-ai/mistral
+```
+
+## createMistral()
+
+Create a Mistral provider instance.
+
+```typescript
+import { createMistral } from '@core-ai/mistral';
+
+const mistral = createMistral({
+  apiKey: process.env.MISTRAL_API_KEY
+});
+```
+
+### Options
+
+<ParamField path="apiKey" type="string" optional>
+  Your Mistral API key. Defaults to `MISTRAL_API_KEY` environment variable.
+</ParamField>
+
+<ParamField path="baseURL" type="string" optional>
+  Custom base URL for API requests. Useful for proxies or self-hosted deployments.
+</ParamField>
+
+<ParamField path="client" type="Mistral" optional>
+  Provide your own configured Mistral client instance.
+</ParamField>
+
+### Returns
+
+`MistralProvider` - Provider instance with methods to create models.
+
+## Provider Methods
+
+### chatModel()
+
+Create a chat model instance.
+
+```typescript
+const model = mistral.chatModel('mistral-large-2');
+```
+
+<ParamField path="modelId" type="string" required>
+  Model identifier. See [Supported Models](#supported-models) below.
+</ParamField>
+
+### embeddingModel()
+
+Create an embedding model instance.
+
+```typescript
+const embeddings = mistral.embeddingModel('mistral-embed');
+```
+
+<ParamField path="modelId" type="string" required>
+  Embedding model identifier.
+</ParamField>
+
+## Supported Models
+
+### Chat Models
+
+<AccordionGroup>
+  <Accordion title="Large Models" icon="star">
+    Flagship models for complex tasks.
+    
+    - **mistral-large-2** - Latest flagship model
+    - **mistral-large** - Previous generation flagship
+  </Accordion>
+  
+  <Accordion title="Medium Models" icon="bolt">
+    Balanced performance and efficiency.
+    
+    - **mistral-medium** - Strong performance at lower cost
+  </Accordion>
+  
+  <Accordion title="Small Models" icon="zap">
+    Fast and efficient for simpler tasks.
+    
+    - **mistral-small** - Quick responses
+    - **mistral-tiny** - Ultra-fast, lightweight
+  </Accordion>
+  
+  <Accordion title="Specialized Models" icon="sparkles">
+    Purpose-built for specific use cases.
+    
+    - **codestral** - Optimized for code generation
+    - **mixtral-8x7b** - Mixture of experts architecture
+    - **mixtral-8x22b** - Larger mixture of experts
+  </Accordion>
+</AccordionGroup>
+
+### Embedding Models
+
+- **mistral-embed** - High-quality text embeddings
+
+## Capabilities
+
+| Feature | Support |
+|---------|--------|
+| Chat Completion | ✓ |
+| Streaming | ✓ |
+| Function Calling | ✓ |
+| Vision | Limited |
+| Reasoning Effort | ✗ |
+| Embeddings | ✓ |
+| Image Generation | ✗ |
+
+<Note>
+  Mistral models do not support explicit reasoning effort control like OpenAI or Anthropic.
+</Note>
+
+## Examples
+
+### Basic Chat
+
+```typescript
+import { createMistral } from '@core-ai/mistral';
+import { generateText } from '@core-ai/core-ai';
+
+const mistral = createMistral({
+  apiKey: process.env.MISTRAL_API_KEY
+});
+
+const result = await generateText({
+  model: mistral.chatModel('mistral-large-2'),
+  prompt: 'Explain the concept of recursion'
+});
+
+console.log(result.text);
+```
+
+### Multilingual Chat
+
+```typescript
+// Mistral models excel at multilingual tasks
+const result = await generateText({
+  model: mistral.chatModel('mistral-large-2'),
+  prompt: 'Expliquez la théorie de la relativité en français'
+});
+
+console.log(result.text);
+```
+
+### Streaming
+
+```typescript
+import { streamText } from '@core-ai/core-ai';
+
+const stream = await streamText({
+  model: mistral.chatModel('mistral-medium'),
+  prompt: 'Write a short story about artificial intelligence'
+});
+
+for await (const chunk of stream) {
+  if (chunk.type === 'text') {
+    process.stdout.write(chunk.text);
+  }
+}
+```
+
+### Code Generation
+
+```typescript
+// Use Codestral for code tasks
+const result = await generateText({
+  model: mistral.chatModel('codestral'),
+  prompt: `
+    Write a Python function to calculate the Fibonacci sequence
+    up to n terms using dynamic programming.
+  `
+});
+
+console.log(result.text);
+```
+
+### Function Calling
+
+```typescript
+import { generateText, tool } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const result = await generateText({
+  model: mistral.chatModel('mistral-large-2'),
+  prompt: 'What is 25 multiplied by 4?',
+  tools: {
+    calculator: tool({
+      description: 'Perform mathematical calculations',
+      parameters: z.object({
+        operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+        a: z.number(),
+        b: z.number()
+      }),
+      execute: async ({ operation, a, b }) => {
+        const ops = {
+          add: a + b,
+          subtract: a - b,
+          multiply: a * b,
+          divide: a / b
+        };
+        return { result: ops[operation] };
+      }
+    })
+  }
+});
+```
+
+### Embeddings
+
+```typescript
+import { embed } from '@core-ai/core-ai';
+
+const result = await embed({
+  model: mistral.embeddingModel('mistral-embed'),
+  value: 'Search query for semantic similarity'
+});
+
+console.log(result.embedding); // number[]
+```
+
+### Batch Embeddings
+
+```typescript
+import { embedMany } from '@core-ai/core-ai';
+
+const documents = [
+  'First document',
+  'Second document',
+  'Third document'
+];
+
+const results = await embedMany({
+  model: mistral.embeddingModel('mistral-embed'),
+  values: documents
+});
+
+for (const result of results) {
+  console.log(result.embedding);
+}
+```
+
+### Custom Base URL
+
+```typescript
+// Use with self-hosted or proxy endpoints
+const mistral = createMistral({
+  apiKey: 'your-api-key',
+  baseURL: 'https://your-proxy.com/v1'
+});
+```
+
+### Conversation
+
+```typescript
+const result = await generateText({
+  model: mistral.chatModel('mistral-large-2'),
+  messages: [
+    {
+      role: 'user',
+      content: 'What is machine learning?'
+    },
+    {
+      role: 'assistant',
+      content: 'Machine learning is a subset of AI...'
+    },
+    {
+      role: 'user',
+      content: 'Can you give me an example?'
+    }
+  ]
+});
+```
+
+## Error Handling
+
+```typescript
+import { APIError } from '@core-ai/core-ai';
+
+try {
+  const result = await generateText({
+    model: mistral.chatModel('mistral-large-2'),
+    prompt: 'Hello!'
+  });
+} catch (error) {
+  if (error instanceof APIError) {
+    console.error('Mistral API error:', error.message);
+    console.error('Status:', error.statusCode);
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Model Selection" icon="compass">
+    - **mistral-large-2** - Complex reasoning, analysis, creative writing
+    - **mistral-medium** - General purpose, good balance
+    - **mistral-small** - Simple queries, high throughput
+    - **codestral** - Code generation, technical documentation
+    - **mixtral-8x22b** - When you need the best quality
+  </Accordion>
+  
+  <Accordion title="Multilingual Usage" icon="language">
+    - Mistral models have strong support for European languages
+    - Particularly good for French, German, Spanish, Italian
+    - Works well for code-switching between languages
+  </Accordion>
+  
+  <Accordion title="Performance Optimization" icon="rocket">
+    - Use smaller models for simple tasks to reduce latency and cost
+    - Enable streaming for long-form content
+    - Batch embeddings when processing multiple documents
+  </Accordion>
+</AccordionGroup>
+
+## Model Comparison
+
+| Model | Parameters | Best For | Speed |
+|-------|-----------|----------|-------|
+| mistral-large-2 | Large | Complex reasoning | Slower |
+| mistral-medium | Medium | General purpose | Medium |
+| mistral-small | Small | Simple queries | Fast |
+| codestral | Specialized | Code generation | Medium |
+| mixtral-8x22b | 141B (MoE) | Highest quality | Slower |
+| mixtral-8x7b | 46.7B (MoE) | Good balance | Medium |
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Code Generation" icon="code">
+    Use Codestral for implementing functions, debugging, and technical documentation.
+  </Card>
+  <Card title="Multilingual Support" icon="language">
+    Leverage strong European language support for international applications.
+  </Card>
+  <Card title="Semantic Search" icon="magnifying-glass">
+    Use embeddings for document search and similarity matching.
+  </Card>
+  <Card title="Content Generation" icon="pen-fancy">
+    Generate articles, summaries, and creative content with Large models.
+  </Card>
+</CardGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="OpenAI Provider" icon="robot" href="/api/providers/openai">
+    GPT models with reasoning effort control
+  </Card>
+  <Card title="Anthropic Provider" icon="message" href="/api/providers/anthropic">
+    Claude models with extended thinking
+  </Card>
+  <Card title="Embeddings Guide" icon="vector-square" href="/guides/embeddings">
+    Learn how to use embeddings effectively
+  </Card>
+</CardGroup>

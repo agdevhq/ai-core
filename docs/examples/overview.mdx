@@ -1,0 +1,214 @@
+---
+title: Examples Overview
+description: Explore practical examples demonstrating Core AI features and capabilities
+---
+
+This page provides an overview of all available examples in the Core AI repository. Each example is a complete, runnable TypeScript file that demonstrates specific features and use cases.
+
+## Running Examples
+
+All examples are located in the [`examples/`](https://github.com/agdevhq/core-ai/tree/main/examples) directory of the repository.
+
+### Prerequisites
+
+- Node.js 18+
+- Dependencies installed from the repository root:
+
+```bash
+npm install
+```
+
+### Environment Variables
+
+Create a `.env` file at the repository root:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+GOOGLE_API_KEY=your_google_api_key
+MISTRAL_API_KEY=your_mistral_api_key
+```
+
+<Note>
+You only need API keys for the providers you plan to use. Each example specifies which key it requires.
+</Note>
+
+### Run an Example
+
+From the repository root:
+
+```bash
+npx tsx examples/01-chat-completion.ts
+```
+
+## Basic Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Chat Completion"
+    icon="message"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/01-chat-completion.ts"
+  >
+    Basic `generate()` chat completion with OpenAI. Demonstrates the simplest way to get started with Core AI.
+  </Card>
+
+  <Card
+    title="Streaming"
+    icon="stream"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/02-streaming.ts"
+  >
+    Streaming output with `stream()` and `toResponse()`. Shows how to handle real-time text generation with event-based streaming.
+  </Card>
+
+  <Card
+    title="Multi-Modal Input"
+    icon="image"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/04-multi-modal.ts"
+  >
+    Multi-modal input using text and image URLs. Demonstrates how to send images alongside text for vision-enabled models.
+  </Card>
+
+  <Card
+    title="Error Handling"
+    icon="shield-check"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/07-error-handling.ts"
+  >
+    Handling `LLMError` and `ProviderError`. Shows proper error handling patterns for both local validation and provider errors.
+  </Card>
+</CardGroup>
+
+## Advanced Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Tool Calling"
+    icon="wrench"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/03-tool-calling.ts"
+  >
+    Tool definition and full tool-call round trip. Complete example of defining tools with Zod schemas and handling tool execution.
+  </Card>
+
+  <Card
+    title="Embeddings"
+    icon="vector-square"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/05-embeddings.ts"
+  >
+    Embeddings with `embed()`. Shows how to generate vector embeddings for text using OpenAI's embedding models.
+  </Card>
+
+  <Card
+    title="Image Generation"
+    icon="palette"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/06-image-generation.ts"
+  >
+    Image generation with `generateImage()`. Demonstrates creating images from text prompts with configurable size options.
+  </Card>
+
+  <Card
+    title="Structured Outputs"
+    icon="brackets-curly"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/11-generate-object.ts"
+  >
+    Typed structured output with `generateObject()`. Shows how to generate strongly-typed JSON objects validated with Zod schemas.
+  </Card>
+
+  <Card
+    title="Streaming Objects"
+    icon="code"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/12-stream-object.ts"
+  >
+    Streaming structured output with `streamObject()`. Demonstrates real-time streaming of structured JSON with incremental validation.
+  </Card>
+</CardGroup>
+
+## Provider Examples
+
+Core AI supports multiple AI providers with the same unified API.
+
+<CardGroup cols={2}>
+  <Card
+    title="Anthropic Provider"
+    icon="a"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/08-anthropic-provider.ts"
+  >
+    Using Anthropic (Claude) with the same `generate()` API. Shows how to switch providers while keeping the same code structure.
+  </Card>
+
+  <Card
+    title="Google GenAI Provider"
+    icon="google"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/09-google-genai-provider.ts"
+  >
+    Using Google GenAI (Gemini) with the same `generate()` API. Demonstrates provider portability with Google's models.
+  </Card>
+
+  <Card
+    title="Mistral Provider"
+    icon="m"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/10-mistral-provider.ts"
+  >
+    Using Mistral with the same `generate()` API. Shows how easily you can integrate Mistral's models into your application.
+  </Card>
+</CardGroup>
+
+## Example Categories
+
+### 1. Getting Started
+Start with these examples if you're new to Core AI:
+- **01-chat-completion.ts** - Your first chat completion
+- **02-streaming.ts** - Real-time streaming responses
+- **07-error-handling.ts** - Proper error handling patterns
+
+### 2. Advanced Capabilities
+Explore powerful features:
+- **03-tool-calling.ts** - Enable models to call functions
+- **05-embeddings.ts** - Generate vector embeddings
+- **06-image-generation.ts** - Create images from text
+- **04-multi-modal.ts** - Process text and images together
+
+### 3. Structured Data
+Work with typed, validated outputs:
+- **11-generate-object.ts** - Generate structured JSON
+- **12-stream-object.ts** - Stream structured data
+
+### 4. Multi-Provider
+Experience true provider portability:
+- **08-anthropic-provider.ts** - Claude models
+- **09-google-genai-provider.ts** - Gemini models
+- **10-mistral-provider.ts** - Mistral models
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Guides"
+    icon="book-open"
+    href="/guides/chat-completion"
+  >
+    Read detailed guides for each feature
+  </Card>
+
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api/core/generate"
+  >
+    Explore the complete API documentation
+  </Card>
+
+  <Card
+    title="GitHub Repository"
+    icon="github"
+    href="https://github.com/agdevhq/core-ai"
+  >
+    Browse the source code and examples
+  </Card>
+
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get started with Core AI in minutes
+  </Card>
+</CardGroup>

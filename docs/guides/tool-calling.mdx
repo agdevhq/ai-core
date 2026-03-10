@@ -1,0 +1,586 @@
+---
+title: Tool Calling
+description: Let models use external tools and functions with defineTool()
+---
+
+Tool calling enables language models to interact with external functions and APIs, extending their capabilities beyond text generation.
+
+## Define a Tool
+
+Create tools using `defineTool()` with Zod schemas:
+
+```typescript
+import { defineTool } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const weatherTool = defineTool({
+  name: 'get_weather',
+  description: 'Get mocked weather information for a city',
+  parameters: z.object({
+    location: z.string().describe('City name'),
+    unit: z.enum(['celsius', 'fahrenheit']).default('celsius'),
+  }),
+});
+```
+
+## Basic Tool Usage
+
+Implement a complete tool calling flow:
+
+```typescript
+import { generate, defineTool } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+// Define the tool
+const weatherTool = defineTool({
+  name: 'get_weather',
+  description: 'Get mocked weather information for a city',
+  parameters: z.object({
+    location: z.string().describe('City name'),
+    unit: z.enum(['celsius', 'fahrenheit']).default('celsius'),
+  }),
+});
+
+// Implement the tool function
+function runWeatherTool(args: { location: string; unit: string }): string {
+  const conditions = ['sunny', 'cloudy', 'windy'];
+  const condition = conditions[args.location.length % conditions.length];
+  const temperature = 10 + (args.location.length % 18);
+
+  return JSON.stringify({
+    location: args.location,
+    unit: args.unit,
+    temperature,
+    condition,
+  });
+}
+
+// Initial request with tools
+const initialMessages = [
+  {
+    role: 'user' as const,
+    content: 'What is the weather in Berlin? Reply in one sentence.',
+  },
+];
+
+const firstResult = await generate({
+  model,
+  messages: initialMessages,
+  tools: { get_weather: weatherTool },
+  toolChoice: 'auto',
+});
+
+// Check if model wants to call tools
+if (firstResult.finishReason !== 'tool-calls') {
+  console.log('Model response without tool calls:', firstResult.content);
+  process.exit(0);
+}
+
+// Execute the tool calls
+const toolMessages = firstResult.toolCalls.map((call) => {
+  if (call.name !== 'get_weather') {
+    return {
+      role: 'tool' as const,
+      toolCallId: call.id,
+      content: JSON.stringify({ error: `Unknown tool: ${call.name}` }),
+      isError: true,
+    };
+  }
+
+  return {
+    role: 'tool' as const,
+    toolCallId: call.id,
+    content: runWeatherTool(call.arguments as any),
+  };
+});
+
+// Get final response with tool results
+const secondResult = await generate({
+  model,
+  messages: [
+    ...initialMessages,
+    {
+      role: 'assistant',
+      content: firstResult.content,
+      toolCalls: firstResult.toolCalls,
+    },
+    ...toolMessages,
+  ],
+  tools: { get_weather: weatherTool },
+});
+
+console.log('Final response:', secondResult.content);
+```
+
+## Tool Choice Strategies
+
+Control when and how tools are used:
+
+```typescript
+// Let model decide whether to use tools
+const result = await generate({
+  model,
+  messages,
+  tools: { get_weather: weatherTool },
+  toolChoice: 'auto', // Default behavior
+});
+
+// Force model to use at least one tool
+const result = await generate({
+  model,
+  messages,
+  tools: { get_weather: weatherTool },
+  toolChoice: 'required',
+});
+
+// Disable tool usage
+const result = await generate({
+  model,
+  messages,
+  tools: { get_weather: weatherTool },
+  toolChoice: 'none',
+});
+
+// Force a specific tool
+const result = await generate({
+  model,
+  messages,
+  tools: { get_weather: weatherTool },
+  toolChoice: { type: 'tool', toolName: 'get_weather' },
+});
+```
+
+## Multiple Tools
+
+Provide multiple tools for the model to choose from:
+
+```typescript
+import { defineTool, generate } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const weatherTool = defineTool({
+  name: 'get_weather',
+  description: 'Get current weather information',
+  parameters: z.object({
+    location: z.string(),
+  }),
+});
+
+const timeTool = defineTool({
+  name: 'get_time',
+  description: 'Get current time in a timezone',
+  parameters: z.object({
+    timezone: z.string().describe('IANA timezone name'),
+  }),
+});
+
+const searchTool = defineTool({
+  name: 'search_web',
+  description: 'Search the web for information',
+  parameters: z.object({
+    query: z.string(),
+    limit: z.number().default(10),
+  }),
+});
+
+const result = await generate({
+  model,
+  messages: [{
+    role: 'user',
+    content: 'What is the weather in London and what time is it there?',
+  }],
+  tools: {
+    get_weather: weatherTool,
+    get_time: timeTool,
+    search_web: searchTool,
+  },
+  toolChoice: 'auto',
+});
+
+// Model may call multiple tools
+if (result.finishReason === 'tool-calls') {
+  console.log('Tools called:', result.toolCalls.length);
+  result.toolCalls.forEach((call) => {
+    console.log(`- ${call.name}:`, call.arguments);
+  });
+}
+```
+
+## Handling Tool Calls
+
+Best practices for executing tool calls:
+
+```typescript
+import { generate, defineTool } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const weatherParameters = z.object({
+  location: z.string(),
+  unit: z.enum(['celsius', 'fahrenheit']).default('celsius'),
+});
+
+const weatherTool = defineTool({
+  name: 'get_weather',
+  description: 'Get weather information',
+  parameters: weatherParameters,
+});
+
+type WeatherArgs = z.infer<typeof weatherParameters>;
+
+function getWeather(args: WeatherArgs): string {
+  // Implement your weather API call here
+  return JSON.stringify({ temperature: 20, condition: 'sunny' });
+}
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Weather in Paris?' }],
+  tools: { get_weather: weatherTool },
+});
+
+if (result.finishReason === 'tool-calls') {
+  const toolMessages = result.toolCalls.map((call) => {
+    // Validate tool name
+    if (call.name !== 'get_weather') {
+      return {
+        role: 'tool' as const,
+        toolCallId: call.id,
+        content: JSON.stringify({ error: `Unknown tool: ${call.name}` }),
+        isError: true,
+      };
+    }
+
+    // Validate arguments with Zod
+    const parsed = weatherParameters.safeParse(call.arguments);
+    if (!parsed.success) {
+      return {
+        role: 'tool' as const,
+        toolCallId: call.id,
+        content: JSON.stringify({
+          error: 'Invalid arguments',
+          issues: parsed.error.issues,
+        }),
+        isError: true,
+      };
+    }
+
+    // Execute tool with validated arguments
+    try {
+      const result = getWeather(parsed.data);
+      return {
+        role: 'tool' as const,
+        toolCallId: call.id,
+        content: result,
+      };
+    } catch (error) {
+      return {
+        role: 'tool' as const,
+        toolCallId: call.id,
+        content: JSON.stringify({ error: String(error) }),
+        isError: true,
+      };
+    }
+  });
+
+  // Continue conversation with tool results
+  const finalResult = await generate({
+    model,
+    messages: [
+      { role: 'user', content: 'Weather in Paris?' },
+      {
+        role: 'assistant',
+        content: result.content,
+        toolCalls: result.toolCalls,
+      },
+      ...toolMessages,
+    ],
+    tools: { get_weather: weatherTool },
+  });
+
+  console.log(finalResult.content);
+}
+```
+
+## Tool Calling with Streaming
+
+Handle tool calls during streaming:
+
+```typescript
+import { stream, defineTool } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const calculatorTool = defineTool({
+  name: 'calculate',
+  description: 'Perform a calculation',
+  parameters: z.object({
+    expression: z.string().describe('Mathematical expression'),
+  }),
+});
+
+const result = await stream({
+  model,
+  messages: [{ role: 'user', content: 'What is 25 * 17?' }],
+  tools: { calculate: calculatorTool },
+});
+
+const toolCalls: ToolCall[] = [];
+
+for await (const event of result) {
+  switch (event.type) {
+    case 'text-delta':
+      process.stdout.write(event.text);
+      break;
+
+    case 'tool-call-start':
+      console.log(`\nCalling tool: ${event.toolName}`);
+      break;
+
+    case 'tool-call-delta':
+      // Tool arguments are being streamed
+      process.stdout.write(event.argumentsDelta);
+      break;
+
+    case 'tool-call-end':
+      console.log(`\nTool call complete:`, event.toolCall);
+      toolCalls.push(event.toolCall);
+      break;
+  }
+}
+
+const response = await result.toResponse();
+
+if (response.finishReason === 'tool-calls') {
+  // Execute tools and continue conversation
+  console.log('Need to execute tools:', toolCalls);
+}
+```
+
+## Advanced Tool Examples
+
+<Tabs>
+  <Tab title="Database Query">
+    ```typescript
+    const queryTool = defineTool({
+      name: 'query_database',
+      description: 'Query the user database',
+      parameters: z.object({
+        query: z.string().describe('SQL query to execute'),
+        limit: z.number().max(100).default(10),
+      }),
+    });
+
+    function executeQuery(args: { query: string; limit: number }) {
+      // Validate and execute safe queries only
+      if (!args.query.toLowerCase().startsWith('select')) {
+        throw new Error('Only SELECT queries are allowed');
+      }
+
+      // Execute query with your database client
+      const results = db.query(args.query, { limit: args.limit });
+      return JSON.stringify(results);
+    }
+    ```
+  </Tab>
+  <Tab title="API Call">
+    ```typescript
+    const apiTool = defineTool({
+      name: 'call_api',
+      description: 'Make an API request',
+      parameters: z.object({
+        endpoint: z.string(),
+        method: z.enum(['GET', 'POST', 'PUT', 'DELETE']),
+        body: z.record(z.string(), z.unknown()).optional(),
+      }),
+    });
+
+    async function callApi(args: {
+      endpoint: string;
+      method: string;
+      body?: Record<string, unknown>;
+    }) {
+      const response = await fetch(args.endpoint, {
+        method: args.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: args.body ? JSON.stringify(args.body) : undefined,
+      });
+
+      return JSON.stringify(await response.json());
+    }
+    ```
+  </Tab>
+  <Tab title="File Operations">
+    ```typescript
+    const fileTool = defineTool({
+      name: 'read_file',
+      description: 'Read contents of a file',
+      parameters: z.object({
+        path: z.string().describe('File path to read'),
+        encoding: z.enum(['utf-8', 'base64']).default('utf-8'),
+      }),
+    });
+
+    async function readFile(args: { path: string; encoding: string }) {
+      // Validate path is safe
+      if (args.path.includes('..')) {
+        throw new Error('Path traversal not allowed');
+      }
+
+      const content = await fs.readFile(args.path, args.encoding as any);
+      return JSON.stringify({ content });
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Tool Result Messages
+
+Structure tool results properly:
+
+```typescript
+import type { ToolResultMessage } from '@core-ai/core-ai';
+
+// Success case
+const successMessage: ToolResultMessage = {
+  role: 'tool',
+  toolCallId: call.id,
+  content: JSON.stringify({ result: 'success', data: { /* ... */ } }),
+};
+
+// Error case
+const errorMessage: ToolResultMessage = {
+  role: 'tool',
+  toolCallId: call.id,
+  content: JSON.stringify({ error: 'Something went wrong' }),
+  isError: true, // Mark as error
+};
+```
+
+## Helper: Convert Result to Message
+
+Use `resultToMessage()` to simplify conversation building:
+
+```typescript
+import { generate, resultToMessage } from '@core-ai/core-ai';
+
+const messages = [{ role: 'user', content: 'What is the weather?' }];
+
+const firstResult = await generate({
+  model,
+  messages,
+  tools: { get_weather: weatherTool },
+});
+
+// Convert result to assistant message automatically
+const assistantMessage = resultToMessage(firstResult);
+
+messages.push(assistantMessage);
+
+// Add tool results
+if (firstResult.finishReason === 'tool-calls') {
+  const toolResults = executeTools(firstResult.toolCalls);
+  messages.push(...toolResults);
+
+  const secondResult = await generate({ model, messages, tools });
+  console.log(secondResult.content);
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Validate tool arguments with Zod">
+    Always validate tool arguments before execution:
+
+    ```typescript
+    const parsed = toolParameters.safeParse(call.arguments);
+    if (!parsed.success) {
+      return {
+        role: 'tool',
+        toolCallId: call.id,
+        content: JSON.stringify({ error: parsed.error }),
+        isError: true,
+      };
+    }
+
+    // Use parsed.data safely
+    const result = executeTool(parsed.data);
+    ```
+  </Accordion>
+
+  <Accordion title="Add detailed tool descriptions">
+    Help the model understand when to use tools:
+
+    ```typescript
+    const tool = defineTool({
+      name: 'get_weather',
+      description: 'Get current weather information for a specific location. Use this when users ask about weather, temperature, or conditions.',
+      parameters: z.object({
+        location: z.string().describe('City name or location. Examples: "London", "New York, NY", "Tokyo, Japan"'),
+      }),
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Handle errors gracefully">
+    Return errors as tool results instead of throwing:
+
+    ```typescript
+    try {
+      const result = await executeToolFunction(args);
+      return {
+        role: 'tool',
+        toolCallId: call.id,
+        content: JSON.stringify(result),
+      };
+    } catch (error) {
+      return {
+        role: 'tool',
+        toolCallId: call.id,
+        content: JSON.stringify({
+          error: error.message,
+          type: error.name,
+        }),
+        isError: true,
+      };
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Limit tool execution time">
+    Prevent tools from hanging:
+
+    ```typescript
+    async function executeToolWithTimeout(
+      tool: () => Promise<string>,
+      timeoutMs: number = 5000
+    ): Promise<string> {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Tool timeout')), timeoutMs)
+      );
+
+      return Promise.race([tool(), timeoutPromise]);
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Chat Completion" icon="message" href="/guides/chat-completion">
+    Learn basic message generation
+  </Card>
+  <Card title="Structured Outputs" icon="brackets-curly" href="/guides/structured-outputs">
+    Combine tools with structured responses
+  </Card>
+  <Card title="Streaming" icon="water" href="/guides/streaming">
+    Stream tool calls in real-time
+  </Card>
+  <Card title="Multi-Modal" icon="images" href="/guides/multi-modal">
+    Use tools with image inputs
+  </Card>
+</CardGroup>

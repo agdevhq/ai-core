@@ -1,0 +1,318 @@
+---
+title: 'generateObject()'
+description: 'Generate structured objects validated against Zod schemas'
+icon: 'brackets-curly'
+---
+
+## Overview
+
+The `generateObject()` function generates structured, type-safe objects from chat models using Zod schema validation. This ensures the model output conforms to your expected data structure.
+
+## Function Signature
+
+```typescript
+export async function generateObject<TSchema extends z.ZodType>(
+    params: GenerateObjectParams<TSchema>
+): Promise<GenerateObjectResult<TSchema>>
+
+export type GenerateObjectParams<TSchema extends z.ZodType> = 
+    GenerateObjectOptions<TSchema> & {
+        model: ChatModel;
+    };
+```
+
+## Parameters
+
+<ParamField path="model" type="ChatModel" required>
+  The chat model instance to use for generation.
+</ParamField>
+
+<ParamField path="messages" type="Message[]" required>
+  Array of messages in the conversation. Must not be empty.
+</ParamField>
+
+<ParamField path="schema" type="z.ZodType" required>
+  Zod schema that defines the structure of the object to generate.
+</ParamField>
+
+<ParamField path="schemaName" type="string">
+  Optional name for the schema. Used by some providers for better results.
+</ParamField>
+
+<ParamField path="schemaDescription" type="string">
+  Optional description of the schema. Helps the model understand what to generate.
+</ParamField>
+
+<ParamField path="reasoning" type="ReasoningConfig">
+  Configuration for extended thinking/reasoning capabilities.
+  
+  <Expandable title="ReasoningConfig">
+    <ParamField path="effort" type="ReasoningEffort" required>
+      The effort level for reasoning: `'minimal'`, `'low'`, `'medium'`, `'high'`, or `'max'`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="config" type="ModelConfig">
+  Model configuration parameters.
+  
+  <Expandable title="ModelConfig">
+    <ParamField path="temperature" type="number">
+      Sampling temperature (0-2).
+    </ParamField>
+    
+    <ParamField path="maxTokens" type="number">
+      Maximum number of tokens to generate.
+    </ParamField>
+    
+    <ParamField path="topP" type="number">
+      Nucleus sampling parameter (0-1).
+    </ParamField>
+    
+    <ParamField path="stopSequences" type="string[]">
+      Sequences that stop generation.
+    </ParamField>
+    
+    <ParamField path="frequencyPenalty" type="number">
+      Penalty for token frequency (-2 to 2).
+    </ParamField>
+    
+    <ParamField path="presencePenalty" type="number">
+      Penalty for token presence (-2 to 2).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="providerOptions" type="Record<string, unknown>">
+  Provider-specific options.
+</ParamField>
+
+<ParamField path="signal" type="AbortSignal">
+  AbortSignal for cancelling the request.
+</ParamField>
+
+## Return Value
+
+Returns a `Promise<GenerateObjectResult<TSchema>>` with the following properties:
+
+<ResponseField name="object" type="z.infer<TSchema>">
+  The generated object, fully typed according to your Zod schema.
+</ResponseField>
+
+<ResponseField name="finishReason" type="FinishReason">
+  Why generation stopped: `'stop'`, `'length'`, `'content-filter'`, or `'unknown'`.
+</ResponseField>
+
+<ResponseField name="usage" type="ChatUsage">
+  Token usage statistics including input/output tokens and cache details.
+</ResponseField>
+
+## Examples
+
+### Basic Object Generation
+
+```typescript
+import { generateObject } from '@coreai/core';
+import { openai } from '@coreai/openai';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string(),
+  age: z.number(),
+  email: z.string().email()
+});
+
+const result = await generateObject({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Generate a person named John who is 30 years old' }
+  ],
+  schema
+});
+
+// Fully typed!
+console.log(result.object.name);  // string
+console.log(result.object.age);   // number
+console.log(result.object.email); // string
+```
+
+### Complex Schema
+
+```typescript
+const schema = z.object({
+  title: z.string(),
+  author: z.object({
+    name: z.string(),
+    bio: z.string()
+  }),
+  chapters: z.array(
+    z.object({
+      title: z.string(),
+      summary: z.string(),
+      wordCount: z.number()
+    })
+  ),
+  publishedAt: z.string().datetime()
+});
+
+const result = await generateObject({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Create a book outline about artificial intelligence' }
+  ],
+  schema,
+  schemaName: 'BookOutline',
+  schemaDescription: 'A structured book outline with chapters'
+});
+
+console.log(result.object.title);
+console.log(result.object.chapters.length);
+```
+
+### With Schema Name and Description
+
+```typescript
+const schema = z.object({
+  sentiment: z.enum(['positive', 'negative', 'neutral']),
+  score: z.number().min(0).max(1),
+  keywords: z.array(z.string())
+});
+
+const result = await generateObject({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Analyze this review: "Great product, highly recommend!"' }
+  ],
+  schema,
+  schemaName: 'SentimentAnalysis',
+  schemaDescription: 'Sentiment analysis result with score and keywords'
+});
+
+console.log(result.object.sentiment); // 'positive'
+console.log(result.object.score);     // 0.95
+```
+
+### Enum Values
+
+```typescript
+const schema = z.object({
+  category: z.enum(['technology', 'science', 'business', 'entertainment']),
+  tags: z.array(z.string()),
+  priority: z.enum(['low', 'medium', 'high'])
+});
+
+const result = await generateObject({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Categorize this article about AI breakthrough' }
+  ],
+  schema
+});
+```
+
+### With Configuration
+
+```typescript
+const result = await generateObject({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Generate creative character profiles' }
+  ],
+  schema: z.object({
+    characters: z.array(
+      z.object({
+        name: z.string(),
+        personality: z.string(),
+        backstory: z.string()
+      })
+    )
+  }),
+  config: {
+    temperature: 1.2, // More creative
+    maxTokens: 1000
+  }
+});
+```
+
+### Error Handling
+
+```typescript
+import { LLMError, StructuredOutputError } from '@coreai/core';
+
+try {
+  const result = await generateObject({
+    model: openai('gpt-4'),
+    messages: [
+      { role: 'user', content: 'Generate user data' }
+    ],
+    schema: z.object({
+      name: z.string(),
+      age: z.number()
+    })
+  });
+} catch (error) {
+  if (error instanceof StructuredOutputError) {
+    console.error('Failed to generate valid object:', error.message);
+    console.error('Raw output:', error.rawOutput);
+  } else if (error instanceof LLMError) {
+    console.error('Generation failed:', error.message);
+  }
+}
+```
+
+## Error Types
+
+The function may throw several error types:
+
+- `LLMError` - If messages array is empty or general errors occur
+- `StructuredOutputError` - Base class for structured output errors
+- `StructuredOutputNoObjectGeneratedError` - Model didn't generate an object
+- `StructuredOutputParseError` - Generated output couldn't be parsed as JSON
+- `StructuredOutputValidationError` - Output doesn't match the Zod schema
+
+```typescript
+import { 
+  StructuredOutputNoObjectGeneratedError,
+  StructuredOutputParseError,
+  StructuredOutputValidationError 
+} from '@coreai/core';
+
+try {
+  const result = await generateObject({ /* ... */ });
+} catch (error) {
+  if (error instanceof StructuredOutputValidationError) {
+    console.error('Validation errors:', error.issues);
+  } else if (error instanceof StructuredOutputParseError) {
+    console.error('Parse error:', error.message);
+  } else if (error instanceof StructuredOutputNoObjectGeneratedError) {
+    console.error('No object generated');
+  }
+}
+```
+
+## Type Safety
+
+The return type is fully inferred from your Zod schema:
+
+```typescript
+const userSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  isActive: z.boolean()
+});
+
+const result = await generateObject({
+  model: openai('gpt-4'),
+  messages: [{ role: 'user', content: 'Generate a user' }],
+  schema: userSchema
+});
+
+// TypeScript knows the exact type!
+const id: number = result.object.id;
+const username: string = result.object.username;
+const isActive: boolean = result.object.isActive;
+```
+
+## Source Location
+
+`~/workspace/source/packages/core-ai/src/generate-object.ts:14`

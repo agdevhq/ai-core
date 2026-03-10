@@ -1,0 +1,601 @@
+---
+title: Multi-Modal
+description: Work with images, files, and multi-part messages in chat conversations
+---
+
+Core AI supports multi-modal inputs, allowing you to include images, files, and text in the same message.
+
+## Images in Messages
+
+Include images in user messages:
+
+```typescript
+import { generate } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+const result = await generate({
+  model,
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'What do you see in this image?' },
+        {
+          type: 'image',
+          source: {
+            type: 'url',
+            url: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/Fronalpstock_big.jpg',
+          },
+        },
+      ],
+    },
+  ],
+});
+
+console.log('Model description:', result.content);
+```
+
+## Image Sources
+
+Images can be provided via URL or base64:
+
+<Tabs>
+  <Tab title="URL">
+    ```typescript
+    const result = await generate({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Describe this image' },
+            {
+              type: 'image',
+              source: {
+                type: 'url',
+                url: 'https://example.com/image.jpg',
+              },
+            },
+          ],
+        },
+      ],
+    });
+    ```
+  </Tab>
+  <Tab title="Base64">
+    ```typescript
+    import { readFile } from 'fs/promises';
+
+    // Read image file
+    const imageBuffer = await readFile('path/to/image.jpg');
+    const base64Image = imageBuffer.toString('base64');
+
+    const result = await generate({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analyze this image' },
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                mediaType: 'image/jpeg',
+                data: base64Image,
+              },
+            },
+          ],
+        },
+      ],
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Content Part Types
+
+User messages can contain multiple content parts:
+
+```typescript
+type UserContentPart = TextPart | ImagePart | FilePart;
+
+type TextPart = {
+  type: 'text';
+  text: string;
+};
+
+type ImagePart = {
+  type: 'image';
+  source:
+    | { type: 'base64'; mediaType: string; data: string }
+    | { type: 'url'; url: string };
+};
+
+type FilePart = {
+  type: 'file';
+  data: string;      // Base64-encoded file data
+  mimeType: string;  // MIME type of the file
+  filename?: string; // Optional filename
+};
+```
+
+## Multiple Images
+
+Include multiple images in one message:
+
+```typescript
+const result = await generate({
+  model,
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Compare these two images. What are the differences?' },
+        {
+          type: 'image',
+          source: { type: 'url', url: 'https://example.com/image1.jpg' },
+        },
+        {
+          type: 'image',
+          source: { type: 'url', url: 'https://example.com/image2.jpg' },
+        },
+      ],
+    },
+  ],
+});
+
+console.log('Comparison:', result.content);
+```
+
+## Text and Images Together
+
+Mix text and images in any order:
+
+```typescript
+const result = await generate({
+  model,
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Here is the product:' },
+        {
+          type: 'image',
+          source: { type: 'url', url: 'https://example.com/product.jpg' },
+        },
+        { type: 'text', text: 'Write a detailed product description.' },
+      ],
+    },
+  ],
+});
+```
+
+## File Attachments
+
+Include files in messages:
+
+```typescript
+import { generate } from '@core-ai/core-ai';
+import { readFile } from 'fs/promises';
+
+const fileBuffer = await readFile('document.pdf');
+const base64Data = fileBuffer.toString('base64');
+
+const result = await generate({
+  model,
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Summarize this document' },
+        {
+          type: 'file',
+          data: base64Data,
+          mimeType: 'application/pdf',
+          filename: 'document.pdf',
+        },
+      ],
+    },
+  ],
+});
+
+console.log('Summary:', result.content);
+```
+
+<Note>
+  File support varies by provider and model. Check your provider's documentation for supported file types.
+</Note>
+
+## Common Use Cases
+
+<Tabs>
+  <Tab title="Image Analysis">
+    ```typescript
+    async function analyzeImage(imageUrl: string) {
+      const result = await generate({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Analyze this image and provide: 1) Main subjects, ' +
+                      '2) Colors and composition, 3) Mood and style',
+              },
+              {
+                type: 'image',
+                source: { type: 'url', url: imageUrl },
+              },
+            ],
+          },
+        ],
+      });
+
+      return result.content;
+    }
+
+    const analysis = await analyzeImage('https://example.com/photo.jpg');
+    console.log(analysis);
+    ```
+  </Tab>
+  <Tab title="OCR / Text Extraction">
+    ```typescript
+    async function extractText(imageUrl: string) {
+      const result = await generate({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Extract all text from this image. ' +
+                      'Maintain the original formatting and structure.',
+              },
+              {
+                type: 'image',
+                source: { type: 'url', url: imageUrl },
+              },
+            ],
+          },
+        ],
+      });
+
+      return result.content;
+    }
+
+    const extractedText = await extractText('https://example.com/document.jpg');
+    console.log('Extracted:', extractedText);
+    ```
+  </Tab>
+  <Tab title="Image Comparison">
+    ```typescript
+    async function compareImages(url1: string, url2: string) {
+      const result = await generate({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Compare these two images. List the similarities and differences.',
+              },
+              { type: 'text', text: 'Image 1:' },
+              {
+                type: 'image',
+                source: { type: 'url', url: url1 },
+              },
+              { type: 'text', text: 'Image 2:' },
+              {
+                type: 'image',
+                source: { type: 'url', url: url2 },
+              },
+            ],
+          },
+        ],
+      });
+
+      return result.content;
+    }
+    ```
+  </Tab>
+  <Tab title="Visual Question Answering">
+    ```typescript
+    async function answerAboutImage(
+      imageUrl: string,
+      question: string
+    ) {
+      const result = await generate({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'url', url: imageUrl },
+              },
+              { type: 'text', text: question },
+            ],
+          },
+        ],
+      });
+
+      return result.content;
+    }
+
+    const answer = await answerAboutImage(
+      'https://example.com/scene.jpg',
+      'How many people are in this image?'
+    );
+    ```
+  </Tab>
+</Tabs>
+
+## Multi-Modal with Streaming
+
+Stream responses for multi-modal inputs:
+
+```typescript
+import { stream } from '@core-ai/core-ai';
+
+const result = await stream({
+  model,
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Describe this image in detail:' },
+        {
+          type: 'image',
+          source: { type: 'url', url: 'https://example.com/image.jpg' },
+        },
+      ],
+    },
+  ],
+});
+
+for await (const event of result) {
+  if (event.type === 'text-delta') {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+## Reading Images from Disk
+
+Load and encode local images:
+
+```typescript
+import { generate } from '@core-ai/core-ai';
+import { readFile } from 'fs/promises';
+import { resolve } from 'path';
+
+async function analyzeLocalImage(imagePath: string) {
+  const imageBuffer = await readFile(resolve(imagePath));
+  const base64Image = imageBuffer.toString('base64');
+
+  // Detect MIME type from extension
+  const mimeType = imagePath.endsWith('.png')
+    ? 'image/png'
+    : imagePath.endsWith('.jpg') || imagePath.endsWith('.jpeg')
+    ? 'image/jpeg'
+    : 'image/webp';
+
+  const result = await generate({
+    model,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'What is in this image?' },
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              mediaType: mimeType,
+              data: base64Image,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  return result.content;
+}
+
+const description = await analyzeLocalImage('./photo.jpg');
+console.log(description);
+```
+
+## Multi-Modal Conversations
+
+Build conversations with images:
+
+```typescript
+const messages = [
+  {
+    role: 'user' as const,
+    content: [
+      { type: 'text' as const, text: 'What is in this image?' },
+      {
+        type: 'image' as const,
+        source: { type: 'url' as const, url: 'https://example.com/chart.png' },
+      },
+    ],
+  },
+];
+
+const firstResponse = await generate({ model, messages });
+console.log('First response:', firstResponse.content);
+
+// Add assistant response
+messages.push({
+  role: 'assistant',
+  content: firstResponse.content,
+});
+
+// Follow up question
+messages.push({
+  role: 'user',
+  content: 'Can you explain the trend shown in the chart?',
+});
+
+const secondResponse = await generate({ model, messages });
+console.log('Second response:', secondResponse.content);
+```
+
+## Provider Support
+
+Multi-modal support varies by provider:
+
+<Tabs>
+  <Tab title="OpenAI">
+    ```typescript
+    import { generate } from '@core-ai/core-ai';
+    import { createOpenAI } from '@core-ai/openai';
+
+    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const model = openai.chatModel('gpt-5-mini'); // Supports vision
+
+    const result = await generate({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Describe this' },
+            {
+              type: 'image',
+              source: { type: 'url', url: imageUrl },
+            },
+          ],
+        },
+      ],
+    });
+    ```
+  </Tab>
+  <Tab title="Anthropic">
+    ```typescript
+    import { generate } from '@core-ai/core-ai';
+    import { createAnthropic } from '@core-ai/anthropic';
+
+    const anthropic = createAnthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+    const model = anthropic.chatModel('claude-haiku-4-5'); // Supports vision
+
+    const result = await generate({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'What is in this image?' },
+            {
+              type: 'image',
+              source: { type: 'url', url: imageUrl },
+            },
+          ],
+        },
+      ],
+    });
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  Check your provider's documentation for which models support vision and other multi-modal capabilities.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use appropriate image formats">
+    Common formats work best:
+
+    - **JPEG**: Photos, complex images
+    - **PNG**: Screenshots, diagrams, transparency
+    - **WebP**: Modern format, good compression
+
+    ```typescript
+    // Good: common formats
+    const formats = ['image/jpeg', 'image/png', 'image/webp'];
+    ```
+  </Accordion>
+
+  <Accordion title="Optimize image size">
+    Resize large images before sending:
+
+    ```typescript
+    import sharp from 'sharp';
+
+    async function optimizeImage(buffer: Buffer): Promise<string> {
+      const optimized = await sharp(buffer)
+        .resize(1024, 1024, { fit: 'inside' }) // Max 1024px
+        .jpeg({ quality: 85 })                 // Good quality
+        .toBuffer();
+
+      return optimized.toString('base64');
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Be specific in prompts">
+    Tell the model what to focus on:
+
+    ```typescript
+    // Vague
+    { type: 'text', text: 'Analyze this' }
+
+    // Better
+    {
+      type: 'text',
+      text: 'Analyze this product image. Focus on: ' +
+            '1) Product condition, 2) Visible defects, ' +
+            '3) Brand and model if visible'
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Handle vision model limitations">
+    Not all models support images:
+
+    ```typescript
+    function supportsVision(modelId: string): boolean {
+      // Check if model supports vision
+      return modelId.includes('vision') || 
+             modelId.includes('gpt-5') ||
+             modelId.includes('claude');
+    }
+
+    if (!supportsVision(model.modelId)) {
+      throw new Error('Model does not support vision');
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Image Generation" icon="wand-magic-sparkles" href="/guides/image-generation">
+    Generate images from text prompts
+  </Card>
+  <Card title="Chat Completion" icon="message" href="/guides/chat-completion">
+    Learn basic text generation
+  </Card>
+  <Card title="Streaming" icon="water" href="/guides/streaming">
+    Stream multi-modal responses
+  </Card>
+  <Card title="Structured Outputs" icon="brackets-curly" href="/guides/structured-outputs">
+    Extract structured data from images
+  </Card>
+</CardGroup>

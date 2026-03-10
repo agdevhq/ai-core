@@ -1,0 +1,209 @@
+---
+title: Providers
+description: Learn how providers work in Core AI and how to use OpenAI, Anthropic, Google GenAI, and Mistral
+---
+
+## Overview
+
+Providers are the bridge between Core AI and LLM services like OpenAI, Anthropic, Google GenAI, and Mistral. Each provider implements a unified interface that abstracts away provider-specific details, allowing you to switch between providers with minimal code changes.
+
+## Provider Interface
+
+All providers implement methods to create model instances:
+
+```typescript
+type Provider = {
+  chatModel(modelId: string): ChatModel;
+  embeddingModel?(modelId: string): EmbeddingModel;
+  imageModel?(modelId: string): ImageModel;
+};
+```
+
+<Note>
+  Not all providers support all model types. For example, Anthropic only supports chat models, while OpenAI and Google GenAI support chat, embedding, and image models.
+</Note>
+
+## OpenAI
+
+OpenAI is one of the most popular providers, offering chat, embedding, and image generation models.
+
+### Creating a Provider
+
+```typescript
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // Optional: defaults to OPENAI_API_KEY env var
+  baseURL: 'https://api.openai.com/v1', // Optional: custom base URL
+});
+```
+
+### Provider Options
+
+```typescript
+type OpenAIProviderOptions = {
+  apiKey?: string;
+  baseURL?: string;
+  client?: OpenAI; // Optional: bring your own OpenAI client
+};
+```
+
+### Getting Models
+
+```typescript
+// Chat models
+const gpt4 = openai.chatModel('gpt-4-turbo');
+const gpt35 = openai.chatModel('gpt-3.5-turbo');
+
+// Embedding models
+const embeddings = openai.embeddingModel('text-embedding-3-small');
+
+// Image models
+const dalle = openai.imageModel('dall-e-3');
+```
+
+## Anthropic
+
+Anthropic provides powerful chat models like Claude, with advanced capabilities for extended thinking and reasoning.
+
+### Creating a Provider
+
+```typescript
+import { createAnthropic } from '@core-ai/anthropic';
+
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  defaultMaxTokens: 4096, // Optional: default max tokens for responses
+});
+```
+
+### Provider Options
+
+```typescript
+type AnthropicProviderOptions = {
+  apiKey?: string;
+  baseURL?: string;
+  client?: Anthropic; // Optional: bring your own Anthropic client
+  defaultMaxTokens?: number; // Optional: defaults to 4096
+};
+```
+
+### Getting Models
+
+```typescript
+const claude = anthropic.chatModel('claude-3-5-sonnet-20241022');
+const claudeOpus = anthropic.chatModel('claude-3-opus-20240229');
+```
+
+<Note>
+  Anthropic requires a `maxTokens` value for all requests. The `defaultMaxTokens` option sets a default value that can be overridden per request.
+</Note>
+
+## Google GenAI
+
+Google GenAI provides access to Gemini models for chat, embeddings, and image generation.
+
+### Creating a Provider
+
+```typescript
+import { createGoogleGenAI } from '@core-ai/google-genai';
+
+const google = createGoogleGenAI({
+  apiKey: process.env.GOOGLE_GENAI_API_KEY,
+  apiVersion: 'v1beta', // Optional: API version
+  baseUrl: 'https://generativelanguage.googleapis.com', // Optional
+});
+```
+
+### Provider Options
+
+```typescript
+type GoogleGenAIProviderOptions = {
+  apiKey?: string;
+  apiVersion?: string;
+  baseUrl?: string;
+  client?: GoogleGenAI; // Optional: bring your own GoogleGenAI client
+};
+```
+
+### Getting Models
+
+```typescript
+// Chat models
+const gemini = google.chatModel('gemini-2.0-flash-exp');
+
+// Embedding models
+const embeddings = google.embeddingModel('text-embedding-004');
+
+// Image models
+const imagen = google.imageModel('imagen-3.0-generate-001');
+```
+
+## Mistral
+
+Mistral provides efficient open-source and proprietary models for chat and embeddings.
+
+### Creating a Provider
+
+```typescript
+import { createMistral } from '@core-ai/mistral';
+
+const mistral = createMistral({
+  apiKey: process.env.MISTRAL_API_KEY,
+  baseURL: 'https://api.mistral.ai', // Optional
+});
+```
+
+### Provider Options
+
+```typescript
+type MistralProviderOptions = {
+  apiKey?: string;
+  baseURL?: string;
+  client?: Mistral; // Optional: bring your own Mistral client
+};
+```
+
+### Getting Models
+
+```typescript
+// Chat models
+const mistralLarge = mistral.chatModel('mistral-large-latest');
+const mistralSmall = mistral.chatModel('mistral-small-latest');
+
+// Embedding models
+const embeddings = mistral.embeddingModel('mistral-embed');
+```
+
+## Using Custom Clients
+
+All providers support bringing your own client instance, which is useful for advanced configuration:
+
+```typescript
+import OpenAI from 'openai';
+import { createOpenAI } from '@core-ai/openai';
+
+const customClient = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000,
+  maxRetries: 3,
+  // Any other OpenAI client options
+});
+
+const openai = createOpenAI({ client: customClient });
+```
+
+## Provider Comparison
+
+| Provider | Chat | Embeddings | Images | Special Features |
+|----------|------|------------|--------|------------------|
+| OpenAI | ✓ | ✓ | ✓ | Most comprehensive model selection |
+| Anthropic | ✓ | ✗ | ✗ | Extended thinking, prompt caching |
+| Google GenAI | ✓ | ✓ | ✓ | Gemini models with multimodal support |
+| Mistral | ✓ | ✓ | ✗ | Efficient open-source options |
+
+## Next Steps
+
+- Learn about [Models](/concepts/models) to understand different model types
+- Explore [Messages](/concepts/messages) to see how to structure conversations
+- Configure models with [Configuration](/concepts/configuration) options

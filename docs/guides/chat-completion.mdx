@@ -1,0 +1,290 @@
+---
+title: Chat Completion
+description: Generate text responses using the generate() function
+---
+
+The `generate()` function provides synchronous chat completion, returning a complete response from the language model.
+
+## Basic Usage
+
+Generate a simple chat completion:
+
+```typescript
+import { generate } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
+const result = await generate({
+  model,
+  messages: [
+    {
+      role: 'system',
+      content: 'You are a concise technical assistant.',
+    },
+    {
+      role: 'user',
+      content: 'Explain what an embedding vector is in one short paragraph.',
+    },
+  ],
+});
+
+console.log('Response:', result.content);
+console.log('Usage:', result.usage);
+```
+
+## Using Different Providers
+
+Core AI supports multiple providers with the same API:
+
+<Tabs>
+  <Tab title="OpenAI">
+    ```typescript
+    import { generate } from '@core-ai/core-ai';
+    import { createOpenAI } from '@core-ai/openai';
+
+    const openai = createOpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY 
+    });
+    const model = openai.chatModel('gpt-5-mini');
+
+    const result = await generate({
+      model,
+      messages: [{ role: 'user', content: 'Hello!' }],
+    });
+    ```
+  </Tab>
+  <Tab title="Anthropic">
+    ```typescript
+    import { generate } from '@core-ai/core-ai';
+    import { createAnthropic } from '@core-ai/anthropic';
+
+    const anthropic = createAnthropic({ 
+      apiKey: process.env.ANTHROPIC_API_KEY 
+    });
+    const model = anthropic.chatModel('claude-haiku-4-5');
+
+    const result = await generate({
+      model,
+      messages: [{ role: 'user', content: 'Hello!' }],
+      config: { maxTokens: 256 },
+    });
+    ```
+  </Tab>
+  <Tab title="Google">
+    ```typescript
+    import { generate } from '@core-ai/core-ai';
+    import { createGoogleGenAI } from '@core-ai/google-genai';
+
+    const google = createGoogleGenAI({ 
+      apiKey: process.env.GOOGLE_API_KEY 
+    });
+    const model = google.chatModel('gemini-3-flash-preview');
+
+    const result = await generate({
+      model,
+      messages: [{ role: 'user', content: 'Hello!' }],
+      config: { maxTokens: 256 },
+    });
+    ```
+  </Tab>
+  <Tab title="Mistral">
+    ```typescript
+    import { generate } from '@core-ai/core-ai';
+    import { createMistral } from '@core-ai/mistral';
+
+    const mistral = createMistral({ 
+      apiKey: process.env.MISTRAL_API_KEY 
+    });
+    const model = mistral.chatModel('mistral-small-latest');
+
+    const result = await generate({
+      model,
+      messages: [{ role: 'user', content: 'Hello!' }],
+      config: { maxTokens: 256 },
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration Options
+
+Customize model behavior with configuration parameters:
+
+```typescript
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Tell me a story.' }],
+  config: {
+    temperature: 0.7,        // Control randomness (0-2)
+    maxTokens: 500,          // Limit response length
+    topP: 0.9,              // Nucleus sampling
+    stopSequences: ['\n\n'], // Stop generation at sequences
+    frequencyPenalty: 0.5,   // Reduce repetition
+    presencePenalty: 0.3,    // Encourage topic diversity
+  },
+});
+```
+
+## Response Structure
+
+The `generate()` function returns a `GenerateResult` object:
+
+```typescript
+type GenerateResult = {
+  parts: AssistantContentPart[];  // Raw response parts
+  content: string | null;          // Text content (null if only tool calls)
+  reasoning: string | null;        // Reasoning content (if available)
+  toolCalls: ToolCall[];          // Tool calls made by model
+  finishReason: FinishReason;     // Why generation stopped
+  usage: ChatUsage;               // Token usage information
+};
+```
+
+### Understanding Token Usage
+
+```typescript
+const result = await generate({ model, messages });
+
+console.log('Input tokens:', result.usage.inputTokens);
+console.log('Output tokens:', result.usage.outputTokens);
+
+// Token details breakdown
+console.log('Cache read:', result.usage.inputTokenDetails.cacheReadTokens);
+console.log('Cache write:', result.usage.inputTokenDetails.cacheWriteTokens);
+
+if (result.usage.outputTokenDetails.reasoningTokens) {
+  console.log('Reasoning tokens:', result.usage.outputTokenDetails.reasoningTokens);
+}
+```
+
+## Multi-Turn Conversations
+
+Build conversations by including previous messages:
+
+```typescript
+const messages = [
+  { role: 'system', content: 'You are a helpful assistant.' },
+  { role: 'user', content: 'What is TypeScript?' },
+];
+
+const firstResponse = await generate({ model, messages });
+
+// Add assistant response and follow-up question
+messages.push({
+  role: 'assistant',
+  content: firstResponse.content,
+});
+
+messages.push({
+  role: 'user',
+  content: 'How is it different from JavaScript?',
+});
+
+const secondResponse = await generate({ model, messages });
+console.log(secondResponse.content);
+```
+
+## Error Handling
+
+Handle errors gracefully:
+
+```typescript
+import { LLMError, ProviderError } from '@core-ai/core-ai';
+
+try {
+  const result = await generate({ model, messages });
+  console.log(result.content);
+} catch (error) {
+  if (error instanceof ProviderError) {
+    console.error('Provider error:', error.message);
+    console.error('Status code:', error.statusCode);
+  } else if (error instanceof LLMError) {
+    console.error('LLM error:', error.message);
+  } else {
+    console.error('Unknown error:', error);
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use system messages for consistent behavior">
+    System messages set the assistant's behavior and context:
+
+    ```typescript
+    const result = await generate({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a concise technical writer. Always use examples.',
+        },
+        { role: 'user', content: 'Explain async/await' },
+      ],
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Set appropriate token limits">
+    Control costs and response length with `maxTokens`:
+
+    ```typescript
+    const result = await generate({
+      model,
+      messages,
+      config: {
+        maxTokens: 200, // Limit response to 200 tokens
+      },
+    });
+
+    if (result.finishReason === 'length') {
+      console.warn('Response was truncated');
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Handle finish reasons appropriately">
+    Check why generation stopped:
+
+    ```typescript
+    const result = await generate({ model, messages });
+
+    switch (result.finishReason) {
+      case 'stop':
+        // Normal completion
+        break;
+      case 'length':
+        // Hit token limit
+        console.warn('Response truncated');
+        break;
+      case 'tool-calls':
+        // Model wants to use tools
+        break;
+      case 'content-filter':
+        // Content filtered by provider
+        console.warn('Content filtered');
+        break;
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Streaming" icon="water" href="/guides/streaming">
+    Stream responses in real-time for better UX
+  </Card>
+  <Card title="Tool Calling" icon="wrench" href="/guides/tool-calling">
+    Let models use tools and functions
+  </Card>
+  <Card title="Multi-Modal" icon="images" href="/guides/multi-modal">
+    Work with images and files
+  </Card>
+  <Card title="Structured Outputs" icon="brackets-curly" href="/guides/structured-outputs">
+    Get type-safe JSON responses
+  </Card>
+</CardGroup>

@@ -1,0 +1,271 @@
+---
+title: 'embed()'
+description: 'Generate embeddings for text using embedding models'
+icon: 'vector-square'
+---
+
+## Overview
+
+The `embed()` function generates vector embeddings for text input using embedding models. Embeddings are useful for semantic search, clustering, recommendations, and other AI tasks that require numerical representations of text.
+
+## Function Signature
+
+```typescript
+export async function embed(
+    params: EmbedParams
+): Promise<EmbedResult>
+
+export type EmbedParams = EmbedOptions & {
+    model: EmbeddingModel;
+};
+```
+
+## Parameters
+
+<ParamField path="model" type="EmbeddingModel" required>
+  The embedding model instance to use for generating embeddings.
+</ParamField>
+
+<ParamField path="input" type="string | string[]" required>
+  Text input to embed. Can be a single string or an array of strings. Must not be empty.
+</ParamField>
+
+<ParamField path="dimensions" type="number">
+  Optional dimension size for the output embeddings. Not all models support this parameter.
+</ParamField>
+
+<ParamField path="providerOptions" type="Record<string, unknown>">
+  Provider-specific options that are passed through to the underlying model.
+</ParamField>
+
+## Return Value
+
+Returns a `Promise<EmbedResult>` with the following properties:
+
+<ResponseField name="embeddings" type="number[][]">
+  Array of embedding vectors. Each vector is an array of numbers representing the embedding dimensions.
+  
+  - For single string input: Returns array with one embedding
+  - For array input: Returns array with one embedding per input string
+</ResponseField>
+
+<ResponseField name="usage" type="EmbeddingUsage | undefined">
+  Optional token usage metadata. Some providers/models do not expose token usage for embedding calls.
+  
+  <Expandable title="EmbeddingUsage">
+    <ResponseField name="inputTokens" type="number">
+      Number of tokens consumed by the embedding input.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+### Single String Embedding
+
+```typescript
+import { embed } from '@coreai/core';
+import { openai } from '@coreai/openai';
+
+const result = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: 'Hello, world!'
+});
+
+console.log(result.embeddings[0]); // [0.1, 0.2, -0.3, ...]
+console.log(result.embeddings[0].length); // 1536 (dimension size)
+```
+
+### Batch Embedding
+
+```typescript
+const result = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: [
+    'First document about AI',
+    'Second document about machine learning',
+    'Third document about neural networks'
+  ]
+});
+
+console.log(result.embeddings.length); // 3
+console.log(result.embeddings[0]); // First document's embedding
+console.log(result.embeddings[1]); // Second document's embedding
+console.log(result.embeddings[2]); // Third document's embedding
+```
+
+### With Custom Dimensions
+
+```typescript
+const result = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: 'This is a test',
+  dimensions: 256 // Reduce from default 1536 to 256
+});
+
+console.log(result.embeddings[0].length); // 256
+```
+
+### Checking Token Usage
+
+```typescript
+const result = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: 'Sample text for embedding'
+});
+
+if (result.usage) {
+  console.log('Tokens used:', result.usage.inputTokens);
+} else {
+  console.log('Usage information not available');
+}
+```
+
+### Semantic Search Use Case
+
+```typescript
+// Embed documents
+const documents = [
+  'The quick brown fox jumps over the lazy dog',
+  'Artificial intelligence is transforming technology',
+  'Machine learning models require training data'
+];
+
+const docResult = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: documents
+});
+
+const docEmbeddings = docResult.embeddings;
+
+// Embed query
+const queryResult = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: 'What is AI?'
+});
+
+const queryEmbedding = queryResult.embeddings[0];
+
+// Calculate cosine similarity
+function cosineSimilarity(a: number[], b: number[]): number {
+  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+  const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+}
+
+// Find most similar document
+const similarities = docEmbeddings.map(docEmbed => 
+  cosineSimilarity(queryEmbedding, docEmbed)
+);
+
+const mostSimilarIndex = similarities.indexOf(Math.max(...similarities));
+console.log('Most similar document:', documents[mostSimilarIndex]);
+// Output: "Artificial intelligence is transforming technology"
+```
+
+### Clustering Documents
+
+```typescript
+const articles = [
+  'Python programming tutorial',
+  'JavaScript web development',
+  'Cooking pasta recipes',
+  'Italian cuisine guide',
+  'TypeScript type system'
+];
+
+const result = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: articles
+});
+
+// Use embeddings for clustering (e.g., K-means)
+// Group similar articles together based on their embeddings
+const embeddings = result.embeddings;
+```
+
+## Error Handling
+
+Throws `LLMError` if:
+- Input is an empty string
+- Input is an empty array
+- Model encounters an error during embedding
+
+```typescript
+import { LLMError } from '@coreai/core';
+
+try {
+  const result = await embed({
+    model: openai.embedding('text-embedding-3-small'),
+    input: '' // Empty string
+  });
+} catch (error) {
+  if (error instanceof LLMError) {
+    console.error('Embedding failed:', error.message);
+    // Output: "input must not be empty"
+  }
+}
+
+try {
+  const result = await embed({
+    model: openai.embedding('text-embedding-3-small'),
+    input: [] // Empty array
+  });
+} catch (error) {
+  if (error instanceof LLMError) {
+    console.error('Embedding failed:', error.message);
+    // Output: "input must not be empty"
+  }
+}
+```
+
+## Provider Support
+
+Different providers have different embedding models and capabilities:
+
+```typescript
+// OpenAI
+import { openai } from '@coreai/openai';
+const openaiEmbed = openai.embedding('text-embedding-3-small');
+const openaiLarge = openai.embedding('text-embedding-3-large');
+
+// Other providers may have their own embedding models
+// Check provider documentation for available models
+```
+
+## Performance Tips
+
+<Info>
+  Batch multiple inputs in a single call instead of making separate calls for each input. This is more efficient and faster.
+</Info>
+
+```typescript
+// Good: Single batch call
+const result = await embed({
+  model: openai.embedding('text-embedding-3-small'),
+  input: ['text1', 'text2', 'text3']
+});
+
+// Less efficient: Multiple separate calls
+const result1 = await embed({ model, input: 'text1' });
+const result2 = await embed({ model, input: 'text2' });
+const result3 = await embed({ model, input: 'text3' });
+```
+
+<Tip>
+  Use smaller dimension sizes when possible to reduce storage and computation costs. The `text-embedding-3-small` and `text-embedding-3-large` models support custom dimensions.
+</Tip>
+
+## Common Use Cases
+
+1. **Semantic Search**: Find documents similar to a query
+2. **Clustering**: Group similar documents together
+3. **Recommendations**: Recommend items based on similarity
+4. **Classification**: Use embeddings as features for ML models
+5. **Anomaly Detection**: Identify outliers based on embedding distance
+6. **Deduplication**: Find and remove duplicate or near-duplicate content
+
+## Source Location
+
+`~/workspace/source/packages/core-ai/src/embed.ts:12`

@@ -1,0 +1,278 @@
+---
+title: 'stream()'
+description: 'Stream responses from a chat model in real-time'
+icon: 'water'
+---
+
+## Overview
+
+The `stream()` function streams responses from a chat model in real-time, allowing you to process tokens as they're generated. This is ideal for interactive applications where you want to display responses progressively.
+
+## Function Signature
+
+```typescript
+export async function stream(
+    params: StreamParams
+): Promise<StreamResult>
+
+export type StreamParams = GenerateOptions & {
+    model: ChatModel;
+};
+```
+
+## Parameters
+
+<ParamField path="model" type="ChatModel" required>
+  The chat model instance to use for streaming.
+</ParamField>
+
+<ParamField path="messages" type="Message[]" required>
+  Array of messages in the conversation. Must not be empty.
+</ParamField>
+
+<ParamField path="reasoning" type="ReasoningConfig">
+  Configuration for extended thinking/reasoning capabilities.
+  
+  <Expandable title="ReasoningConfig">
+    <ParamField path="effort" type="ReasoningEffort" required>
+      The effort level for reasoning: `'minimal'`, `'low'`, `'medium'`, `'high'`, or `'max'`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="tools" type="ToolSet">
+  Object mapping tool names to tool definitions.
+</ParamField>
+
+<ParamField path="toolChoice" type="ToolChoice">
+  Controls how the model uses tools: `'auto'`, `'none'`, `'required'`, or `{ type: 'tool', toolName: string }`.
+</ParamField>
+
+<ParamField path="config" type="ModelConfig">
+  Model configuration parameters (temperature, maxTokens, etc.).
+</ParamField>
+
+<ParamField path="providerOptions" type="Record<string, unknown>">
+  Provider-specific options.
+</ParamField>
+
+<ParamField path="signal" type="AbortSignal">
+  AbortSignal for cancelling the stream.
+</ParamField>
+
+## Return Value
+
+Returns a `Promise<StreamResult>`, which is an async iterable that yields `StreamEvent` objects.
+
+### StreamResult
+
+```typescript
+type StreamResult = AsyncIterable<StreamEvent> & {
+    toResponse(): Promise<GenerateResult>;
+};
+```
+
+<ResponseField name="[Symbol.asyncIterator]" type="AsyncIterator<StreamEvent>">
+  Async iterator for streaming events. Can only be iterated once.
+</ResponseField>
+
+<ResponseField name="toResponse" type="() => Promise<GenerateResult>">
+  Consumes the entire stream and returns the final result. Can be called without iterating.
+</ResponseField>
+
+### StreamEvent Types
+
+The stream yields different event types:
+
+<ResponseField name="reasoning-start" type="{ type: 'reasoning-start' }">
+  Emitted when reasoning/thinking begins.
+</ResponseField>
+
+<ResponseField name="reasoning-delta" type="{ type: 'reasoning-delta'; text: string }">
+  Emitted for each chunk of reasoning text.
+</ResponseField>
+
+<ResponseField name="reasoning-end" type="{ type: 'reasoning-end' }">
+  Emitted when reasoning completes.
+</ResponseField>
+
+<ResponseField name="text-delta" type="{ type: 'text-delta'; text: string }">
+  Emitted for each chunk of response text.
+</ResponseField>
+
+<ResponseField name="tool-call-start" type="{ type: 'tool-call-start'; toolCallId: string; toolName: string }">
+  Emitted when a tool call begins.
+</ResponseField>
+
+<ResponseField name="tool-call-delta" type="{ type: 'tool-call-delta'; toolCallId: string; argumentsDelta: string }">
+  Emitted for each chunk of tool call arguments.
+</ResponseField>
+
+<ResponseField name="tool-call-end" type="{ type: 'tool-call-end'; toolCall: ToolCall }">
+  Emitted when a tool call completes with the full tool call object.
+</ResponseField>
+
+<ResponseField name="finish" type="{ type: 'finish'; finishReason: FinishReason; usage: ChatUsage }">
+  Emitted when streaming completes with final metadata.
+</ResponseField>
+
+## Examples
+
+### Basic Streaming
+
+```typescript
+import { stream } from '@coreai/core';
+import { openai } from '@coreai/openai';
+
+const result = await stream({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Write a short story' }
+  ]
+});
+
+for await (const event of result) {
+  if (event.type === 'text-delta') {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+### Handling All Event Types
+
+```typescript
+const result = await stream({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Explain quantum physics' }
+  ],
+  reasoning: { effort: 'high' }
+});
+
+for await (const event of result) {
+  switch (event.type) {
+    case 'reasoning-start':
+      console.log('\n[Thinking...]');
+      break;
+    case 'reasoning-delta':
+      process.stdout.write(event.text);
+      break;
+    case 'reasoning-end':
+      console.log('\n[Done thinking]\n');
+      break;
+    case 'text-delta':
+      process.stdout.write(event.text);
+      break;
+    case 'finish':
+      console.log('\n\nTokens used:', event.usage.outputTokens);
+      break;
+  }
+}
+```
+
+### Using toResponse()
+
+```typescript
+// Don't iterate, just get the final result
+const result = await stream({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Hello' }
+  ]
+});
+
+const finalResult = await result.toResponse();
+console.log(finalResult.content);
+console.log('Usage:', finalResult.usage);
+```
+
+### Streaming with Tools
+
+```typescript
+import { defineTool } from '@coreai/core';
+import { z } from 'zod';
+
+const result = await stream({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'What\'s the weather in Tokyo?' }
+  ],
+  tools: {
+    get_weather: defineTool({
+      name: 'get_weather',
+      description: 'Get weather for a location',
+      parameters: z.object({ location: z.string() })
+    })
+  }
+});
+
+for await (const event of result) {
+  if (event.type === 'tool-call-start') {
+    console.log('Calling tool:', event.toolName);
+  } else if (event.type === 'tool-call-end') {
+    console.log('Tool arguments:', event.toolCall.arguments);
+  } else if (event.type === 'text-delta') {
+    process.stdout.write(event.text);
+  }
+}
+```
+
+### Cancellation
+
+```typescript
+const controller = new AbortController();
+
+const result = await stream({
+  model: openai('gpt-4'),
+  messages: [
+    { role: 'user', content: 'Write a very long essay' }
+  ],
+  signal: controller.signal
+});
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  for await (const event of result) {
+    if (event.type === 'text-delta') {
+      process.stdout.write(event.text);
+    }
+  }
+} catch (error) {
+  console.log('\nStream cancelled');
+}
+```
+
+## Important Notes
+
+<Warning>
+  A `StreamResult` can only be iterated once. Attempting to iterate multiple times will throw an error: "Stream can only be iterated once"
+</Warning>
+
+<Info>
+  Calling `toResponse()` without iterating will automatically consume the stream in the background and return a promise for the final result.
+</Info>
+
+## Error Handling
+
+Throws `LLMError` if:
+- Messages array is empty
+- Model encounters an error during streaming
+
+```typescript
+try {
+  const result = await stream({
+    model: openai('gpt-4'),
+    messages: []
+  });
+} catch (error) {
+  if (error instanceof LLMError) {
+    console.error('Stream failed:', error.message);
+  }
+}
+```
+
+## Source Location
+
+`~/workspace/source/packages/core-ai/src/stream-chat.ts:12`
