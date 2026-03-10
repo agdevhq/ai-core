@@ -80,7 +80,7 @@ Core AI supports multiple providers with the same API:
     const google = createGoogleGenAI({ 
       apiKey: process.env.GOOGLE_GENAI_API_KEY 
     });
-    const model = google.chatModel('gemini-3-pro');
+    const model = google.chatModel('gemini-3.1-pro');
 
     const result = await generate({
       model,
@@ -97,7 +97,7 @@ Core AI supports multiple providers with the same API:
     const mistral = createMistral({ 
       apiKey: process.env.MISTRAL_API_KEY 
     });
-    const model = mistral.chatModel('mistral-small-latest');
+    const model = mistral.chatModel('mistral-small-2506');
 
     const result = await generate({
       model,
@@ -113,6 +113,12 @@ Core AI supports multiple providers with the same API:
 Customize model behavior with configuration parameters:
 
 ```typescript
+import { generate } from '@core-ai/core-ai';
+import { createOpenAICompat } from '@core-ai/openai/compat';
+
+const openai = createOpenAICompat({ apiKey: process.env.OPENAI_API_KEY });
+const model = openai.chatModel('gpt-5-mini');
+
 const result = await generate({
   model,
   messages: [{ role: 'user', content: 'Tell me a story.' }],
@@ -130,7 +136,7 @@ const result = await generate({
 ```
 
 <Note>
-  `temperature`, `maxTokens`, and `topP` are top-level options. `stopSequences`, `frequencyPenalty`, and `presencePenalty` are provider-specific and passed via `providerOptions`. See [Configuration](/concepts/configuration) for details.
+  `temperature`, `maxTokens`, and `topP` are top-level options. `stopSequences`, `frequencyPenalty`, and `presencePenalty` are provider-specific and passed via `providerOptions`. Options like `stopSequences` and `frequencyPenalty` are available with `createOpenAICompat` (Chat Completions API). The default `createOpenAI` (Responses API) supports a different set of options — see [Configuration](/concepts/configuration) for details.
 </Note>
 
 ## Response Structure

@@ -52,7 +52,7 @@ Before you begin, make sure you have:
     ```
 
     <Note>
-      You can use any OpenAI model ID like `gpt-5-mini`, `gpt-5`, or `gpt-o3-mini`.
+      You can use any OpenAI model ID like `gpt-5.4`, `gpt-5-mini`, `gpt-5`, or `o3-mini`.
     </Note>
   </Step>
 
@@ -107,7 +107,7 @@ console.log('Response:', result.content);
 console.log('Usage:', result.usage);
 // Output:
 // Response: Quantum computing uses quantum mechanical phenomena...
-// Usage: { inputTokens: 25, outputTokens: 18, totalTokens: 43 }
+// Usage: { inputTokens: 25, outputTokens: 18, inputTokenDetails: { ... }, outputTokenDetails: { ... } }
 ```
 
 ## Try streaming
@@ -181,7 +181,7 @@ import { generate } from '@core-ai/core-ai';
 import { createGoogleGenAI } from '@core-ai/google-genai';
 
 const google = createGoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
-const model = google.chatModel('gemini-3-flash');
+const model = google.chatModel('gemini-3.1-pro');
 
 const result = await generate({
   model,
@@ -194,7 +194,7 @@ import { generate } from '@core-ai/core-ai';
 import { createMistral } from '@core-ai/mistral';
 
 const mistral = createMistral({ apiKey: process.env.MISTRAL_API_KEY });
-const model = mistral.chatModel('mistral-large-latest');
+const model = mistral.chatModel('mistral-large-2512');
 
 const result = await generate({
   model,

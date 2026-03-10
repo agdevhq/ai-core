@@ -127,7 +127,7 @@ type GoogleGenAIProviderOptions = {
 ### Getting Models
 
 ```typescript
-const gemini = google.chatModel('gemini-3-pro');
+const gemini = google.chatModel('gemini-3.1-pro');
 const embeddings = google.embeddingModel('text-embedding-004');
 const imagen = google.imageModel('imagen-3.0');
 ```
@@ -161,8 +161,8 @@ type MistralProviderOptions = {
 
 ```typescript
 // Chat models
-const mistralLarge = mistral.chatModel('mistral-large-latest');
-const mistralSmall = mistral.chatModel('mistral-small-latest');
+const mistralLarge = mistral.chatModel('mistral-large-2512');
+const mistralSmall = mistral.chatModel('mistral-small-2506');
 
 // Embedding models
 const embeddings = mistral.embeddingModel('mistral-embed');

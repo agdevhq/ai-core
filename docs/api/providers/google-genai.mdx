@@ -53,7 +53,7 @@ const google = createGoogleGenAI({
 
 <AccordionGroup>
   <Accordion title="Gemini 3 (Thinking Level)" icon="star">
-    - **gemini-3-pro** - Most capable multimodal model
+    - **gemini-3.1-pro** - Most capable multimodal model
   </Accordion>
   
   <Accordion title="Gemini 2.5 (Thinking Budget)" icon="brain">
@@ -82,7 +82,7 @@ import { generate } from '@core-ai/core-ai';
 const google = createGoogleGenAI();
 
 const result = await generate({
-  model: google.chatModel('gemini-3-pro'),
+  model: google.chatModel('gemini-3.1-pro'),
   messages: [
     { role: 'user', content: 'Explain machine learning' },
   ],
@@ -95,7 +95,7 @@ console.log(result.content);
 
 ```typescript
 const result = await generate({
-  model: google.chatModel('gemini-3-pro'),
+  model: google.chatModel('gemini-3.1-pro'),
   messages: [
     { role: 'user', content: 'Analyze this complex scenario...' },
   ],
@@ -109,7 +109,7 @@ const result = await generate({
 
 ```typescript
 const result = await generate({
-  model: google.chatModel('gemini-3-pro'),
+  model: google.chatModel('gemini-3.1-pro'),
   messages: [
     {
       role: 'user',
@@ -181,7 +181,7 @@ import { generate, defineTool } from '@core-ai/core-ai';
 import { z } from 'zod';
 
 const result = await generate({
-  model: google.chatModel('gemini-3-pro'),
+  model: google.chatModel('gemini-3.1-pro'),
   messages: [
     { role: 'user', content: 'Calculate the area of a circle with radius 5' },
   ],
@@ -223,7 +223,7 @@ Options are namespaced under `google` in `providerOptions`:
 
 ```typescript
 const result = await generate({
-  model: google.chatModel('gemini-3-pro'),
+  model: google.chatModel('gemini-3.1-pro'),
   messages: [{ role: 'user', content: 'Hello' }],
   providerOptions: {
     google: {
@@ -265,7 +265,7 @@ import { ProviderError } from '@core-ai/core-ai';
 
 try {
   const result = await generate({
-    model: google.chatModel('gemini-3-pro'),
+    model: google.chatModel('gemini-3.1-pro'),
     messages: [{ role: 'user', content: 'Hello!' }],
   });
 } catch (error) {

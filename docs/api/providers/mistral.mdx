@@ -49,12 +49,12 @@ const mistral = createMistral({
 
 <AccordionGroup>
   <Accordion title="Large Models" icon="star">
-    - **mistral-large-2** - Latest flagship model
-    - **mistral-large** - Previous generation flagship
+    - **mistral-large-2512** - Latest flagship model (Mistral Large 3)
+    - **mistral-large-2407** - Previous generation flagship
   </Accordion>
   
   <Accordion title="Medium Models" icon="bolt">
-    - **mistral-medium** - Strong performance at lower cost
+    - **mistral-medium-2508** - Strong performance at lower cost (Mistral Medium 3.1)
   </Accordion>
   
   <Accordion title="Small Models" icon="zap">
@@ -100,7 +100,7 @@ import { generate } from '@core-ai/core-ai';
 const mistral = createMistral();
 
 const result = await generate({
-  model: mistral.chatModel('mistral-large-2'),
+  model: mistral.chatModel('mistral-large-2512'),
   messages: [
     { role: 'user', content: 'Explain the concept of recursion' },
   ],
@@ -115,7 +115,7 @@ console.log(result.content);
 import { stream } from '@core-ai/core-ai';
 
 const chatStream = await stream({
-  model: mistral.chatModel('mistral-medium'),
+  model: mistral.chatModel('mistral-medium-2508'),
   messages: [
     { role: 'user', content: 'Write a short story about artificial intelligence' },
   ],
@@ -135,7 +135,7 @@ import { generate, defineTool } from '@core-ai/core-ai';
 import { z } from 'zod';
 
 const result = await generate({
-  model: mistral.chatModel('mistral-large-2'),
+  model: mistral.chatModel('mistral-large-2512'),
   messages: [
     { role: 'user', content: 'What is 25 multiplied by 4?' },
   ],
@@ -209,7 +209,7 @@ Options are namespaced under `mistral` in `providerOptions`:
 
 ```typescript
 const result = await generate({
-  model: mistral.chatModel('mistral-large-2'),
+  model: mistral.chatModel('mistral-large-2512'),
   messages: [{ role: 'user', content: 'Hello' }],
   providerOptions: {
     mistral: {
@@ -248,7 +248,7 @@ import { ProviderError } from '@core-ai/core-ai';
 
 try {
   const result = await generate({
-    model: mistral.chatModel('mistral-large-2'),
+    model: mistral.chatModel('mistral-large-2512'),
     messages: [{ role: 'user', content: 'Hello!' }],
   });
 } catch (error) {

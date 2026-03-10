@@ -87,7 +87,8 @@ const imageGen = openai.imageModel('gpt-image-1');
 
 <AccordionGroup>
   <Accordion title="GPT-5 Series" icon="star">
-    - **gpt-5.2** - Latest flagship model with max reasoning effort
+    - **gpt-5.4** - Latest flagship model with max reasoning effort
+    - **gpt-5.2** - Flagship with reasoning control
     - **gpt-5.2-codex** - Optimized for code generation
     - **gpt-5.2-pro** - Enhanced reasoning capabilities
     - **gpt-5.1** - Previous generation flagship
@@ -147,7 +148,7 @@ console.log(result.content);
 
 ```typescript
 const result = await generate({
-  model: openai.chatModel('gpt-5.2'),
+  model: openai.chatModel('gpt-5.4'),
   messages: [
     { role: 'user', content: 'Solve this complex mathematical proof...' },
   ],
