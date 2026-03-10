@@ -22,13 +22,13 @@ type ChatModel = {
   readonly provider: string;
   readonly modelId: string;
   generate(options: GenerateOptions): Promise<GenerateResult>;
-  stream(options: GenerateOptions): Promise<StreamResult>;
+  stream(options: GenerateOptions): Promise<ChatStream>;
   generateObject<TSchema extends z.ZodType>(
     options: GenerateObjectOptions<TSchema>
   ): Promise<GenerateObjectResult<TSchema>>;
   streamObject<TSchema extends z.ZodType>(
     options: StreamObjectOptions<TSchema>
-  ): Promise<StreamObjectResult<TSchema>>;
+  ): Promise<ObjectStream<TSchema>>;
 };
 ```
 
@@ -39,7 +39,7 @@ import { createOpenAI } from '@core-ai/openai';
 import { generate } from '@core-ai/core-ai';
 
 const openai = createOpenAI();
-const model = openai.chatModel('gpt-4-turbo');
+const model = openai.chatModel('gpt-5-mini');
 
 const result = await generate({
   model,
@@ -85,7 +85,8 @@ const schema = z.object({
   hobbies: z.array(z.string()),
 });
 
-const result = await model.generateObject({
+const result = await generateObject({
+  model,
   messages: [
     { role: 'user', content: 'Generate a random person profile.' }
   ],
@@ -156,7 +157,7 @@ type FinishReason =
 type StreamEvent =
   | { type: 'reasoning-start' }
   | { type: 'reasoning-delta'; text: string }
-  | { type: 'reasoning-end' }
+  | { type: 'reasoning-end'; providerMetadata?: Record<string, Record<string, unknown>> }
   | { type: 'text-delta'; text: string }
   | { type: 'tool-call-start'; toolCallId: string; toolName: string }
   | { type: 'tool-call-delta'; toolCallId: string; argumentsDelta: string }
@@ -274,7 +275,7 @@ type ImageGenerateOptions = {
   prompt: string; // Text description of desired image
   n?: number; // Number of images to generate
   size?: string; // Image size (e.g., "1024x1024")
-  providerOptions?: Record<string, unknown>; // Provider-specific options
+  providerOptions?: ImageProviderOptions; // Provider-specific options
 };
 ```
 
@@ -315,10 +316,10 @@ type GeneratedImage = {
 All models expose two readonly properties:
 
 ```typescript
-const model = openai.chatModel('gpt-4-turbo');
+const model = openai.chatModel('gpt-5-mini');
 
 console.log(model.provider); // "openai"
-console.log(model.modelId); // "gpt-4-turbo"
+console.log(model.modelId); // "gpt-5-mini"
 ```
 
 These properties are useful for logging, debugging, and tracking which models are used in your application.

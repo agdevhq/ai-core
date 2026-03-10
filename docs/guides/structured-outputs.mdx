@@ -80,14 +80,14 @@ for await (const event of result) {
   }
 }
 
-const response = await result.toResponse();
+const response = await result.result;
 console.log('\nFinal object:', response.object);
 console.log('Finish reason:', response.finishReason);
 ```
 
-## Object Stream Events
+## Object stream events
 
-The `streamObject()` function emits these event types:
+The `streamObject()` function returns an `ObjectStream` -- an async iterable with `.result` and `.events`. It emits these event types:
 
 ```typescript
 type ObjectStreamEvent<TSchema extends z.ZodType> =
@@ -347,7 +347,7 @@ for await (const event of result) {
   }
 }
 
-const response = await result.toResponse();
+const response = await result.result;
 console.log('Complete recipe:', response.object);
 ```
 
@@ -360,12 +360,10 @@ const result = await generateObject({
   model,
   messages,
   schema: mySchema,
-  schemaName: 'my_object',           // Name for the schema
-  schemaDescription: 'A description',  // Help the model understand
-  config: {
-    temperature: 0.3,  // Lower temperature for more consistent structure
-    maxTokens: 2000,
-  },
+  schemaName: 'my_object',
+  schemaDescription: 'A description',
+  temperature: 0.3,
+  maxTokens: 2000,
 });
 ```
 
@@ -397,9 +395,7 @@ const result = await generateObject({
       model,
       messages,
       schema: mySchema,
-      config: {
-        temperature: 0.3, // More deterministic
-      },
+      temperature: 0.3,
     });
     ```
   </Accordion>

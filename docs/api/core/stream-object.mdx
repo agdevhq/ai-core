@@ -8,12 +8,12 @@ icon: 'stream'
 
 The `streamObject()` function streams structured objects from chat models in real-time, with progressive updates validated against a Zod schema. This is ideal for displaying partial results as they're being generated.
 
-## Function Signature
+## Function signature
 
 ```typescript
 export async function streamObject<TSchema extends z.ZodType>(
     params: StreamObjectParams<TSchema>
-): Promise<StreamObjectResult<TSchema>>
+): Promise<ObjectStream<TSchema>>
 
 export type StreamObjectParams<TSchema extends z.ZodType> = 
     StreamObjectOptions<TSchema> & {
@@ -43,44 +43,52 @@ export type StreamObjectParams<TSchema extends z.ZodType> =
   Optional description of the schema.
 </ParamField>
 
+<ParamField path="temperature" type="number">
+  Sampling temperature (0-2).
+</ParamField>
+
+<ParamField path="maxTokens" type="number">
+  Maximum number of tokens to generate.
+</ParamField>
+
+<ParamField path="topP" type="number">
+  Nucleus sampling parameter (0-1).
+</ParamField>
+
 <ParamField path="reasoning" type="ReasoningConfig">
   Configuration for extended thinking/reasoning capabilities.
 </ParamField>
 
-<ParamField path="config" type="ModelConfig">
-  Model configuration parameters (temperature, maxTokens, etc.).
-</ParamField>
-
-<ParamField path="providerOptions" type="Record<string, unknown>">
-  Provider-specific options.
+<ParamField path="providerOptions" type="GenerateProviderOptions">
+  Provider-specific options, namespaced by provider name.
 </ParamField>
 
 <ParamField path="signal" type="AbortSignal">
   AbortSignal for cancelling the stream.
 </ParamField>
 
-## Return Value
+## Return value
 
-Returns a `Promise<StreamObjectResult<TSchema>>`, which is an async iterable that yields `ObjectStreamEvent` objects.
-
-### StreamObjectResult
+Returns a `Promise<ObjectStream<TSchema>>`. `ObjectStream` is an async iterable of `ObjectStreamEvent` objects with two additional properties:
 
 ```typescript
-type StreamObjectResult<TSchema extends z.ZodType> = 
-    AsyncIterable<ObjectStreamEvent<TSchema>> & {
-        toResponse(): Promise<GenerateObjectResult<TSchema>>;
-    };
+type ObjectStream<TSchema extends z.ZodType> = AsyncIterable<
+    ObjectStreamEvent<TSchema>
+> & {
+    readonly result: Promise<GenerateObjectResult<TSchema>>;
+    readonly events: Promise<readonly ObjectStreamEvent<TSchema>[]>;
+};
 ```
 
-<ResponseField name="[Symbol.asyncIterator]" type="AsyncIterator<ObjectStreamEvent<TSchema>>">
-  Async iterator for streaming object events. Can only be iterated once.
+<ResponseField name="result" type="Promise<GenerateObjectResult<TSchema>>">
+  Resolves with the final validated object result when the stream completes.
 </ResponseField>
 
-<ResponseField name="toResponse" type="() => Promise<GenerateObjectResult<TSchema>>">
-  Consumes the entire stream and returns the final object result.
+<ResponseField name="events" type="Promise<readonly ObjectStreamEvent<TSchema>[]>">
+  Resolves with all observed events.
 </ResponseField>
 
-### ObjectStreamEvent Types
+### ObjectStreamEvent types
 
 <ResponseField name="object-delta" type="{ type: 'object-delta'; text: string }">
   Emitted for each chunk of the JSON object being generated.
@@ -96,12 +104,15 @@ type StreamObjectResult<TSchema extends z.ZodType> =
 
 ## Examples
 
-### Basic Streaming Object
+### Basic streaming object
 
 ```typescript
-import { streamObject } from '@coreai/core';
-import { openai } from '@coreai/openai';
+import { streamObject } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
 import { z } from 'zod';
+
+const openai = createOpenAI();
+const model = openai.chatModel('gpt-5-mini');
 
 const schema = z.object({
   name: z.string(),
@@ -109,26 +120,24 @@ const schema = z.object({
   bio: z.string()
 });
 
-const result = await streamObject({
-  model: openai('gpt-4'),
+const objectStream = await streamObject({
+  model,
   messages: [
     { role: 'user', content: 'Generate a character profile' }
   ],
   schema
 });
 
-for await (const event of result) {
+for await (const event of objectStream) {
   if (event.type === 'object-delta') {
-    // Show partial JSON as it's generated
     process.stdout.write(event.text);
   } else if (event.type === 'object') {
-    // Final validated object
     console.log('\n\nComplete object:', event.object);
   }
 }
 ```
 
-### Progressive UI Updates
+### Progressive UI updates
 
 ```typescript
 const schema = z.object({
@@ -141,8 +150,8 @@ const schema = z.object({
   )
 });
 
-const result = await streamObject({
-  model: openai('gpt-4'),
+const objectStream = await streamObject({
+  model,
   messages: [
     { role: 'user', content: 'Create a project task list' }
   ],
@@ -151,16 +160,14 @@ const result = await streamObject({
 
 let partialJson = '';
 
-for await (const event of result) {
+for await (const event of objectStream) {
   switch (event.type) {
     case 'object-delta':
       partialJson += event.text;
-      // Update UI with partial JSON
       updatePreview(partialJson);
       break;
     
     case 'object':
-      // Display final validated result
       displayTasks(event.object.tasks);
       break;
     
@@ -171,12 +178,11 @@ for await (const event of result) {
 }
 ```
 
-### Using toResponse()
+### Using .result
 
 ```typescript
-// Don't iterate, just get the final object
-const result = await streamObject({
-  model: openai('gpt-4'),
+const objectStream = await streamObject({
+  model,
   messages: [
     { role: 'user', content: 'Generate a user profile' }
   ],
@@ -186,94 +192,9 @@ const result = await streamObject({
   })
 });
 
-const finalResult = await result.toResponse();
+const finalResult = await objectStream.result;
 console.log(finalResult.object);
 console.log('Usage:', finalResult.usage);
-```
-
-### Complex Schema with Arrays
-
-```typescript
-const schema = z.object({
-  article: z.object({
-    title: z.string(),
-    summary: z.string(),
-    sections: z.array(
-      z.object({
-        heading: z.string(),
-        content: z.string(),
-        subsections: z.array(
-          z.object({
-            title: z.string(),
-            points: z.array(z.string())
-          })
-        ).optional()
-      })
-    )
-  })
-});
-
-const result = await streamObject({
-  model: openai('gpt-4'),
-  messages: [
-    { role: 'user', content: 'Create an article about renewable energy' }
-  ],
-  schema,
-  schemaName: 'ArticleStructure',
-  schemaDescription: 'A structured article with nested sections'
-});
-
-for await (const event of result) {
-  if (event.type === 'object') {
-    console.log('Title:', event.object.article.title);
-    console.log('Sections:', event.object.article.sections.length);
-  }
-}
-```
-
-### Real-time JSON Validation
-
-```typescript
-import { LLMError } from '@coreai/core';
-
-const schema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      value: z.number(),
-      valid: z.boolean()
-    })
-  )
-});
-
-const result = await streamObject({
-  model: openai('gpt-4'),
-  messages: [
-    { role: 'user', content: 'Generate a list of items' }
-  ],
-  schema
-});
-
-try {
-  for await (const event of result) {
-    if (event.type === 'object-delta') {
-      // Try to parse partial JSON (may fail)
-      try {
-        const partial = JSON.parse(event.text);
-        console.log('Valid partial JSON');
-      } catch {
-        // Still building the JSON
-      }
-    } else if (event.type === 'object') {
-      // Always valid here - passed Zod validation
-      console.log('Final validated object:', event.object);
-    }
-  }
-} catch (error) {
-  if (error instanceof LLMError) {
-    console.error('Stream failed:', error.message);
-  }
-}
 ```
 
 ### Cancellation
@@ -281,8 +202,8 @@ try {
 ```typescript
 const controller = new AbortController();
 
-const result = await streamObject({
-  model: openai('gpt-4'),
+const objectStream = await streamObject({
+  model,
   messages: [
     { role: 'user', content: 'Generate a large dataset' }
   ],
@@ -295,11 +216,10 @@ const result = await streamObject({
   signal: controller.signal
 });
 
-// Cancel after 5 seconds
 setTimeout(() => controller.abort(), 5000);
 
 try {
-  for await (const event of result) {
+  for await (const event of objectStream) {
     if (event.type === 'object-delta') {
       process.stdout.write(event.text);
     }
@@ -309,21 +229,17 @@ try {
 }
 ```
 
-## Important Notes
-
-<Warning>
-  A `StreamObjectResult` can only be iterated once. Attempting to iterate multiple times will throw an error: "Stream can only be iterated once"
-</Warning>
+## Important notes
 
 <Info>
-  The `object` event is only emitted once at the end with the complete validated object. Use `object-delta` events to show progressive updates.
+  `ObjectStream` is replayable: iterating after events have already arrived replays the buffered event history.
 </Info>
 
-<Warning>
-  If the stream completes without emitting a final object, an `LLMError` will be thrown: "object stream completed without emitting a final object"
-</Warning>
+<Info>
+  The `object` event is emitted once at the end with the complete validated object. Use `object-delta` events to show progressive updates.
+</Info>
 
-## Error Handling
+## Error handling
 
 Throws `LLMError` if:
 - Messages array is empty
@@ -331,7 +247,6 @@ Throws `LLMError` if:
 - Model encounters an error during streaming
 
 May also throw structured output errors:
-- `StructuredOutputError`
 - `StructuredOutputValidationError`
 - `StructuredOutputParseError`
 
@@ -339,16 +254,16 @@ May also throw structured output errors:
 import { 
   LLMError, 
   StructuredOutputValidationError 
-} from '@coreai/core';
+} from '@core-ai/core-ai';
 
 try {
-  const result = await streamObject({
-    model: openai('gpt-4'),
-    messages: [],
+  const objectStream = await streamObject({
+    model,
+    messages: [{ role: 'user', content: 'Generate data' }],
     schema: z.object({ name: z.string() })
   });
   
-  for await (const event of result) {
+  for await (const event of objectStream) {
     // Process events
   }
 } catch (error) {
@@ -359,36 +274,3 @@ try {
   }
 }
 ```
-
-## Type Safety
-
-The stream events are fully typed based on your Zod schema:
-
-```typescript
-const userSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-  settings: z.object({
-    theme: z.enum(['light', 'dark']),
-    notifications: z.boolean()
-  })
-});
-
-const result = await streamObject({
-  model: openai('gpt-4'),
-  messages: [{ role: 'user', content: 'Generate user' }],
-  schema: userSchema
-});
-
-for await (const event of result) {
-  if (event.type === 'object') {
-    // TypeScript knows the exact type!
-    const id: number = event.object.id;
-    const theme: 'light' | 'dark' = event.object.settings.theme;
-  }
-}
-```
-
-## Source Location
-
-`~/workspace/source/packages/core-ai/src/stream-object.ts:16`

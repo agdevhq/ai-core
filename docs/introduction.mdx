@@ -36,7 +36,7 @@ Switch between OpenAI, Anthropic, Google Gemini, and Mistral without changing yo
     Strict TypeScript types, Zod-based tool definitions, and zero `any` types for complete type safety.
   </Card>
   <Card title="Streaming support" icon="water">
-    Async iterable-based streaming with optional aggregation via `toResponse()` for both text and structured outputs.
+    Replayable async iterable streams with `.result` and `.events` for both text (`ChatStream`) and structured outputs (`ObjectStream`).
   </Card>
   <Card title="Structured outputs" icon="table">
     Schema-validated object generation and streaming with `z.infer<TSchema>` for type-safe results.

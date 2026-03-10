@@ -1,7 +1,3 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
-
 # Documentation project instructions
 
 ## About this project
@@ -12,22 +8,11 @@
 - Run `mint dev` to preview locally
 - Run `mint broken-links` to check links
 
-## Terminology
-
-{/_ Add product-specific terms and preferred usage _/}
-{/_ Example: Use "workspace" not "project", "member" not "user" _/}
-
 ## Style preferences
-
-{/_ Add any project-specific style rules below _/}
 
 - Use active voice and second person ("you")
 - Keep sentences concise — one idea per sentence
 - Use sentence case for headings
 - Bold for UI elements: Click **Settings**
 - Code formatting for file names, commands, paths, and code references
-
-## Content boundaries
-
-{/_ Define what should and shouldn't be documented _/}
-{/_ Example: Don't document internal admin features _/}
+- We should always write the documentation for the current state of the library, there is no reason to mention any past things, things that have changed, backwards compatible things, etc. It should always be written to document the status quo, the most current version, as if this was a brand new documentation.

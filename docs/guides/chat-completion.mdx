@@ -68,7 +68,7 @@ Core AI supports multiple providers with the same API:
     const result = await generate({
       model,
       messages: [{ role: 'user', content: 'Hello!' }],
-      config: { maxTokens: 256 },
+      maxTokens: 256,
     });
     ```
   </Tab>
@@ -78,14 +78,14 @@ Core AI supports multiple providers with the same API:
     import { createGoogleGenAI } from '@core-ai/google-genai';
 
     const google = createGoogleGenAI({ 
-      apiKey: process.env.GOOGLE_API_KEY 
+      apiKey: process.env.GOOGLE_GENAI_API_KEY 
     });
-    const model = google.chatModel('gemini-3-flash-preview');
+    const model = google.chatModel('gemini-3-pro');
 
     const result = await generate({
       model,
       messages: [{ role: 'user', content: 'Hello!' }],
-      config: { maxTokens: 256 },
+      maxTokens: 256,
     });
     ```
   </Tab>
@@ -102,13 +102,13 @@ Core AI supports multiple providers with the same API:
     const result = await generate({
       model,
       messages: [{ role: 'user', content: 'Hello!' }],
-      config: { maxTokens: 256 },
+      maxTokens: 256,
     });
     ```
   </Tab>
 </Tabs>
 
-## Configuration Options
+## Configuration options
 
 Customize model behavior with configuration parameters:
 
@@ -116,16 +116,22 @@ Customize model behavior with configuration parameters:
 const result = await generate({
   model,
   messages: [{ role: 'user', content: 'Tell me a story.' }],
-  config: {
-    temperature: 0.7,        // Control randomness (0-2)
-    maxTokens: 500,          // Limit response length
-    topP: 0.9,              // Nucleus sampling
-    stopSequences: ['\n\n'], // Stop generation at sequences
-    frequencyPenalty: 0.5,   // Reduce repetition
-    presencePenalty: 0.3,    // Encourage topic diversity
+  temperature: 0.7,
+  maxTokens: 500,
+  topP: 0.9,
+  providerOptions: {
+    openai: {
+      stopSequences: ['\n\n'],
+      frequencyPenalty: 0.5,
+      presencePenalty: 0.3,
+    },
   },
 });
 ```
+
+<Note>
+  `temperature`, `maxTokens`, and `topP` are top-level options. `stopSequences`, `frequencyPenalty`, and `presencePenalty` are provider-specific and passed via `providerOptions`. See [Configuration](/concepts/configuration) for details.
+</Note>
 
 ## Response Structure
 
@@ -159,11 +165,13 @@ if (result.usage.outputTokenDetails.reasoningTokens) {
 }
 ```
 
-## Multi-Turn Conversations
+## Multi-turn conversations
 
-Build conversations by including previous messages:
+Build conversations by including previous messages. Use `resultToMessage()` to convert a `GenerateResult` into an `AssistantMessage`:
 
 ```typescript
+import { generate, resultToMessage } from '@core-ai/core-ai';
+
 const messages = [
   { role: 'system', content: 'You are a helpful assistant.' },
   { role: 'user', content: 'What is TypeScript?' },
@@ -171,12 +179,7 @@ const messages = [
 
 const firstResponse = await generate({ model, messages });
 
-// Add assistant response and follow-up question
-messages.push({
-  role: 'assistant',
-  content: firstResponse.content,
-});
-
+messages.push(resultToMessage(firstResponse));
 messages.push({
   role: 'user',
   content: 'How is it different from JavaScript?',
@@ -235,9 +238,7 @@ try {
     const result = await generate({
       model,
       messages,
-      config: {
-        maxTokens: 200, // Limit response to 200 tokens
-      },
+      maxTokens: 200,
     });
 
     if (result.finishReason === 'length') {

@@ -351,10 +351,9 @@ for await (const event of result) {
   }
 }
 
-const response = await result.toResponse();
+const response = await result.result;
 
 if (response.finishReason === 'tool-calls') {
-  // Execute tools and continue conversation
   console.log('Need to execute tools:', toolCalls);
 }
 ```

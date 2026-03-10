@@ -136,13 +136,13 @@ for await (const event of result) {
 }
 
 // Get the complete response with metadata
-const response = await result.toResponse();
+const response = await result.result;
 console.log('\nFinish reason:', response.finishReason);
 console.log('Usage:', response.usage);
 ```
 
 <Tip>
-  The `toResponse()` method aggregates the stream into a complete response object. You can call it after iterating through the stream.
+  The `.result` property returns a promise that resolves with the aggregated `GenerateResult` once the stream completes. Streams are replayable -- you can iterate multiple times.
 </Tip>
 
 ## Switch providers
@@ -180,7 +180,7 @@ const result = await generate({
 import { generate } from '@core-ai/core-ai';
 import { createGoogleGenAI } from '@core-ai/google-genai';
 
-const google = createGoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+const google = createGoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
 const model = google.chatModel('gemini-3-flash');
 
 const result = await generate({

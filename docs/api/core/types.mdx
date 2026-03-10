@@ -8,7 +8,7 @@ icon: 'brackets'
 
 Core AI uses a comprehensive type system to ensure type safety across all operations. This page documents the essential types for working with messages, models, configurations, and results.
 
-## Message Types
+## Message types
 
 ### Message
 
@@ -24,8 +24,6 @@ type Message =
 
 ### SystemMessage
 
-System instructions that guide the model's behavior.
-
 ```typescript
 type SystemMessage = {
     role: 'system';
@@ -33,17 +31,7 @@ type SystemMessage = {
 };
 ```
 
-**Example:**
-```typescript
-const systemMsg: SystemMessage = {
-  role: 'system',
-  content: 'You are a helpful assistant.'
-};
-```
-
 ### UserMessage
-
-Messages from the user, supporting text and multimodal content.
 
 ```typescript
 type UserMessage = {
@@ -52,46 +40,6 @@ type UserMessage = {
 };
 
 type UserContentPart = TextPart | ImagePart | FilePart;
-```
-
-**Examples:**
-
-```typescript
-// Simple text message
-const textMsg: UserMessage = {
-  role: 'user',
-  content: 'Hello!'
-};
-
-// Multimodal message with text and image
-const multimodalMsg: UserMessage = {
-  role: 'user',
-  content: [
-    { type: 'text', text: 'What is in this image?' },
-    {
-      type: 'image',
-      source: {
-        type: 'url',
-        url: 'https://example.com/image.jpg'
-      }
-    }
-  ]
-};
-
-// Image from base64
-const base64Msg: UserMessage = {
-  role: 'user',
-  content: [
-    {
-      type: 'image',
-      source: {
-        type: 'base64',
-        mediaType: 'image/png',
-        data: 'iVBORw0KGgoAAAANSUhEUgA...'
-      }
-    }
-  ]
-};
 ```
 
 ### TextPart
@@ -127,8 +75,6 @@ type FilePart = {
 
 ### AssistantMessage
 
-Messages from the assistant, containing text, reasoning, or tool calls.
-
 ```typescript
 type AssistantMessage = {
     role: 'assistant';
@@ -139,24 +85,6 @@ type AssistantContentPart =
     | AssistantTextPart
     | ReasoningPart
     | ToolCallPart;
-```
-
-**Example:**
-```typescript
-const assistantMsg: AssistantMessage = {
-  role: 'assistant',
-  parts: [
-    { type: 'text', text: 'I can help with that.' },
-    {
-      type: 'tool-call',
-      toolCall: {
-        id: 'call_123',
-        name: 'get_weather',
-        arguments: { location: 'Paris' }
-      }
-    }
-  ]
-};
 ```
 
 ### AssistantTextPart
@@ -170,15 +98,15 @@ type AssistantTextPart = {
 
 ### ReasoningPart
 
-Internal reasoning/thinking from models that support extended reasoning.
-
 ```typescript
 type ReasoningPart = {
     type: 'reasoning';
     text: string;
-    providerMetadata?: Record<string, unknown>;
+    providerMetadata?: Record<string, Record<string, unknown>>;
 };
 ```
+
+The `providerMetadata` is provider-namespaced. The top-level key is the provider identifier (e.g. `'anthropic'`, `'openai'`).
 
 ### ToolCallPart
 
@@ -201,8 +129,6 @@ type ToolCall = {
 
 ### ToolResultMessage
 
-Results from executing a tool call.
-
 ```typescript
 type ToolResultMessage = {
     role: 'tool';
@@ -212,16 +138,7 @@ type ToolResultMessage = {
 };
 ```
 
-**Example:**
-```typescript
-const toolResult: ToolResultMessage = {
-  role: 'tool',
-  toolCallId: 'call_123',
-  content: JSON.stringify({ temp: 72, condition: 'sunny' })
-};
-```
-
-## Tool Types
+## Tool types
 
 ### ToolDefinition
 
@@ -249,37 +166,26 @@ type ToolChoice =
     | { type: 'tool'; toolName: string };
 ```
 
-**Examples:**
-```typescript
-const auto: ToolChoice = 'auto';
-const required: ToolChoice = 'required';
-const specific: ToolChoice = { type: 'tool', toolName: 'get_weather' };
-```
-
-## Model Types
+## Model types
 
 ### ChatModel
-
-Interface for chat/completion models.
 
 ```typescript
 type ChatModel = {
     readonly provider: string;
     readonly modelId: string;
     generate(options: GenerateOptions): Promise<GenerateResult>;
-    stream(options: GenerateOptions): Promise<StreamResult>;
+    stream(options: GenerateOptions): Promise<ChatStream>;
     generateObject<TSchema extends z.ZodType>(
         options: GenerateObjectOptions<TSchema>
     ): Promise<GenerateObjectResult<TSchema>>;
     streamObject<TSchema extends z.ZodType>(
         options: StreamObjectOptions<TSchema>
-    ): Promise<StreamObjectResult<TSchema>>;
+    ): Promise<ObjectStream<TSchema>>;
 };
 ```
 
 ### EmbeddingModel
-
-Interface for embedding models.
 
 ```typescript
 type EmbeddingModel = {
@@ -291,8 +197,6 @@ type EmbeddingModel = {
 
 ### ImageModel
 
-Interface for image generation models.
-
 ```typescript
 type ImageModel = {
     readonly provider: string;
@@ -301,26 +205,9 @@ type ImageModel = {
 };
 ```
 
-## Configuration Types
-
-### ModelConfig
-
-Model configuration parameters.
-
-```typescript
-type ModelConfig = {
-    temperature?: number;       // 0-2, default varies by model
-    maxTokens?: number;        // Maximum tokens to generate
-    topP?: number;            // 0-1, nucleus sampling
-    stopSequences?: string[]; // Stop generation at these strings
-    frequencyPenalty?: number; // -2 to 2
-    presencePenalty?: number; // -2 to 2
-};
-```
+## Configuration types
 
 ### ReasoningConfig
-
-Configuration for extended thinking/reasoning.
 
 ```typescript
 type ReasoningConfig = {
@@ -335,35 +222,70 @@ type ReasoningEffort =
     | 'max';
 ```
 
-## Generation Options
+## Provider options types
+
+Provider-specific options are namespaced by provider name and validated with Zod schemas by each provider adapter.
+
+```typescript
+interface GenerateProviderOptions {
+    [key: string]: Record<string, unknown> | undefined;
+}
+
+interface EmbedProviderOptions {
+    [key: string]: Record<string, unknown> | undefined;
+}
+
+interface ImageProviderOptions {
+    [key: string]: Record<string, unknown> | undefined;
+}
+```
+
+Providers extend these via declaration merging to provide type-safe options:
+
+```typescript
+providerOptions: {
+  openai: { user: 'user-123', store: true },
+}
+```
+
+## Generation options
+
+### BaseGenerateOptions
+
+Shared options for all generation functions.
+
+```typescript
+type BaseGenerateOptions = {
+    messages: Message[];
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+    reasoning?: ReasoningConfig;
+    providerOptions?: GenerateProviderOptions;
+    signal?: AbortSignal;
+};
+```
 
 ### GenerateOptions
 
+Extends `BaseGenerateOptions` with tool support.
+
 ```typescript
-type GenerateOptions = {
-    messages: Message[];
-    reasoning?: ReasoningConfig;
+type GenerateOptions = BaseGenerateOptions & {
     tools?: ToolSet;
     toolChoice?: ToolChoice;
-    config?: ModelConfig;
-    providerOptions?: Record<string, unknown>;
-    signal?: AbortSignal;
 };
 ```
 
 ### GenerateObjectOptions
 
 ```typescript
-type GenerateObjectOptions<TSchema extends z.ZodType> = {
-    messages: Message[];
-    schema: TSchema;
-    schemaName?: string;
-    schemaDescription?: string;
-    reasoning?: ReasoningConfig;
-    config?: ModelConfig;
-    providerOptions?: Record<string, unknown>;
-    signal?: AbortSignal;
-};
+type GenerateObjectOptions<TSchema extends z.ZodType> =
+    BaseGenerateOptions & {
+        schema: TSchema;
+        schemaName?: string;
+        schemaDescription?: string;
+    };
 ```
 
 ### StreamObjectOptions
@@ -373,7 +295,7 @@ type StreamObjectOptions<TSchema extends z.ZodType> =
     GenerateObjectOptions<TSchema>;
 ```
 
-## Result Types
+## Result types
 
 ### GenerateResult
 
@@ -402,20 +324,23 @@ type GenerateObjectResult<TSchema extends z.ZodType> = {
 
 ```typescript
 type FinishReason =
-    | 'stop'            // Natural completion
-    | 'length'          // Hit max tokens
-    | 'tool-calls'      // Stopped to call tools
-    | 'content-filter'  // Content filtered
-    | 'unknown';        // Unknown reason
+    | 'stop'
+    | 'length'
+    | 'tool-calls'
+    | 'content-filter'
+    | 'unknown';
 ```
 
-## Streaming Types
+## Streaming types
 
-### StreamResult
+### ChatStream
+
+Replayable handle for a chat streaming operation. Iterating after events have arrived replays the buffered history.
 
 ```typescript
-type StreamResult = AsyncIterable<StreamEvent> & {
-    toResponse(): Promise<GenerateResult>;
+type ChatStream = AsyncIterable<StreamEvent> & {
+    readonly result: Promise<GenerateResult>;
+    readonly events: Promise<readonly StreamEvent[]>;
 };
 ```
 
@@ -425,7 +350,7 @@ type StreamResult = AsyncIterable<StreamEvent> & {
 type StreamEvent =
     | { type: 'reasoning-start' }
     | { type: 'reasoning-delta'; text: string }
-    | { type: 'reasoning-end' }
+    | { type: 'reasoning-end'; providerMetadata?: Record<string, Record<string, unknown>> }
     | { type: 'text-delta'; text: string }
     | { type: 'tool-call-start'; toolCallId: string; toolName: string }
     | { type: 'tool-call-delta'; toolCallId: string; argumentsDelta: string }
@@ -433,13 +358,16 @@ type StreamEvent =
     | { type: 'finish'; finishReason: FinishReason; usage: ChatUsage };
 ```
 
-### StreamObjectResult
+### ObjectStream
+
+Replayable handle for a structured object streaming operation.
 
 ```typescript
-type StreamObjectResult<TSchema extends z.ZodType> = AsyncIterable<
+type ObjectStream<TSchema extends z.ZodType> = AsyncIterable<
     ObjectStreamEvent<TSchema>
 > & {
-    toResponse(): Promise<GenerateObjectResult<TSchema>>;
+    readonly result: Promise<GenerateObjectResult<TSchema>>;
+    readonly events: Promise<readonly ObjectStreamEvent<TSchema>[]>;
 };
 ```
 
@@ -452,37 +380,26 @@ type ObjectStreamEvent<TSchema extends z.ZodType> =
     | { type: 'finish'; finishReason: FinishReason; usage: ChatUsage };
 ```
 
-## Usage Types
+## Usage types
 
 ### ChatUsage
 
-Token usage reported after chat completion.
-
 ```typescript
 type ChatUsage = {
-    /** Total input tokens, including cached and cache-write tokens. */
     inputTokens: number;
-    /** Total output tokens, including both visible text and reasoning. */
     outputTokens: number;
-    /** Breakdown of input token categories. */
     inputTokenDetails: ChatInputTokenDetails;
-    /** Breakdown of output token categories. */
     outputTokenDetails: ChatOutputTokenDetails;
 };
 ```
 
-**Important Notes:**
-- `inputTokens` is the **total** including cached reads and cache writes
-- `outputTokens` is the **total** including visible text and reasoning
-- For providers like Anthropic, cache tokens are normalized and included in the total
+`inputTokens` is the **total** including cached reads and cache writes. `outputTokens` is the **total** including visible text and reasoning.
 
 ### ChatInputTokenDetails
 
 ```typescript
 type ChatInputTokenDetails = {
-    /** Input tokens served from cache. Subset of inputTokens. */
     cacheReadTokens: number;
-    /** Input tokens written to cache. Subset of inputTokens. */
     cacheWriteTokens: number;
 };
 ```
@@ -491,7 +408,6 @@ type ChatInputTokenDetails = {
 
 ```typescript
 type ChatOutputTokenDetails = {
-    /** Tokens consumed by reasoning. Subset of outputTokens. */
     reasoningTokens?: number;
 };
 ```
@@ -500,12 +416,11 @@ type ChatOutputTokenDetails = {
 
 ```typescript
 type EmbeddingUsage = {
-    /** Number of tokens consumed by embedding input. */
     inputTokens: number;
 };
 ```
 
-## Embedding Types
+## Embedding types
 
 ### EmbedOptions
 
@@ -513,7 +428,7 @@ type EmbeddingUsage = {
 type EmbedOptions = {
     input: string | string[];
     dimensions?: number;
-    providerOptions?: Record<string, unknown>;
+    providerOptions?: EmbedProviderOptions;
 };
 ```
 
@@ -526,7 +441,7 @@ type EmbedResult = {
 };
 ```
 
-## Image Generation Types
+## Image generation types
 
 ### ImageGenerateOptions
 
@@ -535,7 +450,7 @@ type ImageGenerateOptions = {
     prompt: string;
     n?: number;
     size?: string;
-    providerOptions?: Record<string, unknown>;
+    providerOptions?: ImageProviderOptions;
 };
 ```
 
@@ -557,12 +472,12 @@ type GeneratedImage = {
 };
 ```
 
-## Type Usage Examples
+## Type usage examples
 
-### Building Type-Safe Conversations
+### Building type-safe conversations
 
 ```typescript
-import type { Message } from '@coreai/core';
+import type { Message } from '@core-ai/core-ai';
 
 const conversation: Message[] = [
   {
@@ -584,13 +499,12 @@ const conversation: Message[] = [
 ];
 ```
 
-### Type-Safe Tool Handling
+### Type-safe tool handling
 
 ```typescript
-import type { ToolCall, ToolResultMessage } from '@coreai/core';
+import type { ToolCall, ToolResultMessage } from '@core-ai/core-ai';
 
 function handleToolCall(toolCall: ToolCall): ToolResultMessage {
-  // TypeScript ensures correct structure
   return {
     role: 'tool',
     toolCallId: toolCall.id,
@@ -598,24 +512,3 @@ function handleToolCall(toolCall: ToolCall): ToolResultMessage {
   };
 }
 ```
-
-### Working with Usage Data
-
-```typescript
-import type { ChatUsage } from '@coreai/core';
-
-function logUsage(usage: ChatUsage): void {
-  console.log('Total input tokens:', usage.inputTokens);
-  console.log('Total output tokens:', usage.outputTokens);
-  console.log('Cache read tokens:', usage.inputTokenDetails.cacheReadTokens);
-  console.log('Cache write tokens:', usage.inputTokenDetails.cacheWriteTokens);
-  
-  if (usage.outputTokenDetails.reasoningTokens) {
-    console.log('Reasoning tokens:', usage.outputTokenDetails.reasoningTokens);
-  }
-}
-```
-
-## Source Location
-
-`~/workspace/source/packages/core-ai/src/types.ts`

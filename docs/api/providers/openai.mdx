@@ -5,7 +5,9 @@ description: 'Create and configure the OpenAI provider for chat, embeddings, and
 
 ## Overview
 
-The OpenAI provider gives you access to OpenAI's models including GPT-5, GPT-4, o-series reasoning models, embeddings, and DALL-E image generation.
+The OpenAI provider gives you access to OpenAI's models including GPT-5, GPT-4, o-series reasoning models, embeddings, and image generation.
+
+By default, `createOpenAI` uses the **Responses API**. For the Chat Completions API, use `createOpenAICompat` from `@core-ai/openai/compat`.
 
 ## Installation
 
@@ -15,14 +17,13 @@ npm install @core-ai/openai
 
 ## createOpenAI()
 
-Create an OpenAI provider instance.
+Create an OpenAI provider instance using the Responses API.
 
 ```typescript
 import { createOpenAI } from '@core-ai/openai';
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: 'https://api.openai.com/v1' // optional
 });
 ```
 
@@ -42,49 +43,47 @@ const openai = createOpenAI({
 
 ### Returns
 
-`OpenAIProvider` - Provider instance with methods to create models.
+`OpenAIProvider` with methods `chatModel()`, `embeddingModel()`, and `imageModel()`.
 
-## Provider Methods
+## createOpenAICompat()
+
+Create an OpenAI provider instance using the Chat Completions API.
+
+```typescript
+import { createOpenAICompat } from '@core-ai/openai/compat';
+
+const openai = createOpenAICompat({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+```
+
+Same options as `createOpenAI`. Returns `OpenAICompatProvider` with the same model factory methods.
+
+Use `createOpenAICompat` when you need Chat Completions API compatibility, for example with third-party OpenAI-compatible endpoints.
+
+## Provider methods
 
 ### chatModel()
 
-Create a chat model instance.
-
 ```typescript
-const model = openai.chatModel('gpt-5.2');
+const model = openai.chatModel('gpt-5-mini');
 ```
 
-<ParamField path="modelId" type="string" required>
-  Model identifier. See [Supported Models](#supported-models) below.
-</ParamField>
-
 ### embeddingModel()
-
-Create an embedding model instance.
 
 ```typescript
 const embeddings = openai.embeddingModel('text-embedding-3-large');
 ```
 
-<ParamField path="modelId" type="string" required>
-  Embedding model identifier (e.g., `text-embedding-3-small`, `text-embedding-3-large`).
-</ParamField>
-
 ### imageModel()
 
-Create an image generation model instance.
-
 ```typescript
-const imageGen = openai.imageModel('dall-e-3');
+const imageGen = openai.imageModel('gpt-image-1');
 ```
 
-<ParamField path="modelId" type="string" required>
-  Image model identifier (e.g., `dall-e-2`, `dall-e-3`).
-</ParamField>
+## Supported models
 
-## Supported Models
-
-### Chat Models
+### Chat models
 
 <AccordionGroup>
   <Accordion title="GPT-5 Series" icon="star">
@@ -112,58 +111,49 @@ const imageGen = openai.imageModel('dall-e-3');
   </Accordion>
 </AccordionGroup>
 
-### Embedding Models
+### Embedding models
 
 - **text-embedding-3-large** - 3072 dimensions, highest quality
 - **text-embedding-3-small** - 1536 dimensions, faster and cheaper
 - **text-embedding-ada-002** - Legacy embedding model
 
-### Image Models
+### Image models
 
-- **dall-e-3** - Latest image generation model
-- **dall-e-2** - Previous generation
-
-## Capabilities
-
-| Feature | Support |
-|---------|--------|
-| Chat Completion | ✓ |
-| Streaming | ✓ |
-| Function Calling | ✓ |
-| Vision | ✓ |
-| Reasoning Effort | ✓ (model-dependent) |
-| Embeddings | ✓ |
-| Image Generation | ✓ |
+- **gpt-image-1** - Latest image generation model
+- **dall-e-3** - Previous generation
+- **dall-e-2** - Legacy image model
 
 ## Examples
 
-### Basic Chat
+### Basic chat
 
 ```typescript
 import { createOpenAI } from '@core-ai/openai';
-import { generateText } from '@core-ai/core-ai';
+import { generate } from '@core-ai/core-ai';
 
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const openai = createOpenAI();
+
+const result = await generate({
+  model: openai.chatModel('gpt-5-mini'),
+  messages: [
+    { role: 'user', content: 'Explain quantum computing in simple terms' },
+  ],
 });
 
-const result = await generateText({
-  model: openai.chatModel('gpt-5.2'),
-  prompt: 'Explain quantum computing in simple terms'
-});
-
-console.log(result.text);
+console.log(result.content);
 ```
 
-### Reasoning with Effort Control
+### Reasoning with effort control
 
 ```typescript
-const result = await generateText({
+const result = await generate({
   model: openai.chatModel('gpt-5.2'),
-  prompt: 'Solve this complex mathematical proof...',
+  messages: [
+    { role: 'user', content: 'Solve this complex mathematical proof...' },
+  ],
   reasoning: {
-    effort: 'max' // 'minimal' | 'low' | 'medium' | 'high' | 'max'
-  }
+    effort: 'max',
+  },
 });
 ```
 
@@ -174,61 +164,132 @@ import { embed } from '@core-ai/core-ai';
 
 const result = await embed({
   model: openai.embeddingModel('text-embedding-3-large'),
-  value: 'Search query text'
+  input: 'Search query text',
 });
 
-console.log(result.embedding); // number[]
+console.log(result.embeddings[0]);
 ```
 
-### Image Generation
+### Image generation
 
 ```typescript
 import { generateImage } from '@core-ai/core-ai';
 
 const result = await generateImage({
-  model: openai.imageModel('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'A futuristic city at sunset',
-  size: '1024x1024'
+  size: '1024x1024',
 });
 
 console.log(result.images);
 ```
 
-### Custom Base URL (OpenAI-compatible APIs)
+### Custom base URL
 
 ```typescript
 const openai = createOpenAI({
   apiKey: 'your-api-key',
-  baseURL: 'https://your-proxy.com/v1'
+  baseURL: 'https://your-proxy.com/v1',
 });
 ```
 
-## Reasoning Effort
+## Provider-specific options
 
-OpenAI models support different reasoning effort levels:
+Options are namespaced under `openai` in `providerOptions` and validated with Zod schemas.
 
-- **minimal** - Fastest, least reasoning
-- **low** - Quick responses with basic reasoning
-- **medium** - Balanced reasoning and speed
-- **high** - Deep reasoning for complex problems
-- **max** - Maximum reasoning effort (GPT-5.2 series only)
-
-<Note>
-  Some models restrict sampling parameters when using reasoning effort. The SDK handles this automatically.
-</Note>
-
-## Error Handling
+### Generate options (Responses API)
 
 ```typescript
-import { APIError } from '@core-ai/core-ai';
+import { generate } from '@core-ai/core-ai';
+
+const result = await generate({
+  model: openai.chatModel('gpt-5-mini'),
+  messages: [{ role: 'user', content: 'Hello' }],
+  providerOptions: {
+    openai: {
+      store: true,
+      serviceTier: 'auto',
+      parallelToolCalls: true,
+      user: 'user-123',
+    },
+  },
+});
+```
+
+Available fields: `store`, `serviceTier` (`'auto'` | `'default'` | `'flex'` | `'scale'` | `'priority'`), `include`, `parallelToolCalls`, `user`.
+
+### Generate options (Chat Completions API)
+
+When using `createOpenAICompat`, the available options differ:
+
+```typescript
+import { createOpenAICompat } from '@core-ai/openai/compat';
+import { generate } from '@core-ai/core-ai';
+
+const openai = createOpenAICompat();
+
+const result = await generate({
+  model: openai.chatModel('gpt-5-mini'),
+  messages: [{ role: 'user', content: 'Hello' }],
+  providerOptions: {
+    openai: {
+      stopSequences: ['\n\n'],
+      frequencyPenalty: 0.5,
+      presencePenalty: 0.3,
+      seed: 42,
+      user: 'user-123',
+    },
+  },
+});
+```
+
+### Embed options
+
+```typescript
+const result = await embed({
+  model: openai.embeddingModel('text-embedding-3-small'),
+  input: 'text to embed',
+  providerOptions: {
+    openai: {
+      encodingFormat: 'float',
+      user: 'user-123',
+    },
+  },
+});
+```
+
+### Image options
+
+```typescript
+const result = await generateImage({
+  model: openai.imageModel('gpt-image-1'),
+  prompt: 'A cat',
+  providerOptions: {
+    openai: {
+      quality: 'hd',
+      style: 'vivid',
+      responseFormat: 'url',
+      background: 'auto',
+      outputFormat: 'png',
+    },
+  },
+});
+```
+
+Available fields: `background`, `moderation`, `outputCompression`, `outputFormat`, `quality`, `responseFormat`, `style`, `user`.
+
+## Error handling
+
+```typescript
+import { ProviderError } from '@core-ai/core-ai';
 
 try {
-  const result = await generateText({
-    model: openai.chatModel('gpt-5.2'),
-    prompt: 'Hello!'
+  const result = await generate({
+    model: openai.chatModel('gpt-5-mini'),
+    messages: [{ role: 'user', content: 'Hello!' }],
   });
 } catch (error) {
-  if (error instanceof APIError) {
+  if (error instanceof ProviderError) {
     console.error('OpenAI API error:', error.message);
     console.error('Status:', error.statusCode);
   }
