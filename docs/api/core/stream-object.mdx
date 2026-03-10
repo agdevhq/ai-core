@@ -95,7 +95,7 @@ type ObjectStream<TSchema extends z.ZodType> = AsyncIterable<
 </ResponseField>
 
 <ResponseField name="object" type="{ type: 'object'; object: z.infer<TSchema> }">
-  Emitted with the complete, validated object when generation finishes.
+  Emitted once, when the full object payload has been validated.
 </ResponseField>
 
 <ResponseField name="finish" type="{ type: 'finish'; finishReason: FinishReason; usage: ChatUsage }">
@@ -236,7 +236,7 @@ try {
 </Info>
 
 <Info>
-  The `object` event is emitted once at the end with the complete validated object. Use `object-delta` events to show progressive updates.
+  The `object` event is emitted once with the complete validated object. Use `object-delta` events to show progressive updates while the JSON payload is still streaming.
 </Info>
 
 ## Error handling
