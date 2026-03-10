@@ -661,6 +661,57 @@ describe('transformStream', () => {
         ]);
     });
 
+    it('should return finishReason tool-calls for done-only tool-call ordering', async () => {
+        const stream = toAsyncIterable<ResponseStreamEvent>([
+            asStreamEvent({
+                type: 'response.output_item.done',
+                output_index: 0,
+                item: {
+                    type: 'function_call',
+                    call_id: 'tc_done_only',
+                    name: 'search',
+                    arguments: '{"query":"weather"}',
+                },
+            }),
+            asStreamEvent({
+                type: 'response.completed',
+                response: asResponse({
+                    output: [],
+                    status: 'completed',
+                }),
+            }),
+        ]);
+
+        const events = [];
+        for await (const event of transformStream(stream)) {
+            events.push(event);
+        }
+
+        expect(events).toEqual([
+            {
+                type: 'tool-call-end',
+                toolCall: {
+                    id: 'tc_done_only',
+                    name: 'search',
+                    arguments: { query: 'weather' },
+                },
+            },
+            {
+                type: 'finish',
+                finishReason: 'tool-calls',
+                usage: {
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    inputTokenDetails: {
+                        cacheReadTokens: 0,
+                        cacheWriteTokens: 0,
+                    },
+                    outputTokenDetails: {},
+                },
+            },
+        ]);
+    });
+
     it('should return finishReason stop for text-only stream', async () => {
         const stream = toAsyncIterable<ResponseStreamEvent>([
             asStreamEvent({

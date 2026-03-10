@@ -345,9 +345,7 @@ export function mapGenerateResponse(response: Response): GenerateResult {
         }
 
         if (isOutputMessage(item)) {
-            for (const part of mapMessageTextParts(item)) {
-                parts.push(part);
-            }
+            parts.push(...mapMessageTextParts(item));
             continue;
         }
 
@@ -417,19 +415,23 @@ function mapMessageTextParts(
 }
 
 function getTextContent(parts: AssistantContentPart[]): string | null {
-    const text = parts
-        .flatMap((part) => (part.type === 'text' ? [part.text] : []))
-        .join('');
-
-    return text.length > 0 ? text : null;
+    return getJoinedPartText(parts, 'text');
 }
 
 function getReasoningText(parts: AssistantContentPart[]): string | null {
-    const reasoning = parts
-        .flatMap((part) => (part.type === 'reasoning' ? [part.text] : []))
-        .join('');
+    return getJoinedPartText(parts, 'reasoning');
+}
 
-    return reasoning.length > 0 ? reasoning : null;
+function getJoinedPartText(
+    parts: AssistantContentPart[],
+    type: 'text' | 'reasoning'
+): string | null {
+    const text = parts
+        .flatMap((part) =>
+            part.type === type && 'text' in part ? [part.text] : []
+        )
+        .join('');
+    return text.length > 0 ? text : null;
 }
 
 function getToolCalls(parts: AssistantContentPart[]): ToolCall[] {
@@ -483,6 +485,49 @@ type BufferedToolCall = {
     arguments: string;
 };
 
+type ReasoningStartEvent = Extract<StreamEvent, { type: 'reasoning-start' }>;
+type ReasoningEndEvent = Extract<StreamEvent, { type: 'reasoning-end' }>;
+
+function getReasoningStartTransition(reasoningStarted: boolean): {
+    nextReasoningStarted: boolean;
+    event: ReasoningStartEvent | null;
+} {
+    if (reasoningStarted) {
+        return {
+            nextReasoningStarted: true,
+            event: null,
+        };
+    }
+
+    return {
+        nextReasoningStarted: true,
+        event: { type: 'reasoning-start' },
+    };
+}
+
+function getReasoningEndTransition(
+    reasoningStarted: boolean,
+    providerMetadata: ReasoningEndEvent['providerMetadata']
+): {
+    nextReasoningStarted: boolean;
+    event: ReasoningEndEvent | null;
+} {
+    if (!reasoningStarted) {
+        return {
+            nextReasoningStarted: false,
+            event: null,
+        };
+    }
+
+    return {
+        nextReasoningStarted: false,
+        event: {
+            type: 'reasoning-end',
+            providerMetadata,
+        },
+    };
+}
+
 export async function* transformStream(
     stream: AsyncIterable<ResponseStreamEvent>
 ): AsyncIterable<StreamEvent> {
@@ -495,14 +540,28 @@ export async function* transformStream(
     let latestResponse: Response | undefined;
     let reasoningStarted = false;
 
+    const upsertBufferedToolCall = (
+        outputIndex: number,
+        getNextToolCall: (
+            bufferedToolCall: BufferedToolCall | undefined
+        ) => BufferedToolCall
+    ): BufferedToolCall => {
+        const nextToolCall = getNextToolCall(bufferedToolCalls.get(outputIndex));
+        bufferedToolCalls.set(outputIndex, nextToolCall);
+        return nextToolCall;
+    };
+
     for await (const event of stream) {
         if (event.type === 'response.reasoning_summary_text.delta') {
             seenSummaryDeltas.add(`${event.item_id}:${event.summary_index}`);
             emittedReasoningItems.add(event.item_id);
 
-            if (!reasoningStarted) {
-                reasoningStarted = true;
-                yield { type: 'reasoning-start' };
+            const reasoningStartTransition =
+                getReasoningStartTransition(reasoningStarted);
+            reasoningStarted = reasoningStartTransition.nextReasoningStarted;
+
+            if (reasoningStartTransition.event) {
+                yield reasoningStartTransition.event;
             }
 
             yield {
@@ -517,9 +576,13 @@ export async function* transformStream(
             if (!seenSummaryDeltas.has(key) && event.text.length > 0) {
                 emittedReasoningItems.add(event.item_id);
 
-                if (!reasoningStarted) {
-                    reasoningStarted = true;
-                    yield { type: 'reasoning-start' };
+                const reasoningStartTransition =
+                    getReasoningStartTransition(reasoningStarted);
+                reasoningStarted =
+                    reasoningStartTransition.nextReasoningStarted;
+
+                if (reasoningStartTransition.event) {
+                    yield reasoningStartTransition.event;
                 }
 
                 yield {
@@ -544,35 +607,41 @@ export async function* transformStream(
             }
 
             const toolCallId = event.item.call_id;
-            bufferedToolCalls.set(event.output_index, {
-                id: toolCallId,
-                name: event.item.name,
-                arguments: event.item.arguments,
-            });
+            const toolCallName = event.item.name;
+            const toolCallArguments = event.item.arguments;
+            upsertBufferedToolCall(
+                event.output_index,
+                () => ({
+                    id: toolCallId,
+                    name: toolCallName,
+                    arguments: toolCallArguments,
+                })
+            );
 
-            if (!startedToolCalls.has(toolCallId)) {
+            const shouldStartToolCall = !startedToolCalls.has(toolCallId);
+            if (shouldStartToolCall) {
                 startedToolCalls.add(toolCallId);
                 yield {
                     type: 'tool-call-start',
                     toolCallId,
-                    toolName: event.item.name,
+                    toolName: toolCallName,
                 };
             }
             continue;
         }
 
         if (event.type === 'response.function_call_arguments.delta') {
-            const currentToolCall = bufferedToolCalls.get(
-                event.output_index
-            ) ?? {
-                id: event.item_id,
-                name: '',
-                arguments: '',
-            };
-            currentToolCall.arguments += event.delta;
-            bufferedToolCalls.set(event.output_index, currentToolCall);
+            const currentToolCall = upsertBufferedToolCall(
+                event.output_index,
+                (bufferedToolCall) => ({
+                    id: bufferedToolCall?.id ?? event.item_id,
+                    name: bufferedToolCall?.name ?? '',
+                    arguments: `${bufferedToolCall?.arguments ?? ''}${event.delta}`,
+                })
+            );
 
-            if (!startedToolCalls.has(currentToolCall.id)) {
+            const shouldStartToolCall = !startedToolCalls.has(currentToolCall.id);
+            if (shouldStartToolCall) {
                 startedToolCalls.add(currentToolCall.id);
                 yield {
                     type: 'tool-call-start',
@@ -596,9 +665,13 @@ export async function* transformStream(
                         event.item.summary
                     );
                     if (summaryText.length > 0) {
-                        if (!reasoningStarted) {
-                            reasoningStarted = true;
-                            yield { type: 'reasoning-start' };
+                        const reasoningStartTransition =
+                            getReasoningStartTransition(reasoningStarted);
+                        reasoningStarted =
+                            reasoningStartTransition.nextReasoningStarted;
+
+                        if (reasoningStartTransition.event) {
+                            yield reasoningStartTransition.event;
                         }
                         yield {
                             type: 'reasoning-delta',
@@ -613,23 +686,29 @@ export async function* transformStream(
                         ? event.item.encrypted_content
                         : undefined;
 
-                if (!reasoningStarted && encryptedContent) {
-                    reasoningStarted = true;
-                    yield { type: 'reasoning-start' };
+                if (encryptedContent) {
+                    const reasoningStartTransition =
+                        getReasoningStartTransition(reasoningStarted);
+                    reasoningStarted =
+                        reasoningStartTransition.nextReasoningStarted;
+
+                    if (reasoningStartTransition.event) {
+                        yield reasoningStartTransition.event;
+                    }
                 }
 
-                if (reasoningStarted) {
-                    reasoningStarted = false;
-                    yield {
-                        type: 'reasoning-end',
-                        providerMetadata: {
-                            openai: {
-                                ...(encryptedContent
-                                    ? { encryptedContent }
-                                    : {}),
-                            },
+                const reasoningEndTransition = getReasoningEndTransition(
+                    reasoningStarted,
+                    {
+                        openai: {
+                            ...(encryptedContent ? { encryptedContent } : {}),
                         },
-                    };
+                    }
+                );
+                reasoningStarted = reasoningEndTransition.nextReasoningStarted;
+
+                if (reasoningEndTransition.event) {
+                    yield reasoningEndTransition.event;
                 }
                 continue;
             }
@@ -638,18 +717,18 @@ export async function* transformStream(
                 continue;
             }
 
-            const currentToolCall = bufferedToolCalls.get(
-                event.output_index
-            ) ?? {
-                id: event.item.call_id,
-                name: event.item.name,
-                arguments: '',
-            };
-
-            currentToolCall.id = event.item.call_id;
-            currentToolCall.name = event.item.name;
-            currentToolCall.arguments =
-                event.item.arguments || currentToolCall.arguments;
+            const toolCallId = event.item.call_id;
+            const toolCallName = event.item.name;
+            const toolCallArguments = event.item.arguments;
+            const currentToolCall = upsertBufferedToolCall(
+                event.output_index,
+                (bufferedToolCall) => ({
+                    id: toolCallId,
+                    name: toolCallName,
+                    arguments:
+                        toolCallArguments || bufferedToolCall?.arguments || '',
+                })
+            );
 
             if (!emittedToolCalls.has(currentToolCall.id)) {
                 emittedToolCalls.add(currentToolCall.id);
@@ -670,12 +749,14 @@ export async function* transformStream(
         if (event.type === 'response.completed') {
             latestResponse = event.response;
 
-            if (reasoningStarted) {
-                reasoningStarted = false;
-                yield {
-                    type: 'reasoning-end',
-                    providerMetadata: { openai: {} },
-                };
+            const reasoningEndTransition = getReasoningEndTransition(
+                reasoningStarted,
+                { openai: {} }
+            );
+            reasoningStarted = reasoningEndTransition.nextReasoningStarted;
+
+            if (reasoningEndTransition.event) {
+                yield reasoningEndTransition.event;
             }
 
             for (const bufferedToolCall of bufferedToolCalls.values()) {
@@ -706,8 +787,13 @@ export async function* transformStream(
         }
     }
 
-    if (reasoningStarted) {
-        yield { type: 'reasoning-end', providerMetadata: { openai: {} } };
+    const reasoningEndTransition = getReasoningEndTransition(reasoningStarted, {
+        openai: {},
+    });
+    reasoningStarted = reasoningEndTransition.nextReasoningStarted;
+
+    if (reasoningEndTransition.event) {
+        yield reasoningEndTransition.event;
     }
 
     const hasToolCalls = bufferedToolCalls.size > 0;
