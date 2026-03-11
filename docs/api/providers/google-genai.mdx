@@ -21,14 +21,14 @@ Create a Google GenAI provider instance.
 import { createGoogleGenAI } from '@core-ai/google-genai';
 
 const google = createGoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY,
+  apiKey: process.env.GOOGLE_API_KEY,
 });
 ```
 
 ### Options
 
 <ParamField path="apiKey" type="string" optional>
-  Your Google AI API key. Defaults to `GOOGLE_GENAI_API_KEY` environment variable.
+  Your Google AI API key. Pass it explicitly or set the `GOOGLE_API_KEY` environment variable.
 </ParamField>
 
 <ParamField path="apiVersion" type="string" optional>

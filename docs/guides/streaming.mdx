@@ -150,7 +150,7 @@ const result = await stream({
   temperature: 0.8,
   maxTokens: 1000,
   providerOptions: {
-    openai: { stopSequences: ['The End'] },
+    openai: { store: true, user: 'user-123' },
   },
 });
 
