@@ -311,6 +311,8 @@ if (response.finishReason === 'tool-calls') {
 Cancel streaming with AbortController:
 
 ```typescript
+import { StreamAbortedError } from '@core-ai/core-ai';
+
 const controller = new AbortController();
 
 const result = await stream({
@@ -329,7 +331,7 @@ try {
     }
   }
 } catch (error) {
-  if (error.name === 'AbortError') {
+  if (error instanceof StreamAbortedError) {
     console.log('\nStream cancelled');
   }
 }
