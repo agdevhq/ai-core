@@ -1,0 +1,167 @@
+---
+title: Releases
+description: Release history for all core-ai packages.
+---
+
+<Update label="0.6.1" description="New model support, internal refactors" tags={["improvement", "internal"]}>
+  ### @core-ai/core-ai
+
+  - Refactor internal chat/image wrapper plumbing and stream event reduction logic to reduce duplication and improve readability without changing public behavior.
+
+  ### @core-ai/openai
+
+  - Add model capability support for `gpt-5.4` and `gpt-5.4-pro`.
+  - Refactor chat adapter internals to reduce duplicated stream and part-aggregation logic, and consistently report `finishReason: 'tool-calls'` when a function call is emitted from the stream.
+
+  ### @core-ai/google-genai
+
+  - Add model capability support for `gemini-3.1-pro` and `gemini-3.1-flash-lite-preview`.
+  - Refactor adapter internals to reduce duplication and simplify stream/request helper logic without changing runtime behavior.
+
+  ### @core-ai/mistral
+
+  - Refactor adapter internals to reduce duplication and simplify stream/request helper logic without changing runtime behavior.
+</Update>
+
+<Update label="0.6.0" description="Streaming redesign, typed provider options, Responses API" tags={["breaking", "improvement"]}>
+  <Warning>This release contains breaking changes to `@core-ai/core-ai`.</Warning>
+
+  ### @core-ai/core-ai
+
+  - Replace `ModelConfig` with flat sampling fields (`temperature`, `maxTokens`, `topP`) on generate options. Introduce method-specific typed provider option interfaces (`GenerateProviderOptions`, `EmbedProviderOptions`, `ImageProviderOptions`) that providers extend via declaration merging.
+  - Restructure reasoning `providerMetadata` to use provider-namespaced keys. Adapters now detect cross-provider reasoning blocks and downgrade them to plain text instead of forwarding opaque metadata. Add `getProviderMetadata` helper.
+  - Redesign chat and object streaming around replayable stream handles with `result` and `events`, rename the handle types to `ChatStream` and `ObjectStream`, and accept caller-provided `AbortSignal`s for cancellation.
+
+  ### @core-ai/openai
+
+  - Migrate default chat models to the OpenAI Responses API and add a `@core-ai/openai/compat` entrypoint for Chat Completions compatibility.
+  - Namespace provider options under `openai` key with Zod validation. Responses API options: `store`, `serviceTier`, `include`, `parallelToolCalls`, `user`. Compat options: `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`. Embed options: `encodingFormat`, `user`. Image options: `background`, `moderation`, `outputCompression`, `outputFormat`, `quality`, `responseFormat`, `style`, `user`.
+  - Update streaming adapters to expose replayable stream handles using `ChatStream` and `ObjectStream`.
+
+  ### @core-ai/anthropic
+
+  - Namespace provider options under `anthropic` key with Zod validation. Generate options: `topK`, `stopSequences`, `betas`, `outputConfig`.
+  - Restructure reasoning `providerMetadata` to use provider-namespaced keys.
+  - Update streaming adapters to expose replayable stream handles using `ChatStream` and `ObjectStream`.
+
+  ### @core-ai/google-genai
+
+  - Namespace provider options under `google` key with strict Zod validation. Generate options: `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`, `topK`. Embed options: `taskType`, `title`, `mimeType`, `autoTruncate`. Image options: `aspectRatio`, `personGeneration`, `safetyFilterLevel`, `negativePrompt`, `guidanceScale`, `seed`.
+  - Restructure reasoning `providerMetadata` to use provider-namespaced keys.
+  - Update streaming adapters to expose replayable stream handles using `ChatStream` and `ObjectStream`.
+
+  ### @core-ai/mistral
+
+  - Namespace provider options under `mistral` key with Zod validation. Generate options: `stopSequences`, `frequencyPenalty`, `presencePenalty`, `randomSeed`, `parallelToolCalls`, `promptMode`, `safePrompt`. Embed options: `outputDtype`, `encodingFormat`, `metadata`.
+  - Restructure reasoning `providerMetadata` to use provider-namespaced keys.
+  - Update streaming adapters to expose replayable stream handles using `ChatStream` and `ObjectStream`.
+</Update>
+
+<Update label="0.5.1" description="Publish fix" tags={["fix"]}>
+  ### All packages
+
+  - Fix release publish race: remove `prepublishOnly` to avoid concurrent tsup builds failing to resolve `@core-ai/core-ai`.
+</Update>
+
+<Update label="0.5.0" description="Reasoning support" tags={["breaking", "improvement"]}>
+  <Warning>This release contains breaking changes to `@core-ai/core-ai`.</Warning>
+
+  ### @core-ai/core-ai
+
+  Add unified reasoning/thinking support with effort-based configuration.
+
+  **Breaking changes:**
+
+  - `AssistantMessage`: `content` and `toolCalls` fields replaced by `parts: AssistantContentPart[]` array
+  - `StreamEvent`: `content-delta` renamed to `text-delta`, new `reasoning-start`, `reasoning-delta`, `reasoning-end` events added
+  - `GenerateResult`: adds required `parts` and `reasoning` fields
+  - `ChatOutputTokenDetails.reasoningTokens`: changed from `number` to optional
+
+  **New types:** `ReasoningEffort`, `ReasoningConfig`, `AssistantContentPart`, `ReasoningPart`
+
+  **New utilities:** `resultToMessage()` for multi-turn reasoning state preservation, `assistantMessage()` for convenient message construction
+
+  **New option:** `reasoning?: ReasoningConfig` on `GenerateOptions`, `GenerateObjectOptions`, `StreamObjectOptions`
+
+  ### @core-ai/openai
+
+  - Add reasoning support for OpenAI models (Chat Completions API). Maps unified `reasoning.effort` to `reasoning_effort` with model-aware clamping. Extracts reasoning content from responses and streams. Validates parameter restrictions for GPT-5.1+ models.
+
+  ### @core-ai/anthropic
+
+  - Add reasoning support for Anthropic models with adaptive and manual thinking modes. Maps unified `reasoning.effort` to adaptive effort levels or manual `budget_tokens` based on model capabilities. Extracts thinking and redacted thinking blocks with signature preservation for multi-turn fidelity.
+
+  ### @core-ai/google-genai
+
+  - Add reasoning support for Google GenAI models. Maps unified `reasoning.effort` to `thinkingLevel` for Gemini 3 or `thinkingBudget` for Gemini 2.5 based on model capabilities. Extracts thought content with thought signature preservation for multi-turn fidelity.
+
+  ### @core-ai/mistral
+
+  - Add reasoning support for Mistral Magistral models. Extracts thinking chunks from response content and streams as reasoning events.
+</Update>
+
+<Update label="0.4.0" description="Usage accounting redesign" tags={["breaking", "improvement"]}>
+  <Warning>This release contains breaking changes to `@core-ai/core-ai`.</Warning>
+
+  ### @core-ai/core-ai
+
+  Refactor the core `ChatUsage` contract to nested detail objects for input and output token accounting.
+
+  **Breaking changes:**
+
+  - Remove `usage.totalTokens`
+  - Move `usage.reasoningTokens` to `usage.outputTokenDetails.reasoningTokens`
+  - Add `usage.inputTokenDetails.{cacheReadTokens, cacheWriteTokens}`
+
+  ### @core-ai/openai
+
+  - Update usage mapping to the new nested `ChatUsage` structure. Maps `prompt_tokens_details.cached_tokens` to `inputTokenDetails.cacheReadTokens` and `completion_tokens_details.reasoning_tokens` to `outputTokenDetails.reasoningTokens`.
+
+  ### @core-ai/anthropic
+
+  - Update usage mapping to the new nested `ChatUsage` structure. Reports total `inputTokens` including cache tokens, maps `cache_read_input_tokens` and `cache_creation_input_tokens` to `inputTokenDetails`.
+
+  ### @core-ai/google-genai
+
+  - Update usage mapping to the new nested `ChatUsage` structure. Maps `cachedContentTokenCount` to `inputTokenDetails.cacheReadTokens` and `thoughtsTokenCount` to `outputTokenDetails.reasoningTokens`.
+
+  ### @core-ai/mistral
+
+  - Update usage mapping to the new nested `ChatUsage` structure with zero defaults for cache and reasoning token details.
+</Update>
+
+<Update label="0.3.0" description="Structured output" tags={["improvement"]}>
+  ### @core-ai/core-ai
+
+  - Add first-class structured output support with `generateObject()` and `streamObject()` across core and all provider chat models. Introduces schema-driven typed object generation, structured output streaming events, and standardized structured-output errors.
+  - Clarify embedding usage semantics by making `EmbedResult.usage` optional in the core API contract, so providers can return `usage: undefined` when token counts are not exposed by the underlying API.
+
+  ### @core-ai/openai
+
+  - Add structured output support with `generateObject()` and `streamObject()`.
+
+  ### @core-ai/anthropic
+
+  - Add structured output support with `generateObject()` and `streamObject()`.
+
+  ### @core-ai/google-genai
+
+  - Add structured output support with `generateObject()` and `streamObject()`.
+  - Update embedding behavior to only include usage when token statistics are present, and add provider E2E contract coverage.
+
+  ### @core-ai/mistral
+
+  - Add structured output support with `generateObject()` and `streamObject()`.
+</Update>
+
+<Update label="0.2.1" description="Zod 4 compatibility" tags={["fix"]}>
+  ### All packages
+
+  - Broaden Zod compatibility to support both Zod 3 and Zod 4 across all packages. Updates published Zod ranges and raises the minimum `zod-to-json-schema` version to one that supports Zod 4, preventing peer dependency conflicts for projects already using Zod 4.
+</Update>
+
+<Update label="0.2.0" description="Mistral provider" tags={["improvement"]}>
+  ### @core-ai/mistral
+
+  - Add new `@core-ai/mistral` provider package powered by the `@mistralai/mistralai` SDK, including chat generation, streaming, tool-calling, and embeddings support.
+</Update>
