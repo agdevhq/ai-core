@@ -1,5 +1,11 @@
 # @core-ai/core-ai
 
+## 0.6.1
+
+### Patch Changes
+
+- 3b599ab: Refactor internal chat/image wrapper plumbing and stream event reduction logic to reduce duplication and improve readability without changing public behavior.
+
 ## 0.6.0
 
 ### Minor Changes

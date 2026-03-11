@@ -1,5 +1,14 @@
 # @core-ai/openai
 
+## 0.6.1
+
+### Patch Changes
+
+- ccca3e9: Add model capability support for gpt-5.4 and gpt-5.4-pro.
+- 2889c04: Refactor OpenAI chat adapter internals to reduce duplicated stream and part-aggregation logic, and consistently report `finishReason: 'tool-calls'` when a function call is emitted from the stream.
+- Updated dependencies [3b599ab]
+    - @core-ai/core-ai@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes
