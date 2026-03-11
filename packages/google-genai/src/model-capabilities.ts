@@ -15,6 +15,24 @@ const DEFAULT_CAPABILITIES: GoogleModelCapabilities = {
 };
 
 const MODEL_CAPABILITIES: Record<string, GoogleModelCapabilities> = {
+    'gemini-3.1-pro': {
+        reasoning: {
+            thinkingParam: 'thinkingLevel',
+            canDisableThinking: false,
+        },
+    },
+    'gemini-3.1-flash-lite': {
+        reasoning: {
+            thinkingParam: 'thinkingLevel',
+            canDisableThinking: false,
+        },
+    },
+    'gemini-3.1-flash-lite-preview': {
+        reasoning: {
+            thinkingParam: 'thinkingLevel',
+            canDisableThinking: false,
+        },
+    },
     'gemini-3-pro': {
         reasoning: {
             thinkingParam: 'thinkingLevel',
