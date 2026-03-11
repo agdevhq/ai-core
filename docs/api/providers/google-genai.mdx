@@ -256,7 +256,24 @@ Available fields: `taskType`, `title`, `mimeType`, `autoTruncate`.
 
 ### Image options
 
-Available fields: `aspectRatio`, `personGeneration`, `safetyFilterLevel`, `negativePrompt`, `guidanceScale`, `seed`, and others.
+```typescript
+const result = await generateImage({
+  model: google.imageModel('imagen-3.0'),
+  prompt: 'A serene landscape',
+  providerOptions: {
+    google: {
+      aspectRatio: '16:9',
+      negativePrompt: 'blurry, low quality',
+      guidanceScale: 7.5,
+      seed: 42,
+      safetyFilterLevel: 'BLOCK_MEDIUM_AND_ABOVE',
+      personGeneration: 'ALLOW_ADULT',
+    },
+  },
+});
+```
+
+Available fields: `outputGcsUri`, `negativePrompt`, `aspectRatio`, `guidanceScale`, `seed`, `safetyFilterLevel` (`'BLOCK_LOW_AND_ABOVE'` | `'BLOCK_MEDIUM_AND_ABOVE'` | `'BLOCK_ONLY_HIGH'` | `'BLOCK_NONE'`), `personGeneration` (`'DONT_ALLOW'` | `'ALLOW_ADULT'` | `'ALLOW_ALL'`), `includeSafetyAttributes`, `includeRaiReason`, `language`, `outputMimeType`, `outputCompressionQuality`, `addWatermark`, `labels`, `imageSize`, `enhancePrompt`.
 
 ## Error handling
 

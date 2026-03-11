@@ -234,6 +234,9 @@ const result = await generate({
   messages: [{ role: 'user', content: 'Hello' }],
   providerOptions: {
     openai: {
+      store: true,
+      serviceTier: 'auto',
+      parallelToolCalls: true,
       stopSequences: ['\n\n'],
       frequencyPenalty: 0.5,
       presencePenalty: 0.3,
