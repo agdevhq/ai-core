@@ -21,12 +21,6 @@ const MODEL_CAPABILITIES: Record<string, GoogleModelCapabilities> = {
             canDisableThinking: false,
         },
     },
-    'gemini-3.1-flash-lite': {
-        reasoning: {
-            thinkingParam: 'thinkingLevel',
-            canDisableThinking: false,
-        },
-    },
     'gemini-3.1-flash-lite-preview': {
         reasoning: {
             thinkingParam: 'thinkingLevel',
