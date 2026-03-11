@@ -33,12 +33,21 @@ for await (const event of result) {
   }
 }
 
-const response = await result.toResponse();
+const response = await result.result;
 console.log('\n\nFinish reason:', response.finishReason);
 console.log('Usage:', response.usage);
 ```
 
-## Stream Event Types
+## Stream event types
+
+The `stream()` function returns a `ChatStream` -- an async iterable that also exposes `.result` and `.events`:
+
+```typescript
+type ChatStream = AsyncIterable<StreamEvent> & {
+  readonly result: Promise<GenerateResult>;
+  readonly events: Promise<readonly StreamEvent[]>;
+};
+```
 
 The stream emits different event types:
 
@@ -46,7 +55,7 @@ The stream emits different event types:
 type StreamEvent =
   | { type: 'reasoning-start' }
   | { type: 'reasoning-delta'; text: string }
-  | { type: 'reasoning-end' }
+  | { type: 'reasoning-end'; providerMetadata?: Record<string, Record<string, unknown>> }
   | { type: 'text-delta'; text: string }
   | { type: 'tool-call-start'; toolCallId: string; toolName: string }
   | { type: 'tool-call-delta'; toolCallId: string; argumentsDelta: string }
@@ -105,22 +114,20 @@ for await (const event of result) {
 }
 ```
 
-## Getting the Complete Response
+## Getting the complete response
 
-Convert the stream to a complete response:
+Access the aggregated result via `.result`, and the full event list via `.events`:
 
 ```typescript
-const result = await stream({ model, messages });
+const chatStream = await stream({ model, messages });
 
-// Process events in real-time
-for await (const event of result) {
+for await (const event of chatStream) {
   if (event.type === 'text-delta') {
     process.stdout.write(event.text);
   }
 }
 
-// Get the complete response after streaming
-const response = await result.toResponse();
+const response = await chatStream.result;
 
 console.log('\nComplete content:', response.content);
 console.log('Reasoning:', response.reasoning);
@@ -129,10 +136,10 @@ console.log('Token usage:', response.usage);
 ```
 
 <Note>
-  Call `toResponse()` only after consuming all stream events. Calling it before the stream completes will wait for all events to finish.
+  `.result` resolves when the stream completes, regardless of whether you iterated the events. Streams are replayable -- iterating after events have arrived replays the buffered history.
 </Note>
 
-## Streaming with Configuration
+## Streaming with configuration
 
 Apply the same configuration options as `generate()`:
 
@@ -140,10 +147,10 @@ Apply the same configuration options as `generate()`:
 const result = await stream({
   model,
   messages: [{ role: 'user', content: 'Write a story.' }],
-  config: {
-    temperature: 0.8,
-    maxTokens: 1000,
-    stopSequences: ['The End'],
+  temperature: 0.8,
+  maxTokens: 1000,
+  providerOptions: {
+    openai: { store: true, user: 'user-123' },
   },
 });
 
@@ -293,10 +300,9 @@ for await (const event of result) {
   }
 }
 
-const response = await result.toResponse();
+const response = await result.result;
 if (response.finishReason === 'tool-calls') {
   console.log('Tool calls:', response.toolCalls);
-  // Handle tool execution here
 }
 ```
 
@@ -345,7 +351,7 @@ try {
     }
   }
 
-  const response = await result.toResponse();
+  const response = await result.result;
   console.log('\nComplete:', response.finishReason);
 } catch (error) {
   if (error instanceof ProviderError) {
@@ -361,20 +367,22 @@ try {
 ## Best Practices
 
 <AccordionGroup>
-  <Accordion title="Always consume the entire stream">
-    Make sure to iterate through all events before calling `toResponse()`:
+  <Accordion title="Streams are replayable">
+    `ChatStream` buffers events internally. You can iterate multiple times, and `.result` resolves independently of event consumption:
 
     ```typescript
-    const result = await stream({ model, messages });
+    const chatStream = await stream({ model, messages });
 
-    // Good: consume all events first
-    for await (const event of result) {
+    // Iterate events
+    for await (const event of chatStream) {
       // Process events
     }
-    const response = await result.toResponse();
 
-    // Bad: calling toResponse() without consuming events
-    // const response = await result.toResponse(); // This will hang
+    // .result resolves when the stream completes
+    const response = await chatStream.result;
+
+    // You can also get all events after the fact
+    const allEvents = await chatStream.events;
     ```
   </Accordion>
 

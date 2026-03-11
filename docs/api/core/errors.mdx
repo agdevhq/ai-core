@@ -12,6 +12,7 @@ Core AI provides a hierarchy of error classes for handling different types of fa
 
 ```
 LLMError
+├── StreamAbortedError
 └── ProviderError
     └── StructuredOutputError
         ├── StructuredOutputNoObjectGeneratedError
@@ -52,7 +53,7 @@ export class LLMError extends Error {
 ### Example
 
 ```typescript
-import { LLMError } from '@coreai/core';
+import { LLMError } from '@core-ai/core-ai';
 
 try {
   // Some operation
@@ -63,6 +64,47 @@ try {
     if (error.cause) {
       console.error('Caused by:', error.cause);
     }
+  }
+}
+```
+
+## StreamAbortedError
+
+Thrown when a streaming operation is aborted via an `AbortSignal`.
+
+```typescript
+export class StreamAbortedError extends LLMError {
+    constructor(message = 'stream aborted', cause?: unknown) {
+        super(message, cause);
+        this.name = 'StreamAbortedError';
+    }
+}
+```
+
+### Example
+
+```typescript
+import { stream } from '@core-ai/core-ai';
+import { StreamAbortedError } from '@core-ai/core-ai';
+
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  const chatStream = await stream({
+    model,
+    messages: [{ role: 'user', content: 'Write a long story' }],
+    signal: controller.signal,
+  });
+
+  for await (const event of chatStream) {
+    if (event.type === 'text-delta') {
+      process.stdout.write(event.text);
+    }
+  }
+} catch (error) {
+  if (error instanceof StreamAbortedError) {
+    console.log('Stream was cancelled');
   }
 }
 ```
@@ -103,13 +145,15 @@ export class ProviderError extends LLMError {
 ### Example
 
 ```typescript
-import { ProviderError } from '@coreai/core';
-import { generate } from '@coreai/core';
-import { openai } from '@coreai/openai';
+import { generate, ProviderError } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI();
+const model = openai.chatModel('gpt-5-mini');
 
 try {
   const result = await generate({
-    model: openai('gpt-4'),
+    model,
     messages: [{ role: 'user', content: 'Hello' }]
   });
 } catch (error) {
@@ -162,11 +206,11 @@ type StructuredOutputErrorOptions = {
 ### Example
 
 ```typescript
-import { StructuredOutputError } from '@coreai/core';
+import { StructuredOutputError } from '@core-ai/core-ai';
 
 try {
   const result = await generateObject({
-    model: openai('gpt-4'),
+    model,
     messages: [{ role: 'user', content: 'Generate data' }],
     schema: z.object({ name: z.string() })
   });
@@ -202,11 +246,11 @@ export class StructuredOutputNoObjectGeneratedError extends StructuredOutputErro
 ### Example
 
 ```typescript
-import { StructuredOutputNoObjectGeneratedError } from '@coreai/core';
+import { StructuredOutputNoObjectGeneratedError } from '@core-ai/core-ai';
 
 try {
   const result = await generateObject({
-    model: openai('gpt-4'),
+    model,
     messages: [{ role: 'user', content: 'Hello' }],
     schema: z.object({ name: z.string() })
   });
@@ -238,11 +282,11 @@ export class StructuredOutputParseError extends StructuredOutputError {
 ### Example
 
 ```typescript
-import { StructuredOutputParseError } from '@coreai/core';
+import { StructuredOutputParseError } from '@core-ai/core-ai';
 
 try {
   const result = await generateObject({
-    model: openai('gpt-4'),
+    model,
     messages: [{ role: 'user', content: 'Generate user' }],
     schema: z.object({ name: z.string() })
   });
@@ -285,12 +329,12 @@ export class StructuredOutputValidationError extends StructuredOutputError {
 ### Example
 
 ```typescript
-import { StructuredOutputValidationError } from '@coreai/core';
+import { StructuredOutputValidationError } from '@core-ai/core-ai';
 import { z } from 'zod';
 
 try {
   const result = await generateObject({
-    model: openai('gpt-4'),
+    model,
     messages: [{ role: 'user', content: 'Generate user' }],
     schema: z.object({
       name: z.string(),
@@ -322,11 +366,11 @@ import {
   StructuredOutputNoObjectGeneratedError,
   StructuredOutputParseError,
   StructuredOutputValidationError
-} from '@coreai/core';
+} from '@core-ai/core-ai';
 
 try {
   const result = await generateObject({
-    model: openai('gpt-4'),
+    model,
     messages: [{ role: 'user', content: 'Generate data' }],
     schema: z.object({ name: z.string() })
   });
@@ -418,7 +462,7 @@ async function generateWithRetry<T>(
 // Usage
 const result = await generateWithRetry(() => 
   generate({
-    model: openai('gpt-4'),
+    model,
     messages: [{ role: 'user', content: 'Hello' }]
   })
 );
@@ -523,7 +567,3 @@ async function generateWithFallback(
 - `500` - Internal Server Error
 - `502` - Bad Gateway
 - `503` - Service Unavailable
-
-## Source Location
-
-`~/workspace/source/packages/core-ai/src/errors.ts`

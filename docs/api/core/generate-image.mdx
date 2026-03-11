@@ -43,8 +43,8 @@ export type GenerateImageParams = ImageGenerateOptions & {
   - `'1024x1792'` (portrait)
 </ParamField>
 
-<ParamField path="providerOptions" type="Record<string, unknown>">
-  Provider-specific options that are passed through to the underlying model.
+<ParamField path="providerOptions" type="ImageProviderOptions">
+  Provider-specific options, namespaced by provider name (e.g. `{ openai: { quality: 'hd' } }`).
 </ParamField>
 
 ## Return Value
@@ -74,11 +74,13 @@ Returns a `Promise<ImageGenerateResult>` with the following properties:
 ### Basic Image Generation
 
 ```typescript
-import { generateImage } from '@coreai/core';
-import { openai } from '@coreai/openai';
+import { generateImage } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI();
 
 const result = await generateImage({
-  model: openai.image('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'A serene landscape with mountains and a lake at sunset'
 });
 
@@ -90,7 +92,7 @@ console.log(result.images[0].url);
 
 ```typescript
 const result = await generateImage({
-  model: openai.image('dall-e-2'),
+  model: openai.imageModel('dall-e-2'),
   prompt: 'A cute robot playing guitar',
   n: 4 // Generate 4 variations
 });
@@ -105,7 +107,7 @@ result.images.forEach((image, i) => {
 
 ```typescript
 const result = await generateImage({
-  model: openai.image('dall-e-3'),
+  model: openai.imageModel('dall-e-3'),
   prompt: 'A futuristic city skyline',
   size: '1792x1024' // Wide landscape format
 });
@@ -117,10 +119,10 @@ console.log('Generated landscape image:', result.images[0].url);
 
 ```typescript
 const result = await generateImage({
-  model: openai.image('dall-e-3'),
+  model: openai.imageModel('dall-e-3'),
   prompt: 'A detailed illustration of a dragon',
   providerOptions: {
-    response_format: 'b64_json' // OpenAI-specific
+    openai: { responseFormat: 'b64_json' },
   }
 });
 
@@ -137,7 +139,7 @@ if (base64Data) {
 
 ```typescript
 const result = await generateImage({
-  model: openai.image('dall-e-3'),
+  model: openai.imageModel('dall-e-3'),
   prompt: 'cat'
 });
 
@@ -154,7 +156,7 @@ if (result.images[0].revisedPrompt) {
 import { writeFile } from 'fs/promises';
 
 const result = await generateImage({
-  model: openai.image('dall-e-3'),
+  model: openai.imageModel('dall-e-3'),
   prompt: 'Abstract art with vibrant colors'
 });
 
@@ -172,7 +174,7 @@ if (imageUrl) {
 
 ```typescript
 const result = await generateImage({
-  model: openai.image('dall-e-3'),
+  model: openai.imageModel('dall-e-3'),
   prompt: 'A portrait of a wise old wizard, oil painting style, ' +
           'detailed brushstrokes, warm lighting, fantasy art'
 });
@@ -183,11 +185,11 @@ console.log(result.images[0].url);
 ### Error Handling
 
 ```typescript
-import { LLMError } from '@coreai/core';
+import { LLMError } from '@core-ai/core-ai';
 
 try {
   const result = await generateImage({
-    model: openai.image('dall-e-3'),
+    model: openai.imageModel('dall-e-3'),
     prompt: '' // Empty prompt
   });
 } catch (error) {
@@ -205,17 +207,17 @@ const prompt = 'A magical forest with glowing mushrooms';
 
 const [portrait, landscape, square] = await Promise.all([
   generateImage({
-    model: openai.image('dall-e-3'),
+    model: openai.imageModel('dall-e-3'),
     prompt,
     size: '1024x1792' // Portrait
   }),
   generateImage({
-    model: openai.image('dall-e-3'),
+    model: openai.imageModel('dall-e-3'),
     prompt,
     size: '1792x1024' // Landscape
   }),
   generateImage({
-    model: openai.image('dall-e-3'),
+    model: openai.imageModel('dall-e-3'),
     prompt,
     size: '1024x1024' // Square
   })
@@ -231,13 +233,11 @@ console.log('Square:', square.images[0].url);
 Different providers offer different image generation models:
 
 ```typescript
-import { openai } from '@coreai/openai';
+import { createOpenAI } from '@core-ai/openai';
+const openai = createOpenAI();
 
-// DALL-E 3: Higher quality, one image at a time
-const dalle3 = openai.image('dall-e-3');
-
-// DALL-E 2: Can generate multiple images
-const dalle2 = openai.image('dall-e-2');
+const dalle3 = openai.imageModel('dall-e-3');
+const gptImage = openai.imageModel('gpt-image-1');
 
 // Usage
 const result = await generateImage({
@@ -266,12 +266,14 @@ const result = await generateImage({
 
 ```typescript
 const result = await generateImage({
-  model: openai.image('dall-e-3'),
+  model: openai.imageModel('dall-e-3'),
   prompt: 'A cat',
   providerOptions: {
-    quality: 'hd', // 'standard' or 'hd'
-    style: 'vivid', // 'vivid' or 'natural'
-    response_format: 'url' // 'url' or 'b64_json'
+    openai: {
+      quality: 'hd',
+      style: 'vivid',
+      responseFormat: 'url',
+    },
   }
 });
 ```
@@ -301,11 +303,11 @@ Throws `LLMError` if:
 - Prompt violates content policy
 
 ```typescript
-import { LLMError, ProviderError } from '@coreai/core';
+import { LLMError, ProviderError } from '@core-ai/core-ai';
 
 try {
   const result = await generateImage({
-    model: openai.image('dall-e-3'),
+    model: openai.imageModel('dall-e-3'),
     prompt: 'inappropriate content'
   });
 } catch (error) {
@@ -316,7 +318,3 @@ try {
   }
 }
 ```
-
-## Source Location
-
-`~/workspace/source/packages/core-ai/src/generate-image.ts:12`

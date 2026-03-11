@@ -348,15 +348,16 @@ const result = await generateImage({
   n: 2,
   size: '1024x1024',
   providerOptions: {
-    // Provider-specific options
-    quality: 'hd',
-    style: 'vivid',
+    openai: {
+      quality: 'hd',
+      style: 'vivid',
+    },
   },
 });
 ```
 
 <Note>
-  Provider-specific options vary by provider. Check your provider's documentation for available options.
+  Provider options are namespaced by provider name and validated by each provider adapter. Check the [provider docs](/api/providers/openai) for available options.
 </Note>
 
 ## Practical Examples

@@ -76,28 +76,28 @@ for await (const event of result) {
   }
 
   if (event.type === 'object') {
-    console.log('\n\nValidated object update:', event.object);
+    console.log('\n\nValidated object:', event.object);
   }
 }
 
-const response = await result.toResponse();
+const response = await result.result;
 console.log('\nFinal object:', response.object);
 console.log('Finish reason:', response.finishReason);
 ```
 
-## Object Stream Events
+## Object stream events
 
-The `streamObject()` function emits these event types:
+The `streamObject()` function returns an `ObjectStream` -- an async iterable with `.result` and `.events`. It emits these event types:
 
 ```typescript
 type ObjectStreamEvent<TSchema extends z.ZodType> =
   | { type: 'object-delta'; text: string }      // Raw JSON text chunks
-  | { type: 'object'; object: z.infer<TSchema> } // Validated partial object
+  | { type: 'object'; object: z.infer<TSchema> } // Final validated object
   | { type: 'finish'; finishReason: FinishReason; usage: ChatUsage };
 ```
 
 <Note>
-  The `object` event is emitted whenever the partial JSON is valid according to your schema. This may happen multiple times as the object is streamed.
+  The `object` event is emitted once, when the full object payload has been validated. Use `object-delta` events for progressive UI updates while JSON is still streaming.
 </Note>
 
 ## Complex Schema Examples
@@ -303,7 +303,7 @@ try {
     console.error('Validation errors:', error.issues);
   } else if (error instanceof StructuredOutputParseError) {
     console.error('Failed to parse JSON:', error.message);
-    console.error('Raw text:', error.text);
+    console.error('Raw output:', error.rawOutput);
   } else if (error instanceof StructuredOutputError) {
     console.error('Structured output error:', error.message);
   }
@@ -333,21 +333,20 @@ const result = await streamObject({
 });
 
 for await (const event of result) {
+  if (event.type === 'object-delta') {
+    updateRecipePreview(event.text);
+    continue;
+  }
+
   if (event.type === 'object') {
-    // event.object contains the validated partial object
+    // event.object contains the final validated object
     updateRecipeUI(event.object);
-    
-    // Check which fields are available
-    if (event.object.title) {
-      console.log('Title:', event.object.title);
-    }
-    if (event.object.ingredients && event.object.ingredients.length > 0) {
-      console.log('Ingredients so far:', event.object.ingredients.length);
-    }
+    console.log('Title:', event.object.title);
+    console.log('Ingredients:', event.object.ingredients.length);
   }
 }
 
-const response = await result.toResponse();
+const response = await result.result;
 console.log('Complete recipe:', response.object);
 ```
 
@@ -360,12 +359,10 @@ const result = await generateObject({
   model,
   messages,
   schema: mySchema,
-  schemaName: 'my_object',           // Name for the schema
-  schemaDescription: 'A description',  // Help the model understand
-  config: {
-    temperature: 0.3,  // Lower temperature for more consistent structure
-    maxTokens: 2000,
-  },
+  schemaName: 'my_object',
+  schemaDescription: 'A description',
+  temperature: 0.3,
+  maxTokens: 2000,
 });
 ```
 
@@ -397,23 +394,22 @@ const result = await generateObject({
       model,
       messages,
       schema: mySchema,
-      config: {
-        temperature: 0.3, // More deterministic
-      },
+      temperature: 0.3,
     });
     ```
   </Accordion>
 
-  <Accordion title="Handle partial objects during streaming">
-    Check which fields are available when streaming:
+  <Accordion title="Use `object-delta` for progressive updates">
+    Build previews from raw JSON chunks, then switch to the validated object when it arrives:
 
     ```typescript
     for await (const event of result) {
+      if (event.type === 'object-delta') {
+        appendJsonPreview(event.text);
+      }
+
       if (event.type === 'object') {
-        // Safely check for fields
-        if (event.object.field1 !== undefined) {
-          console.log('Field 1 is ready:', event.object.field1);
-        }
+        renderFinalObject(event.object);
       }
     }
     ```

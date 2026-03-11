@@ -22,7 +22,7 @@ import { createAnthropic } from '@core-ai/anthropic';
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
-  defaultMaxTokens: 4096 // optional
+  defaultMaxTokens: 4096,
 });
 ```
 
@@ -33,7 +33,7 @@ const anthropic = createAnthropic({
 </ParamField>
 
 <ParamField path="baseURL" type="string" optional>
-  Custom base URL for API requests. Useful for proxies or custom endpoints.
+  Custom base URL for API requests.
 </ParamField>
 
 <ParamField path="defaultMaxTokens" type="number" optional default="4096">
@@ -46,23 +46,9 @@ const anthropic = createAnthropic({
 
 ### Returns
 
-`AnthropicProvider` - Provider instance with methods to create models.
+`AnthropicProvider` with method `chatModel()`.
 
-## Provider Methods
-
-### chatModel()
-
-Create a chat model instance.
-
-```typescript
-const model = anthropic.chatModel('claude-opus-4-6');
-```
-
-<ParamField path="modelId" type="string" required>
-  Model identifier. See [Supported Models](#supported-models) below.
-</ParamField>
-
-## Supported Models
+## Supported models
 
 <AccordionGroup>
   <Accordion title="Claude 4.6 (Adaptive Thinking)" icon="sparkles">
@@ -80,9 +66,7 @@ const model = anthropic.chatModel('claude-opus-4-6');
     - **claude-haiku-4-5** - Fast and lightweight
   </Accordion>
   
-  <Accordion title="Claude 4 & Earlier" icon="circle">
-    Earlier Claude models with manual thinking.
-    
+  <Accordion title="Claude 4 and earlier" icon="circle">
     - **claude-opus-4-1** - Enhanced reasoning
     - **claude-opus-4** - Strong performance
     - **claude-sonnet-4** - Balanced model
@@ -94,147 +78,106 @@ const model = anthropic.chatModel('claude-opus-4-6');
 
 | Feature | Support |
 |---------|--------|
-| Chat Completion | ✓ |
-| Streaming | ✓ |
-| Function Calling | ✓ |
-| Vision | ✓ |
-| Reasoning Effort | ✓ |
-| Embeddings | ✗ |
-| Image Generation | ✗ |
-
-## Thinking Modes
-
-Claude models use two different thinking modes:
-
-### Adaptive Thinking
-
-Used by Claude 4.6 models. The model automatically determines thinking depth based on the effort level.
-
-```typescript
-const result = await generateText({
-  model: anthropic.chatModel('claude-opus-4-6'),
-  prompt: 'Solve this complex problem...',
-  reasoning: {
-    effort: 'high' // 'low' | 'medium' | 'high' | 'max'
-  }
-});
-```
-
-<Note>
-  Only `claude-opus-4-6` supports `'max'` effort level.
-</Note>
-
-### Manual Thinking Budget
-
-Used by Claude 4.5 and earlier. You control the thinking token budget:
-
-- **minimal** → 1,024 tokens
-- **low** → 2,048 tokens
-- **medium** → 8,192 tokens
-- **high** → 32,768 tokens
-- **max** → 65,536 tokens
-
-```typescript
-const result = await generateText({
-  model: anthropic.chatModel('claude-opus-4-5'),
-  prompt: 'Complex reasoning task...',
-  reasoning: {
-    effort: 'high' // Allocates 32,768 thinking tokens
-  }
-});
-```
+| Chat Completion | Yes |
+| Streaming | Yes |
+| Function Calling | Yes |
+| Vision | Yes |
+| Reasoning Effort | Yes |
+| Embeddings | No |
+| Image Generation | No |
 
 ## Examples
 
-### Basic Chat
+### Basic chat
 
 ```typescript
 import { createAnthropic } from '@core-ai/anthropic';
-import { generateText } from '@core-ai/core-ai';
+import { generate } from '@core-ai/core-ai';
 
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
-});
+const anthropic = createAnthropic();
 
-const result = await generateText({
-  model: anthropic.chatModel('claude-opus-4-6'),
-  prompt: 'Explain the theory of relativity'
-});
-
-console.log(result.text);
-```
-
-### Extended Thinking
-
-```typescript
-const result = await generateText({
-  model: anthropic.chatModel('claude-opus-4-6'),
-  prompt: `
-    Analyze this complex dataset and provide insights:
-    [Large dataset here]
-  `,
-  reasoning: {
-    effort: 'max' // Maximum reasoning effort
-  },
-  maxTokens: 8192
-});
-
-// Access thinking process if available
-if (result.reasoning) {
-  console.log('Thinking tokens:', result.reasoning.thinkingTokens);
-}
-```
-
-### Streaming with Thinking
-
-```typescript
-import { streamText } from '@core-ai/core-ai';
-
-const stream = await streamText({
+const result = await generate({
   model: anthropic.chatModel('claude-sonnet-4-6'),
-  prompt: 'Write a detailed analysis of...',
-  reasoning: {
-    effort: 'high'
-  }
+  messages: [
+    { role: 'user', content: 'Explain the theory of relativity' },
+  ],
 });
 
-for await (const chunk of stream) {
-  if (chunk.type === 'thinking') {
-    console.log('Thinking:', chunk.text);
-  } else if (chunk.type === 'text') {
-    console.log('Output:', chunk.text);
+console.log(result.content);
+```
+
+### Extended thinking
+
+```typescript
+const result = await generate({
+  model: anthropic.chatModel('claude-opus-4-6'),
+  messages: [
+    { role: 'user', content: 'Analyze this complex dataset and provide insights...' },
+  ],
+  reasoning: {
+    effort: 'max',
+  },
+  maxTokens: 8192,
+});
+
+if (result.reasoning) {
+  console.log('Reasoning:', result.reasoning);
+}
+console.log('Answer:', result.content);
+```
+
+### Streaming
+
+```typescript
+import { stream } from '@core-ai/core-ai';
+
+const chatStream = await stream({
+  model: anthropic.chatModel('claude-sonnet-4-6'),
+  messages: [
+    { role: 'user', content: 'Write a detailed analysis of...' },
+  ],
+  reasoning: {
+    effort: 'high',
+  },
+});
+
+for await (const event of chatStream) {
+  if (event.type === 'reasoning-delta') {
+    process.stdout.write(event.text);
+  } else if (event.type === 'text-delta') {
+    process.stdout.write(event.text);
   }
 }
 ```
 
-### Function Calling
+### Tool calling
 
 ```typescript
-import { generateText, tool } from '@core-ai/core-ai';
+import { generate, defineTool } from '@core-ai/core-ai';
 import { z } from 'zod';
 
-const result = await generateText({
-  model: anthropic.chatModel('claude-opus-4-6'),
-  prompt: 'What is the weather in San Francisco?',
+const result = await generate({
+  model: anthropic.chatModel('claude-sonnet-4-6'),
+  messages: [
+    { role: 'user', content: 'What is the weather in San Francisco?' },
+  ],
   tools: {
-    getWeather: tool({
+    getWeather: defineTool({
+      name: 'getWeather',
       description: 'Get weather for a location',
       parameters: z.object({
-        location: z.string()
+        location: z.string(),
       }),
-      execute: async ({ location }) => {
-        return { temp: 72, condition: 'sunny' };
-      }
-    })
-  }
+    }),
+  },
 });
 ```
 
 ### Vision
 
 ```typescript
-const result = await generateText({
-  model: anthropic.chatModel('claude-opus-4-6'),
+const result = await generate({
+  model: anthropic.chatModel('claude-sonnet-4-6'),
   messages: [
     {
       role: 'user',
@@ -242,69 +185,88 @@ const result = await generateText({
         { type: 'text', text: 'What is in this image?' },
         {
           type: 'image',
-          image: 'https://example.com/image.jpg'
-        }
-      ]
-    }
-  ]
+          source: {
+            type: 'url',
+            url: 'https://example.com/image.jpg',
+          },
+        },
+      ],
+    },
+  ],
 });
 ```
 
-### Custom Max Tokens
+## Thinking modes
+
+### Adaptive thinking (Claude 4.6)
+
+The model automatically determines thinking depth based on the effort level.
 
 ```typescript
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  defaultMaxTokens: 8192 // Higher default for all requests
-});
-
-// Or override per request
-const result = await generateText({
+const result = await generate({
   model: anthropic.chatModel('claude-opus-4-6'),
-  prompt: 'Long response...',
-  maxTokens: 16000
+  messages: [{ role: 'user', content: 'Complex problem...' }],
+  reasoning: {
+    effort: 'high',
+  },
 });
 ```
 
-## Error Handling
+<Note>
+  Only `claude-opus-4-6` supports `'max'` effort level.
+</Note>
+
+### Manual thinking budget (Claude 4.5 and earlier)
+
+Token budgets: `minimal` -> 1,024, `low` -> 2,048, `medium` -> 8,192, `high` -> 32,768, `max` -> 65,536.
 
 ```typescript
-import { APIError } from '@core-ai/core-ai';
+const result = await generate({
+  model: anthropic.chatModel('claude-opus-4-5'),
+  messages: [{ role: 'user', content: 'Complex reasoning task...' }],
+  reasoning: {
+    effort: 'high',
+  },
+});
+```
+
+## Provider-specific options
+
+Options are namespaced under `anthropic` in `providerOptions`:
+
+```typescript
+const result = await generate({
+  model: anthropic.chatModel('claude-sonnet-4-6'),
+  messages: [{ role: 'user', content: 'Hello' }],
+  providerOptions: {
+    anthropic: {
+      topK: 40,
+      stopSequences: ['\n\n'],
+      betas: ['max-tokens-3-5-sonnet-2024-07-15'],
+    },
+  },
+});
+```
+
+Available fields: `topK`, `stopSequences`, `betas`, `outputConfig`.
+
+## Error handling
+
+```typescript
+import { ProviderError } from '@core-ai/core-ai';
 
 try {
-  const result = await generateText({
-    model: anthropic.chatModel('claude-opus-4-6'),
-    prompt: 'Hello!'
+  const result = await generate({
+    model: anthropic.chatModel('claude-sonnet-4-6'),
+    messages: [{ role: 'user', content: 'Hello!' }],
   });
 } catch (error) {
-  if (error instanceof APIError) {
+  if (error instanceof ProviderError) {
     console.error('Anthropic API error:', error.message);
     console.error('Status:', error.statusCode);
   }
 }
 ```
-
-## Best Practices
-
-<AccordionGroup>
-  <Accordion title="Choosing Thinking Mode" icon="lightbulb">
-    - Use **Claude 4.6** (adaptive) for most use cases - it's more efficient
-    - Use **Claude 4.5** (manual) when you need precise control over thinking budget
-  </Accordion>
-  
-  <Accordion title="Setting Effort Levels" icon="gauge">
-    - **low** - Simple questions, quick responses
-    - **medium** - Standard reasoning tasks
-    - **high** - Complex analysis, multi-step reasoning
-    - **max** - Most challenging problems (Opus 4-6 only)
-  </Accordion>
-  
-  <Accordion title="Token Management" icon="coins">
-    - Set `defaultMaxTokens` based on your typical use case
-    - Remember thinking tokens count toward your usage
-    - Use streaming to show progress for long responses
-  </Accordion>
-</AccordionGroup>
 
 ## Related
 
@@ -316,6 +278,6 @@ try {
     Gemini models with multimodal support
   </Card>
   <Card title="Chat Completion Guide" icon="message" href="/guides/chat-completion">
-    Learn how to use chat completion effectively
+    Learn how to use chat completion
   </Card>
 </CardGroup>

@@ -34,8 +34,8 @@ export type EmbedParams = EmbedOptions & {
   Optional dimension size for the output embeddings. Not all models support this parameter.
 </ParamField>
 
-<ParamField path="providerOptions" type="Record<string, unknown>">
-  Provider-specific options that are passed through to the underlying model.
+<ParamField path="providerOptions" type="EmbedProviderOptions">
+  Provider-specific options, namespaced by provider name (e.g. `{ openai: { encodingFormat: 'float' } }`).
 </ParamField>
 
 ## Return Value
@@ -64,11 +64,13 @@ Returns a `Promise<EmbedResult>` with the following properties:
 ### Single String Embedding
 
 ```typescript
-import { embed } from '@coreai/core';
-import { openai } from '@coreai/openai';
+import { embed } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI();
 
 const result = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: 'Hello, world!'
 });
 
@@ -80,7 +82,7 @@ console.log(result.embeddings[0].length); // 1536 (dimension size)
 
 ```typescript
 const result = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: [
     'First document about AI',
     'Second document about machine learning',
@@ -98,7 +100,7 @@ console.log(result.embeddings[2]); // Third document's embedding
 
 ```typescript
 const result = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: 'This is a test',
   dimensions: 256 // Reduce from default 1536 to 256
 });
@@ -110,7 +112,7 @@ console.log(result.embeddings[0].length); // 256
 
 ```typescript
 const result = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: 'Sample text for embedding'
 });
 
@@ -132,7 +134,7 @@ const documents = [
 ];
 
 const docResult = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: documents
 });
 
@@ -140,7 +142,7 @@ const docEmbeddings = docResult.embeddings;
 
 // Embed query
 const queryResult = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: 'What is AI?'
 });
 
@@ -176,7 +178,7 @@ const articles = [
 ];
 
 const result = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: articles
 });
 
@@ -193,11 +195,11 @@ Throws `LLMError` if:
 - Model encounters an error during embedding
 
 ```typescript
-import { LLMError } from '@coreai/core';
+import { LLMError } from '@core-ai/core-ai';
 
 try {
   const result = await embed({
-    model: openai.embedding('text-embedding-3-small'),
+    model: openai.embeddingModel('text-embedding-3-small'),
     input: '' // Empty string
   });
 } catch (error) {
@@ -209,7 +211,7 @@ try {
 
 try {
   const result = await embed({
-    model: openai.embedding('text-embedding-3-small'),
+    model: openai.embeddingModel('text-embedding-3-small'),
     input: [] // Empty array
   });
 } catch (error) {
@@ -225,13 +227,10 @@ try {
 Different providers have different embedding models and capabilities:
 
 ```typescript
-// OpenAI
-import { openai } from '@coreai/openai';
-const openaiEmbed = openai.embedding('text-embedding-3-small');
-const openaiLarge = openai.embedding('text-embedding-3-large');
-
-// Other providers may have their own embedding models
-// Check provider documentation for available models
+import { createOpenAI } from '@core-ai/openai';
+const openai = createOpenAI();
+const smallModel = openai.embeddingModel('text-embedding-3-small');
+const largeModel = openai.embeddingModel('text-embedding-3-large');
 ```
 
 ## Performance Tips
@@ -243,7 +242,7 @@ const openaiLarge = openai.embedding('text-embedding-3-large');
 ```typescript
 // Good: Single batch call
 const result = await embed({
-  model: openai.embedding('text-embedding-3-small'),
+  model: openai.embeddingModel('text-embedding-3-small'),
   input: ['text1', 'text2', 'text3']
 });
 
@@ -265,7 +264,3 @@ const result3 = await embed({ model, input: 'text3' });
 4. **Classification**: Use embeddings as features for ML models
 5. **Anomaly Detection**: Identify outliers based on embedding distance
 6. **Deduplication**: Find and remove duplicate or near-duplicate content
-
-## Source Location
-
-`~/workspace/source/packages/core-ai/src/embed.ts:12`

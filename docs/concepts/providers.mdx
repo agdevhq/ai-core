@@ -51,16 +51,14 @@ type OpenAIProviderOptions = {
 ### Getting Models
 
 ```typescript
-// Chat models
-const gpt4 = openai.chatModel('gpt-4-turbo');
-const gpt35 = openai.chatModel('gpt-3.5-turbo');
-
-// Embedding models
+const gpt5 = openai.chatModel('gpt-5-mini');
 const embeddings = openai.embeddingModel('text-embedding-3-small');
-
-// Image models
-const dalle = openai.imageModel('dall-e-3');
+const imageModel = openai.imageModel('gpt-image-1');
 ```
+
+<Note>
+  `createOpenAI` uses the **Responses API** by default. For the Chat Completions API, use `createOpenAICompat` from `@core-ai/openai/compat`.
+</Note>
 
 ## Anthropic
 
@@ -91,8 +89,8 @@ type AnthropicProviderOptions = {
 ### Getting Models
 
 ```typescript
-const claude = anthropic.chatModel('claude-3-5-sonnet-20241022');
-const claudeOpus = anthropic.chatModel('claude-3-opus-20240229');
+const claude = anthropic.chatModel('claude-sonnet-4-6');
+const claudeOpus = anthropic.chatModel('claude-opus-4-6');
 ```
 
 <Note>
@@ -109,7 +107,7 @@ Google GenAI provides access to Gemini models for chat, embeddings, and image ge
 import { createGoogleGenAI } from '@core-ai/google-genai';
 
 const google = createGoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY,
+  apiKey: process.env.GOOGLE_API_KEY,
   apiVersion: 'v1beta', // Optional: API version
   baseUrl: 'https://generativelanguage.googleapis.com', // Optional
 });
@@ -129,14 +127,9 @@ type GoogleGenAIProviderOptions = {
 ### Getting Models
 
 ```typescript
-// Chat models
-const gemini = google.chatModel('gemini-2.0-flash-exp');
-
-// Embedding models
+const gemini = google.chatModel('gemini-3.1-pro');
 const embeddings = google.embeddingModel('text-embedding-004');
-
-// Image models
-const imagen = google.imageModel('imagen-3.0-generate-001');
+const imagen = google.imageModel('imagen-3.0');
 ```
 
 ## Mistral
@@ -168,8 +161,8 @@ type MistralProviderOptions = {
 
 ```typescript
 // Chat models
-const mistralLarge = mistral.chatModel('mistral-large-latest');
-const mistralSmall = mistral.chatModel('mistral-small-latest');
+const mistralLarge = mistral.chatModel('mistral-large-2512');
+const mistralSmall = mistral.chatModel('mistral-small-2506');
 
 // Embedding models
 const embeddings = mistral.embeddingModel('mistral-embed');

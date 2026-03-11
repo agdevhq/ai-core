@@ -12,6 +12,7 @@ Core AI provides a hierarchy of error types that help you handle failures gracef
 ```typescript
 Error
 └── LLMError
+    ├── StreamAbortedError
     └── ProviderError
         └── StructuredOutputError
             ├── StructuredOutputNoObjectGeneratedError
@@ -60,6 +61,41 @@ try {
 <Tip>
   Always check for `LLMError` first to catch all Core AI errors, then check for more specific error types.
 </Tip>
+
+## StreamAbortedError
+
+Thrown when a streaming operation is aborted via an `AbortSignal`.
+
+```typescript
+class StreamAbortedError extends LLMError {
+  constructor(message?: string, cause?: unknown);
+}
+```
+
+**Usage:**
+
+```typescript
+import { stream, StreamAbortedError } from '@core-ai/core-ai';
+
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  const chatStream = await stream({
+    model,
+    messages: [{ role: 'user', content: 'Write a long essay' }],
+    signal: controller.signal,
+  });
+
+  for await (const event of chatStream) {
+    if (event.type === 'text-delta') process.stdout.write(event.text);
+  }
+} catch (error) {
+  if (error instanceof StreamAbortedError) {
+    console.log('Stream was cancelled');
+  }
+}
+```
 
 ## ProviderError
 
@@ -163,7 +199,8 @@ const schema = z.object({
 });
 
 try {
-  const result = await model.generateObject({
+  const result = await generateObject({
+    model,
     messages: [{ role: 'user', content: 'Hello' }],
     schema,
   });
@@ -188,7 +225,8 @@ Thrown when the model's output cannot be parsed as JSON.
 import { generateObject, StructuredOutputParseError } from '@core-ai/core-ai';
 
 try {
-  const result = await model.generateObject({
+  const result = await generateObject({
+    model,
     messages: [{ role: 'user', content: 'Generate user data' }],
     schema,
   });
@@ -220,7 +258,8 @@ const schema = z.object({
 });
 
 try {
-  const result = await model.generateObject({
+  const result = await generateObject({
+    model,
     messages: [{ role: 'user', content: 'Generate user data' }],
     schema,
   });
@@ -269,7 +308,8 @@ async function generateUserProfile(prompt: string) {
   });
 
   try {
-    const result = await model.generateObject({
+    const result = await generateObject({
+      model,
       messages: [{ role: 'user', content: prompt }],
       schema,
       schemaName: 'UserProfile',

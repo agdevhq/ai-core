@@ -265,9 +265,11 @@ Extended thinking and reasoning (supported by some models like Claude):
 type ReasoningPart = {
   type: 'reasoning';
   text: string;
-  providerMetadata?: Record<string, unknown>;
+  providerMetadata?: Record<string, Record<string, unknown>>;
 };
 ```
+
+The `providerMetadata` is provider-namespaced. The top-level key is the provider identifier (e.g. `'anthropic'`).
 
 **Accessing Reasoning:**
 

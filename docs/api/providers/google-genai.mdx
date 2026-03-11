@@ -21,18 +21,18 @@ Create a Google GenAI provider instance.
 import { createGoogleGenAI } from '@core-ai/google-genai';
 
 const google = createGoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY
+  apiKey: process.env.GOOGLE_API_KEY,
 });
 ```
 
 ### Options
 
 <ParamField path="apiKey" type="string" optional>
-  Your Google AI API key. Defaults to `GOOGLE_GENAI_API_KEY` environment variable.
+  Your Google AI API key. Pass it explicitly or set the `GOOGLE_API_KEY` environment variable.
 </ParamField>
 
 <ParamField path="apiVersion" type="string" optional>
-  API version to use (e.g., `'v1'`, `'v1beta'`). Defaults to the latest stable version.
+  API version to use (e.g., `'v1'`, `'v1beta'`).
 </ParamField>
 
 <ParamField path="baseUrl" type="string" optional>
@@ -45,196 +45,86 @@ const google = createGoogleGenAI({
 
 ### Returns
 
-`GoogleGenAIProvider` - Provider instance with methods to create models.
+`GoogleGenAIProvider` with methods `chatModel()`, `embeddingModel()`, and `imageModel()`.
 
-## Provider Methods
+## Supported models
 
-### chatModel()
-
-Create a chat model instance.
-
-```typescript
-const model = google.chatModel('gemini-3-pro');
-```
-
-<ParamField path="modelId" type="string" required>
-  Model identifier. See [Supported Models](#supported-models) below.
-</ParamField>
-
-### embeddingModel()
-
-Create an embedding model instance.
-
-```typescript
-const embeddings = google.embeddingModel('text-embedding-004');
-```
-
-<ParamField path="modelId" type="string" required>
-  Embedding model identifier.
-</ParamField>
-
-### imageModel()
-
-Create an image generation model instance.
-
-```typescript
-const imageGen = google.imageModel('imagen-3.0');
-```
-
-<ParamField path="modelId" type="string" required>
-  Image model identifier.
-</ParamField>
-
-## Supported Models
-
-### Chat Models
+### Chat models
 
 <AccordionGroup>
   <Accordion title="Gemini 3 (Thinking Level)" icon="star">
-    Latest generation with thinking level control.
-    
-    - **gemini-3-pro** - Most capable multimodal model
+    - **gemini-3.1-pro** - Most capable multimodal model
   </Accordion>
   
   <Accordion title="Gemini 2.5 (Thinking Budget)" icon="brain">
-    Previous generation with thinking budget control.
-    
     - **gemini-2.5-pro** - High capability, budget-based thinking
     - **gemini-2.5-flash** - Fast with optional thinking
     - **gemini-2.5-flash-lite** - Lightweight with optional thinking
   </Accordion>
 </AccordionGroup>
 
-### Embedding Models
+### Embedding models
 
 - **text-embedding-004** - Latest text embedding model
-- **text-embedding-003** - Previous generation
 
-### Image Models
+### Image models
 
 - **imagen-3.0** - Latest image generation model
-- **imagen-2.0** - Previous generation
-
-## Capabilities
-
-| Feature | Support |
-|---------|--------|
-| Chat Completion | ✓ |
-| Streaming | ✓ |
-| Function Calling | ✓ |
-| Vision | ✓ |
-| Reasoning Effort | ✓ |
-| Embeddings | ✓ |
-| Image Generation | ✓ |
-
-## Thinking Modes
-
-Gemini models use two different thinking control mechanisms:
-
-### Thinking Level (Gemini 3)
-
-Used by Gemini 3 models. Simple HIGH/LOW thinking control.
-
-```typescript
-const result = await generateText({
-  model: google.chatModel('gemini-3-pro'),
-  prompt: 'Complex problem...',
-  reasoning: {
-    effort: 'high' // Maps to HIGH thinking level
-  }
-});
-```
-
-Mapping:
-- `'minimal'`, `'low'`, `'medium'` → `'LOW'`
-- `'high'`, `'max'` → `'HIGH'`
-
-<Note>
-  Gemini 3 models cannot disable thinking completely.
-</Note>
-
-### Thinking Budget (Gemini 2.5)
-
-Used by Gemini 2.5 models. Fine-grained token budget control.
-
-```typescript
-const result = await generateText({
-  model: google.chatModel('gemini-2.5-pro'),
-  prompt: 'Solve this...',
-  reasoning: {
-    effort: 'high' // Allocates 32,768 thinking tokens
-  }
-});
-```
-
-Token budgets:
-- **minimal** → 1,024 tokens
-- **low** → 4,096 tokens
-- **medium** → 16,384 tokens
-- **high/max** → 32,768 tokens
-
-<Note>
-  `gemini-2.5-flash` and `gemini-2.5-flash-lite` can disable thinking by omitting the reasoning parameter.
-</Note>
 
 ## Examples
 
-### Basic Chat
+### Basic chat
 
 ```typescript
 import { createGoogleGenAI } from '@core-ai/google-genai';
-import { generateText } from '@core-ai/core-ai';
+import { generate } from '@core-ai/core-ai';
 
-const google = createGoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY
+const google = createGoogleGenAI();
+
+const result = await generate({
+  model: google.chatModel('gemini-3.1-pro'),
+  messages: [
+    { role: 'user', content: 'Explain machine learning' },
+  ],
 });
 
-const result = await generateText({
-  model: google.chatModel('gemini-3-pro'),
-  prompt: 'Explain machine learning'
-});
-
-console.log(result.text);
+console.log(result.content);
 ```
 
-### Reasoning with Thinking
+### Reasoning
 
 ```typescript
-const result = await generateText({
-  model: google.chatModel('gemini-3-pro'),
-  prompt: 'Analyze this complex scenario...',
+const result = await generate({
+  model: google.chatModel('gemini-3.1-pro'),
+  messages: [
+    { role: 'user', content: 'Analyze this complex scenario...' },
+  ],
   reasoning: {
-    effort: 'high'
-  }
+    effort: 'high',
+  },
 });
-
-if (result.reasoning) {
-  console.log('Thinking tokens used:', result.reasoning.thinkingTokens);
-}
 ```
 
-### Multimodal Input
+### Multimodal input
 
 ```typescript
-const result = await generateText({
-  model: google.chatModel('gemini-3-pro'),
+const result = await generate({
+  model: google.chatModel('gemini-3.1-pro'),
   messages: [
     {
       role: 'user',
       content: [
-        { type: 'text', text: 'Describe this image and video' },
+        { type: 'text', text: 'Describe this image' },
         {
           type: 'image',
-          image: 'https://example.com/photo.jpg'
+          source: {
+            type: 'url',
+            url: 'https://example.com/photo.jpg',
+          },
         },
-        {
-          type: 'file',
-          mimeType: 'video/mp4',
-          data: videoBuffer
-        }
-      ]
-    }
-  ]
+      ],
+    },
+  ],
 });
 ```
 
@@ -245,13 +135,13 @@ import { embed } from '@core-ai/core-ai';
 
 const result = await embed({
   model: google.embeddingModel('text-embedding-004'),
-  value: 'Text to embed'
+  input: 'Text to embed',
 });
 
-console.log(result.embedding); // number[]
+console.log(result.embeddings[0]);
 ```
 
-### Image Generation
+### Image generation
 
 ```typescript
 import { generateImage } from '@core-ai/core-ai';
@@ -259,128 +149,147 @@ import { generateImage } from '@core-ai/core-ai';
 const result = await generateImage({
   model: google.imageModel('imagen-3.0'),
   prompt: 'A serene mountain landscape at dawn',
-  size: '1024x1024',
-  n: 1
+  n: 1,
 });
 
 console.log(result.images);
 ```
 
-### Function Calling
-
-```typescript
-import { generateText, tool } from '@core-ai/core-ai';
-import { z } from 'zod';
-
-const result = await generateText({
-  model: google.chatModel('gemini-3-pro'),
-  prompt: 'Calculate the area of a circle with radius 5',
-  tools: {
-    calculateArea: tool({
-      description: 'Calculate circle area',
-      parameters: z.object({
-        radius: z.number()
-      }),
-      execute: async ({ radius }) => {
-        return { area: Math.PI * radius ** 2 };
-      }
-    })
-  }
-});
-```
-
 ### Streaming
 
 ```typescript
-import { streamText } from '@core-ai/core-ai';
+import { stream } from '@core-ai/core-ai';
 
-const stream = await streamText({
+const chatStream = await stream({
   model: google.chatModel('gemini-2.5-flash'),
-  prompt: 'Write a story about...'
+  messages: [
+    { role: 'user', content: 'Write a story about...' },
+  ],
 });
 
-for await (const chunk of stream) {
-  if (chunk.type === 'text') {
-    process.stdout.write(chunk.text);
+for await (const event of chatStream) {
+  if (event.type === 'text-delta') {
+    process.stdout.write(event.text);
   }
 }
 ```
 
-### Custom API Version
+### Tool calling
 
 ```typescript
-const google = createGoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY,
-  apiVersion: 'v1beta' // Use beta features
+import { generate, defineTool } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const result = await generate({
+  model: google.chatModel('gemini-3.1-pro'),
+  messages: [
+    { role: 'user', content: 'Calculate the area of a circle with radius 5' },
+  ],
+  tools: {
+    calculateArea: defineTool({
+      name: 'calculateArea',
+      description: 'Calculate circle area',
+      parameters: z.object({
+        radius: z.number(),
+      }),
+    }),
+  },
 });
 ```
 
-### Without Thinking (Flash models)
+## Thinking modes
+
+### Thinking level (Gemini 3)
+
+Gemini 3 uses HIGH/LOW thinking control. Mapping: `minimal`/`low`/`medium` -> LOW, `high`/`max` -> HIGH.
+
+<Note>
+  Gemini 3 models cannot disable thinking completely.
+</Note>
+
+### Thinking budget (Gemini 2.5)
+
+Token budgets: `minimal` -> 1,024, `low` -> 4,096, `medium` -> 16,384, `high`/`max` -> 32,768.
+
+<Note>
+  `gemini-2.5-flash` and `gemini-2.5-flash-lite` can skip thinking by omitting the reasoning parameter.
+</Note>
+
+## Provider-specific options
+
+Options are namespaced under `google` in `providerOptions`:
+
+### Generate options
 
 ```typescript
-// Gemini 2.5 Flash can skip thinking for faster responses
-const result = await generateText({
-  model: google.chatModel('gemini-2.5-flash'),
-  prompt: 'Quick answer needed'
-  // No reasoning parameter = no thinking overhead
+const result = await generate({
+  model: google.chatModel('gemini-3.1-pro'),
+  messages: [{ role: 'user', content: 'Hello' }],
+  providerOptions: {
+    google: {
+      stopSequences: ['\n\n'],
+      frequencyPenalty: 0.5,
+      presencePenalty: 0.3,
+      seed: 42,
+      topK: 40,
+    },
+  },
 });
 ```
 
-## Error Handling
+### Embed options
 
 ```typescript
-import { APIError } from '@core-ai/core-ai';
+const result = await embed({
+  model: google.embeddingModel('text-embedding-004'),
+  input: 'text',
+  providerOptions: {
+    google: {
+      taskType: 'RETRIEVAL_DOCUMENT',
+      title: 'My Document',
+    },
+  },
+});
+```
+
+Available fields: `taskType`, `title`, `mimeType`, `autoTruncate`.
+
+### Image options
+
+Available fields: `aspectRatio`, `personGeneration`, `safetyFilterLevel`, `negativePrompt`, `guidanceScale`, `seed`, and others.
+
+## Error handling
+
+```typescript
+import { ProviderError } from '@core-ai/core-ai';
 
 try {
-  const result = await generateText({
-    model: google.chatModel('gemini-3-pro'),
-    prompt: 'Hello!'
+  const result = await generate({
+    model: google.chatModel('gemini-3.1-pro'),
+    messages: [{ role: 'user', content: 'Hello!' }],
   });
 } catch (error) {
-  if (error instanceof APIError) {
+  if (error instanceof ProviderError) {
     console.error('Google AI API error:', error.message);
     console.error('Status:', error.statusCode);
   }
 }
 ```
 
-## Best Practices
-
-<AccordionGroup>
-  <Accordion title="Choosing the Right Model" icon="sparkles">
-    - **Gemini 3 Pro** - Best for complex multimodal tasks
-    - **Gemini 2.5 Pro** - When you need fine-grained thinking budget control
-    - **Gemini 2.5 Flash** - Fast responses with optional thinking
-    - **Flash Lite** - Lightweight tasks, cost-sensitive applications
-  </Accordion>
-  
-  <Accordion title="Thinking Control" icon="gauge">
-    - Use **HIGH** effort for complex reasoning in Gemini 3
-    - Use **thinking budget** for precise control in Gemini 2.5
-    - Disable thinking on Flash models for simple queries to save costs
-  </Accordion>
-  
-  <Accordion title="Multimodal Best Practices" icon="image">
-    - Gemini excels at understanding images, videos, and audio
-    - Provide clear instructions for multimodal tasks
-    - Consider using Flash models for vision-only tasks
-  </Accordion>
-</AccordionGroup>
-
-## Model Comparison
+## Model comparison
 
 | Model | Thinking Control | Can Disable | Best For |
 |-------|-----------------|-------------|----------|
-| Gemini 3 Pro | Level (HIGH/LOW) | ✗ | Complex multimodal |
-| Gemini 2.5 Pro | Budget (tokens) | ✗ | Controlled reasoning |
-| Gemini 2.5 Flash | Budget (tokens) | ✓ | Fast + flexible |
-| Gemini 2.5 Flash Lite | Budget (tokens) | ✓ | Lightweight tasks |
+| Gemini 3 Pro | Level (HIGH/LOW) | No | Complex multimodal |
+| Gemini 2.5 Pro | Budget (tokens) | No | Controlled reasoning |
+| Gemini 2.5 Flash | Budget (tokens) | Yes | Fast + flexible |
+| Gemini 2.5 Flash Lite | Budget (tokens) | Yes | Lightweight tasks |
 
 ## Related
 
 <CardGroup cols={2}>
   <Card title="OpenAI Provider" icon="robot" href="/api/providers/openai">
-    GPT models and DALL-E image generation
+    GPT models and image generation
   </Card>
   <Card title="Anthropic Provider" icon="message" href="/api/providers/anthropic">
     Claude models with extended thinking

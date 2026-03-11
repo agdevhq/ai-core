@@ -8,7 +8,7 @@ icon: 'message'
 
 The `generate()` function generates a single response from a chat model. It's the core function for synchronous text generation with support for tool calls, reasoning, and structured conversations.
 
-## Function Signature
+## Function signature
 
 ```typescript
 export async function generate(
@@ -28,6 +28,18 @@ export type GenerateParams = GenerateOptions & {
 
 <ParamField path="messages" type="Message[]" required>
   Array of messages in the conversation. Must not be empty.
+</ParamField>
+
+<ParamField path="temperature" type="number">
+  Sampling temperature (0-2). Higher values make output more random.
+</ParamField>
+
+<ParamField path="maxTokens" type="number">
+  Maximum number of tokens to generate.
+</ParamField>
+
+<ParamField path="topP" type="number">
+  Nucleus sampling parameter (0-1).
 </ParamField>
 
 <ParamField path="reasoning" type="ReasoningConfig">
@@ -52,45 +64,15 @@ export type GenerateParams = GenerateOptions & {
   - `{ type: 'tool', toolName: string }` - Force specific tool
 </ParamField>
 
-<ParamField path="config" type="ModelConfig">
-  Model configuration parameters.
-  
-  <Expandable title="ModelConfig">
-    <ParamField path="temperature" type="number">
-      Sampling temperature (0-2). Higher values make output more random.
-    </ParamField>
-    
-    <ParamField path="maxTokens" type="number">
-      Maximum number of tokens to generate.
-    </ParamField>
-    
-    <ParamField path="topP" type="number">
-      Nucleus sampling parameter (0-1).
-    </ParamField>
-    
-    <ParamField path="stopSequences" type="string[]">
-      Sequences that will stop generation when encountered.
-    </ParamField>
-    
-    <ParamField path="frequencyPenalty" type="number">
-      Penalty for token frequency (-2 to 2).
-    </ParamField>
-    
-    <ParamField path="presencePenalty" type="number">
-      Penalty for token presence (-2 to 2).
-    </ParamField>
-  </Expandable>
-</ParamField>
-
-<ParamField path="providerOptions" type="Record<string, unknown>">
-  Provider-specific options that are passed through to the underlying model.
+<ParamField path="providerOptions" type="GenerateProviderOptions">
+  Provider-specific options, namespaced by provider name (e.g. `{ openai: { user: '...' } }`).
 </ParamField>
 
 <ParamField path="signal" type="AbortSignal">
   AbortSignal for cancelling the request.
 </ParamField>
 
-## Return Value
+## Return value
 
 Returns a `Promise<GenerateResult>` with the following properties:
 
@@ -138,41 +120,42 @@ Returns a `Promise<GenerateResult>` with the following properties:
 
 ## Examples
 
-### Basic Text Generation
+### Basic text generation
 
 ```typescript
-import { generate } from '@coreai/core';
-import { openai } from '@coreai/openai';
+import { generate } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI();
+const model = openai.chatModel('gpt-5-mini');
 
 const result = await generate({
-  model: openai('gpt-4'),
+  model,
   messages: [
     { role: 'user', content: 'What is the capital of France?' }
   ]
 });
 
-console.log(result.content); // "Paris"
+console.log(result.content);
 ```
 
-### With Configuration
+### With configuration
 
 ```typescript
 const result = await generate({
-  model: openai('gpt-4'),
+  model,
   messages: [
     { role: 'user', content: 'Write a creative story' }
   ],
-  config: {
-    temperature: 1.5,
-    maxTokens: 500
-  }
+  temperature: 1.5,
+  maxTokens: 500,
 });
 ```
 
-### With Tools
+### With tools
 
 ```typescript
-import { defineTool } from '@coreai/core';
+import { generate, defineTool } from '@core-ai/core-ai';
 import { z } from 'zod';
 
 const weatherTool = defineTool({
@@ -184,7 +167,7 @@ const weatherTool = defineTool({
 });
 
 const result = await generate({
-  model: openai('gpt-4'),
+  model,
   messages: [
     { role: 'user', content: 'What\'s the weather in Paris?' }
   ],
@@ -199,11 +182,11 @@ if (result.toolCalls.length > 0) {
 }
 ```
 
-### Multi-turn Conversation
+### Multi-turn conversation
 
 ```typescript
 const result = await generate({
-  model: openai('gpt-4'),
+  model,
   messages: [
     { role: 'system', content: 'You are a helpful assistant.' },
     { role: 'user', content: 'Hello!' },
@@ -213,16 +196,18 @@ const result = await generate({
 });
 ```
 
-## Error Handling
+## Error handling
 
 Throws `LLMError` if:
 - Messages array is empty
 - Model encounters an error during generation
 
 ```typescript
+import { LLMError } from '@core-ai/core-ai';
+
 try {
   const result = await generate({
-    model: openai('gpt-4'),
+    model,
     messages: []
   });
 } catch (error) {
@@ -231,7 +216,3 @@ try {
   }
 }
 ```
-
-## Source Location
-
-`~/workspace/source/packages/core-ai/src/generate.ts:12`

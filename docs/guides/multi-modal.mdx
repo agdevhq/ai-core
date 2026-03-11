@@ -420,6 +420,8 @@ console.log(description);
 Build conversations with images:
 
 ```typescript
+import { generate, resultToMessage } from '@core-ai/core-ai';
+
 const messages = [
   {
     role: 'user' as const,
@@ -437,10 +439,7 @@ const firstResponse = await generate({ model, messages });
 console.log('First response:', firstResponse.content);
 
 // Add assistant response
-messages.push({
-  role: 'assistant',
-  content: firstResponse.content,
-});
+messages.push(resultToMessage(firstResponse));
 
 // Follow up question
 messages.push({

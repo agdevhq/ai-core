@@ -1,26 +1,27 @@
 ---
 title: Configuration
-description: ModelConfig options for controlling temperature, maxTokens, and other generation parameters
+description: Generation options for controlling temperature, tokens, and model behavior
 ---
 
 ## Overview
 
-The `ModelConfig` type provides fine-grained control over model behavior. These options are passed to the `config` parameter in generation functions.
+Generation functions accept configuration options as flat top-level parameters on the options object. The core options `temperature`, `maxTokens`, and `topP` are available on every generation call. Additional parameters like `stopSequences`, `frequencyPenalty`, and `presencePenalty` are provider-specific and passed via `providerOptions`.
 
-## ModelConfig Type
+## Core options
+
+These options are available on `BaseGenerateOptions` and apply to `generate()`, `stream()`, `generateObject()`, and `streamObject()`:
 
 ```typescript
-type ModelConfig = {
+type BaseGenerateOptions = {
+  messages: Message[];
   temperature?: number;
   maxTokens?: number;
   topP?: number;
-  stopSequences?: string[];
-  frequencyPenalty?: number;
-  presencePenalty?: number;
+  reasoning?: ReasoningConfig;
+  providerOptions?: GenerateProviderOptions;
+  signal?: AbortSignal;
 };
 ```
-
-## Configuration Options
 
 ### temperature
 
@@ -33,22 +34,16 @@ Controls randomness in the output. Higher values make output more creative and r
 ```typescript
 import { generate } from '@core-ai/core-ai';
 
-// Creative writing
 const creative = await generate({
   model,
   messages: [{ role: 'user', content: 'Write a fantasy story opening' }],
-  config: {
-    temperature: 1.5, // High temperature for creativity
-  },
+  temperature: 1.5,
 });
 
-// Factual responses
 const factual = await generate({
   model,
   messages: [{ role: 'user', content: 'What is the capital of Germany?' }],
-  config: {
-    temperature: 0.2, // Low temperature for consistency
-  },
+  temperature: 0.2,
 });
 ```
 
@@ -67,9 +62,7 @@ Maximum number of tokens to generate in the response.
 const result = await generate({
   model,
   messages: [{ role: 'user', content: 'Explain quantum physics' }],
-  config: {
-    maxTokens: 150, // Limit to ~150 tokens (~110 words)
-  },
+  maxTokens: 150,
 });
 ```
 
@@ -94,10 +87,8 @@ Nucleus sampling: considers only tokens whose cumulative probability is above th
 const result = await generate({
   model,
   messages: [{ role: 'user', content: 'Generate product names' }],
-  config: {
-    temperature: 1.0,
-    topP: 0.9, // Consider top 90% probable tokens
-  },
+  temperature: 1.0,
+  topP: 0.9,
 });
 ```
 
@@ -105,18 +96,33 @@ const result = await generate({
   Don't use both high `temperature` and low `topP` together. They serve similar purposes and can conflict. Choose one approach.
 </Warning>
 
+## Provider-specific options
+
+Options like `stopSequences`, `frequencyPenalty`, and `presencePenalty` are not part of the core options. They are passed through `providerOptions`, namespaced by provider:
+
+```typescript
+type GenerateProviderOptions = {
+  [provider: string]: Record<string, unknown> | undefined;
+};
+```
+
+Each provider defines and validates its own set of options. See the provider pages for the full schema:
+
+- [OpenAI](/api/providers/openai) -- Responses API (`createOpenAI`): `store`, `serviceTier`, `include`, `parallelToolCalls`, `user`. Chat Completions API (`createOpenAICompat`): adds `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`
+- [Anthropic](/api/providers/anthropic) -- `topK`, `stopSequences`, `betas`, `outputConfig`
+- [Google GenAI](/api/providers/google-genai) -- `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`, `topK`
+- [Mistral](/api/providers/mistral) -- `stopSequences`, `frequencyPenalty`, `presencePenalty`, `randomSeed`, `safePrompt`
+
 ### stopSequences
 
-Array of sequences that will stop generation when encountered.
-
-**Type:** `string[]`
+Array of sequences that stop generation when encountered. Passed via `providerOptions`:
 
 ```typescript
 const result = await generate({
   model,
   messages: [{ role: 'user', content: 'Count from 1 to 100' }],
-  config: {
-    stopSequences: ['10'], // Stop when reaching "10"
+  providerOptions: {
+    google: { stopSequences: ['10'] },
   },
 });
 
@@ -124,33 +130,25 @@ console.log(result.content);
 // "1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
 ```
 
-**Common Use Cases:**
-- Limiting list generation: `stopSequences: ['\n\n']`
-- Code generation: `stopSequences: ['```', '\n\nfunction']`
-- Structured formats: `stopSequences: ['---END---']`
+<Note>
+  For OpenAI, `stopSequences` is only available with `createOpenAICompat` (Chat Completions API). The default `createOpenAI` (Responses API) does not support it.
+</Note>
 
 ### frequencyPenalty
 
 Reduces likelihood of repeating tokens based on how often they've appeared.
 
-**Type:** `number`  
-**Range:** `-2.0` to `2.0` (provider-dependent)  
-**Default:** `0.0`
+**Range:** `-2.0` to `2.0` (provider-dependent)
 
 ```typescript
 const result = await generate({
   model,
   messages: [{ role: 'user', content: 'List creative product features' }],
-  config: {
-    frequencyPenalty: 0.7, // Discourage repetition
+  providerOptions: {
+    google: { frequencyPenalty: 0.7 },
   },
 });
 ```
-
-**Effects:**
-- Positive values: Reduce repetition
-- Negative values: Allow more repetition
-- Higher magnitude: Stronger effect
 
 <Tip>
   Use `frequencyPenalty` between 0.5-1.0 for creative writing or lists where you want diverse output without repetitive phrases.
@@ -160,32 +158,30 @@ const result = await generate({
 
 Reduces likelihood of tokens that have already appeared at least once.
 
-**Type:** `number`  
-**Range:** `-2.0` to `2.0` (provider-dependent)  
-**Default:** `0.0`
+**Range:** `-2.0` to `2.0` (provider-dependent)
 
 ```typescript
 const result = await generate({
   model,
   messages: [{ role: 'user', content: 'Suggest unique vacation destinations' }],
-  config: {
-    presencePenalty: 1.0, // Encourage new topics
+  providerOptions: {
+    google: { presencePenalty: 1.0 },
   },
 });
 ```
 
 **Difference from Frequency Penalty:**
-- `presencePenalty`: Binary - penalizes any token that appeared at least once
-- `frequencyPenalty`: Proportional - penalizes based on how many times token appeared
+- `presencePenalty`: Binary -- penalizes any token that appeared at least once
+- `frequencyPenalty`: Proportional -- penalizes based on how many times token appeared
 
-## Complete Configuration Example
+## Complete configuration example
 
 ```typescript
 import { generate } from '@core-ai/core-ai';
-import { createOpenAI } from '@core-ai/openai';
+import { createOpenAICompat } from '@core-ai/openai/compat';
 
-const openai = createOpenAI();
-const model = openai.chatModel('gpt-4-turbo');
+const openai = createOpenAICompat();
+const model = openai.chatModel('gpt-5-mini');
 
 const result = await generate({
   model,
@@ -193,13 +189,15 @@ const result = await generate({
     { role: 'system', content: 'You are a creative writing assistant.' },
     { role: 'user', content: 'Write an engaging story opening' },
   ],
-  config: {
-    temperature: 1.2,           // High creativity
-    maxTokens: 500,             // Limit length
-    topP: 0.95,                 // Slight nucleus sampling
-    frequencyPenalty: 0.6,      // Reduce repetition
-    presencePenalty: 0.3,       // Encourage new ideas
-    stopSequences: ['---'],     // Stop at custom marker
+  temperature: 1.2,
+  maxTokens: 500,
+  topP: 0.95,
+  providerOptions: {
+    openai: {
+      frequencyPenalty: 0.6,
+      presencePenalty: 0.3,
+      stopSequences: ['---'],
+    },
   },
 });
 
@@ -207,39 +205,9 @@ console.log(result.content);
 console.log('Tokens used:', result.usage.outputTokens);
 ```
 
-## Provider-Specific Options
+## Reasoning configuration
 
-Some providers support additional options via `providerOptions`:
-
-```typescript
-type GenerateOptions = {
-  messages: Message[];
-  config?: ModelConfig;
-  providerOptions?: Record<string, unknown>; // Provider-specific
-  // ... other options
-};
-```
-
-**OpenAI Example:**
-
-```typescript
-const result = await generate({
-  model: openai.chatModel('gpt-4-turbo'),
-  messages: [{ role: 'user', content: 'Hello' }],
-  providerOptions: {
-    user: 'user-12345', // OpenAI-specific: user identifier for abuse monitoring
-    seed: 42,           // OpenAI-specific: deterministic sampling
-  },
-});
-```
-
-<Warning>
-  Provider options are not validated by Core AI and are passed directly to the provider. Consult provider documentation for available options.
-</Warning>
-
-## Reasoning Configuration
-
-For models that support extended thinking (like Claude with extended thinking):
+For models that support extended thinking:
 
 ```typescript
 type ReasoningConfig = {
@@ -258,12 +226,12 @@ type ReasoningEffort =
 
 ```typescript
 const result = await generate({
-  model: anthropic.chatModel('claude-3-5-sonnet-20241022'),
+  model: anthropic.chatModel('claude-sonnet-4-6'),
   messages: [
     { role: 'user', content: 'Solve this complex logic puzzle...' },
   ],
   reasoning: {
-    effort: 'high', // Allow extensive internal reasoning
+    effort: 'high',
   },
 });
 
@@ -277,85 +245,100 @@ console.log('Answer:', result.content);
   Reasoning configuration is provider-dependent. Check if your model supports extended thinking before using this option.
 </Note>
 
-## Configuration Best Practices
+## Configuration best practices
 
-### For Different Tasks
+### For different tasks
 
 **Code Generation:**
+
 ```typescript
-config: {
+const result = await generate({
+  model,
+  messages,
   temperature: 0.2,
   maxTokens: 2000,
-  stopSequences: ['```\n\n'],
-}
+  providerOptions: {
+    google: { stopSequences: ['```\n\n'] },
+  },
+});
 ```
 
 **Creative Writing:**
+
 ```typescript
-config: {
+const result = await generate({
+  model,
+  messages,
   temperature: 1.3,
-  frequencyPenalty: 0.7,
-  presencePenalty: 0.4,
-}
+  providerOptions: {
+    google: { frequencyPenalty: 0.7, presencePenalty: 0.4 },
+  },
+});
 ```
 
 **Question Answering:**
+
 ```typescript
-config: {
+const result = await generate({
+  model,
+  messages,
   temperature: 0.3,
   maxTokens: 300,
-}
+});
 ```
 
 **Brainstorming/Ideas:**
+
 ```typescript
-config: {
+const result = await generate({
+  model,
+  messages,
   temperature: 1.5,
-  presencePenalty: 1.0,
-}
+  providerOptions: {
+    google: { presencePenalty: 1.0 },
+  },
+});
 ```
 
-### Testing Configurations
+### Testing configurations
 
 <Tip>
   Start with default settings and adjust one parameter at a time. Temperature is usually the most impactful setting to tune first.
 </Tip>
 
 ```typescript
-// Baseline
 const baseline = await generate({ model, messages });
 
-// Test temperature variations
 const temps = [0.3, 0.7, 1.0, 1.5];
 for (const temp of temps) {
   const result = await generate({
     model,
     messages,
-    config: { temperature: temp },
+    temperature: temp,
   });
   console.log(`Temperature ${temp}:`, result.content);
 }
 ```
 
-## Usage Tracking
+## Usage tracking
 
 All generation results include token usage information:
 
 ```typescript
 type ChatUsage = {
-  inputTokens: number;  // Total input tokens (including cached)
-  outputTokens: number; // Total output tokens (including reasoning)
+  inputTokens: number;
+  outputTokens: number;
   inputTokenDetails: ChatInputTokenDetails;
   outputTokenDetails: ChatOutputTokenDetails;
 };
 
 type ChatInputTokenDetails = {
-  cacheReadTokens: number;  // Tokens served from cache
-  cacheWriteTokens: number; // Tokens written to cache
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
 };
 
 type ChatOutputTokenDetails = {
-  reasoningTokens?: number; // Tokens used for reasoning/thinking
+  reasoningTokens?: number;
 };
 ```
 
@@ -372,14 +355,15 @@ if (result.usage.outputTokenDetails.reasoningTokens) {
 }
 ```
 
-## Abort Signal
+## Abort signal
 
 Cancel long-running requests with `AbortSignal`:
 
 ```typescript
+import { LLMError } from '@core-ai/core-ai';
+
 const controller = new AbortController();
 
-// Cancel after 5 seconds
 setTimeout(() => controller.abort(), 5000);
 
 try {
@@ -389,8 +373,8 @@ try {
     signal: controller.signal,
   });
 } catch (error) {
-  if (error.name === 'AbortError') {
-    console.log('Request was cancelled');
+  if (error instanceof LLMError) {
+    console.log('Request was cancelled:', error.message);
   }
 }
 ```
