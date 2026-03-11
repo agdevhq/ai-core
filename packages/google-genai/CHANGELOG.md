@@ -1,5 +1,14 @@
 # @core-ai/google-genai
 
+## 0.6.1
+
+### Patch Changes
+
+- ccca3e9: Add model capability support for gemini-3.1-pro and gemini-3.1-flash-lite-preview.
+- c06e653: Refactor adapter internals to reduce duplication and simplify stream/request helper logic without changing runtime behavior.
+- Updated dependencies [3b599ab]
+    - @core-ai/core-ai@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes
