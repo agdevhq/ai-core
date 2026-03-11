@@ -75,8 +75,8 @@ Selecting any one package in a changeset bumps all five to the same version. How
 ### Changeset scope and granularity
 
 - One changeset per **logical change**. If core types and provider adapters change for different reasons, use separate changesets.
-- When each provider implements distinct behavior (e.g., different cache mapping logic), give each provider its own changeset so changelogs reflect provider-specific details.
-- A single changeset covering all packages is fine when the change is uniform (e.g., a shared config tweak).
+- **Provider changes**: Use one changeset file per provider when changes are **independent** — e.g. new models, internal updates, new provider options. Each provider's changelog must only describe that provider's changes; never mention other provider packages.
+- **Cross-provider changes**: Use a single changeset when the change **applies uniformly** across multiple providers — e.g. a changed interface, method signature, or shared config tweak.
 
 ### Empty changesets
 

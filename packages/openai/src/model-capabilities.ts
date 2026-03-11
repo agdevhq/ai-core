@@ -17,6 +17,20 @@ const DEFAULT_CAPABILITIES: OpenAIModelCapabilities = {
 };
 
 const MODEL_CAPABILITIES: Record<string, OpenAIModelCapabilities> = {
+    'gpt-5.4': {
+        reasoning: {
+            supportsEffort: true,
+            supportedRange: ['low', 'medium', 'high', 'max'],
+            restrictsSamplingParams: true,
+        },
+    },
+    'gpt-5.4-pro': {
+        reasoning: {
+            supportsEffort: true,
+            supportedRange: ['low', 'medium', 'high', 'max'],
+            restrictsSamplingParams: true,
+        },
+    },
     'gpt-5.2': {
         reasoning: {
             supportsEffort: true,
