@@ -1,11 +1,11 @@
 ---
 title: Error Handling
-description: LLMError, ProviderError, and structured output error types in Core AI
+description: LLMError, ProviderError, and structured output error types in core-ai
 ---
 
 ## Overview
 
-Core AI provides a hierarchy of error types that help you handle failures gracefully and provide meaningful feedback to users.
+core-ai provides a hierarchy of error types that help you handle failures gracefully and provide meaningful feedback to users.
 
 ## Error Hierarchy
 
@@ -22,7 +22,7 @@ Error
 
 ## LLMError
 
-Base error class for all Core AI errors.
+Base error class for all core-ai errors.
 
 ```typescript
 class LLMError extends Error {
@@ -59,7 +59,7 @@ try {
 - Invalid configuration or parameters
 
 <Tip>
-  Always check for `LLMError` first to catch all Core AI errors, then check for more specific error types.
+  Always check for `LLMError` first to catch all core-ai errors, then check for more specific error types.
 </Tip>
 
 ## StreamAbortedError

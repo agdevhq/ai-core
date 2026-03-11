@@ -1,6 +1,6 @@
 {
     "projectType": "sdk-library",
-    "projectName": "Core AI",
+    "projectName": "core-ai",
     "projectDescription": "A type-safe abstraction layer over LLM provider SDKs for TypeScript",
     "theme": "palm",
     "primaryColor": "#2563eb",
