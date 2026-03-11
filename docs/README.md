@@ -1,4 +1,4 @@
-# Core AI Docs
+# core-ai Docs
 
 This directory contains the Mintlify documentation for `core-ai`.
 

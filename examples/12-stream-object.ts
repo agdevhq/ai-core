@@ -27,7 +27,7 @@ async function main(): Promise<void> {
             {
                 role: 'user',
                 content:
-                    'Analyze this sentence and return JSON only: "Core AI makes provider integration easier."',
+                    'Analyze this sentence and return JSON only: "core-ai makes provider integration easier."',
             },
         ],
         schema: extractSchema,

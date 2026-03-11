@@ -3,7 +3,7 @@ title: Structured Outputs
 description: Generate type-safe JSON with generateObject() and streamObject() using Zod schemas
 ---
 
-Core AI provides strongly-typed structured outputs using Zod schemas, ensuring your responses match expected formats with full TypeScript type inference.
+core-ai provides strongly-typed structured outputs using Zod schemas, ensuring your responses match expected formats with full TypeScript type inference.
 
 ## Generate Structured Objects
 
@@ -61,7 +61,7 @@ const result = await streamObject({
   messages: [
     {
       role: 'user',
-      content: 'Analyze this sentence and return JSON only: "Core AI makes provider integration easier."',
+      content: 'Analyze this sentence and return JSON only: "core-ai makes provider integration easier."',
     },
   ],
   schema: extractSchema,

@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "name": "Core AI",
+  "name": "core-ai",
   "theme": "palm",
   "colors": {
     "primary": "#2563eb",
