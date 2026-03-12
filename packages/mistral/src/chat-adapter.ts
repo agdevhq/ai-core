@@ -11,7 +11,6 @@ import type {
     UsageInfo,
 } from '@mistralai/mistralai/models/components';
 import type { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
     AssistantContentPart,
     FinishReason,
@@ -25,6 +24,7 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
+import { zodSchemaToJsonSchema } from '@core-ai/core-ai';
 import {
     parseMistralGenerateProviderOptions,
     type MistralGenerateProviderOptions,
@@ -133,10 +133,7 @@ export function convertTools(tools: ToolSet): MistralTool[] {
         function: {
             name: tool.name,
             description: tool.description,
-            parameters: zodToJsonSchema(tool.parameters) as Record<
-                string,
-                unknown
-            >,
+            parameters: zodSchemaToJsonSchema(tool.parameters),
         },
     }));
 }

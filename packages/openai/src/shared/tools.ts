@@ -4,8 +4,8 @@ import type {
     ToolChoice,
     ToolSet,
 } from '@core-ai/core-ai';
+import { zodSchemaToJsonSchema } from '@core-ai/core-ai';
 import type { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export const DEFAULT_STRUCTURED_OUTPUT_TOOL_NAME = 'core_ai_generate_object';
 export const DEFAULT_STRUCTURED_OUTPUT_TOOL_DESCRIPTION =
@@ -17,10 +17,7 @@ export function convertTools(tools: ToolSet) {
         function: {
             name: tool.name,
             description: tool.description,
-            parameters: zodToJsonSchema(tool.parameters) as Record<
-                string,
-                unknown
-            >,
+            parameters: zodSchemaToJsonSchema(tool.parameters),
         },
     }));
 }

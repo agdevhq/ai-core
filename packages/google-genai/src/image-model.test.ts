@@ -105,7 +105,7 @@ describe('createGoogleGenAIImageModel', () => {
                 prompt: 'A cat with a top hat',
                 providerOptions: invalidProviderOptions,
             })
-        ).rejects.toThrow(/Unrecognized key\(s\) in object: 'config'/);
+        ).rejects.toThrow(/unrecognized_key/);
         expect(generateImages).not.toHaveBeenCalled();
     });
 });

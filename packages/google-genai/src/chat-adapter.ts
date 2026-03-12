@@ -11,7 +11,6 @@ import {
     type ToolConfig,
 } from '@google/genai';
 import type { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
     AssistantContentPart,
     FinishReason,
@@ -25,7 +24,7 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
-import { getProviderMetadata } from '@core-ai/core-ai';
+import { getProviderMetadata, zodSchemaToJsonSchema } from '@core-ai/core-ai';
 import {
     getGoogleModelCapabilities,
     toGoogleThinkingBudget,
@@ -187,11 +186,8 @@ export function convertTools(tools: ToolSet): Tool[] {
     const functionDeclarations: FunctionDeclaration[] = Object.values(
         tools
     ).map((tool) => {
-        const schema = zodToJsonSchema(tool.parameters) as Record<
-            string,
-            unknown
-        >;
-        const { $schema: _schema, ...parametersJsonSchema } = schema;
+        const { $schema: _schema, ...parametersJsonSchema } =
+            zodSchemaToJsonSchema(tool.parameters);
 
         return {
             name: tool.name,

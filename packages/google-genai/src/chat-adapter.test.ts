@@ -490,7 +490,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected number/);
+        ).toThrowError(/expected number/);
     });
 
     it('should reject null google provider options', () => {
@@ -503,7 +503,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected object, received null/);
+        ).toThrowError(/expected object, received null/);
     });
 
     it('should reject raw google config on generate requests', () => {
@@ -522,7 +522,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Unrecognized key\(s\) in object: 'config'/);
+        ).toThrowError(/unrecognized_keys/);
     });
 
     it('should extract reasoning parts from thought response parts', () => {

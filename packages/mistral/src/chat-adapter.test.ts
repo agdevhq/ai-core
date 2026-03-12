@@ -319,7 +319,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected string/);
+        ).toThrowError(/expected string/);
     });
 
     it('should reject null mistral provider options', () => {
@@ -332,7 +332,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected object, received null/);
+        ).toThrowError(/expected object, received null/);
     });
 
     it('should extract reasoning parts from thinking content chunks', () => {
