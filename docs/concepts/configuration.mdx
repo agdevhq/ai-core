@@ -130,9 +130,9 @@ console.log(result.content);
 // "1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
 ```
 
-<Note>
-  For OpenAI, `stopSequences` is only available with `createOpenAICompat` (Chat Completions API). The default `createOpenAI` (Responses API) does not support it.
-</Note>
+<Warning>
+  `stopSequences` support varies by provider. For OpenAI, it's only available with `createOpenAICompat` (Chat Completions API). The default `createOpenAI` (Responses API) does not support it.
+</Warning>
 
 ### frequencyPenalty
 

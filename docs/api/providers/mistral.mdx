@@ -58,6 +58,7 @@ const mistral = createMistral({
   </Accordion>
   
   <Accordion title="Small Models" icon="zap">
+    - **mistral-small-2506** - Balanced small model
     - **mistral-small** - Quick responses
     - **mistral-tiny** - Ultra-fast, lightweight
   </Accordion>
@@ -243,7 +244,7 @@ const result = await embed({
 });
 ```
 
-Available fields: `outputDtype`, `encodingFormat`, `metadata`.
+Available fields: `outputDtype` (`'float'` | `'int8'` | `'uint8'` | `'binary'` | `'ubinary'`), `encodingFormat` (`'float'` | `'base64'`), `metadata`.
 
 ## Error handling
 
