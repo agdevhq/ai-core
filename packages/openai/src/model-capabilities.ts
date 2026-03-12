@@ -8,113 +8,44 @@ export type OpenAIModelCapabilities = {
     };
 };
 
-const DEFAULT_CAPABILITIES: OpenAIModelCapabilities = {
-    reasoning: {
-        supportsEffort: true,
-        supportedRange: ['low', 'medium', 'high'],
-        restrictsSamplingParams: false,
-    },
-};
+const RANGE_LOW_TO_HIGH = ['low', 'medium', 'high'] as const;
+const RANGE_LOW_TO_MAX = ['low', 'medium', 'high', 'max'] as const;
+const RANGE_MINIMAL_TO_HIGH = ['minimal', 'low', 'medium', 'high'] as const;
+
+function createReasoningCapabilities(
+    supportedRange: readonly ReasoningEffort[],
+    restrictsSamplingParams: boolean,
+    supportsEffort = true
+): OpenAIModelCapabilities {
+    return {
+        reasoning: {
+            supportsEffort,
+            supportedRange,
+            restrictsSamplingParams,
+        },
+    };
+}
+
+const DEFAULT_CAPABILITIES = createReasoningCapabilities(
+    RANGE_LOW_TO_HIGH,
+    false
+);
 
 const MODEL_CAPABILITIES: Record<string, OpenAIModelCapabilities> = {
-    'gpt-5.4': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.4-pro': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.2': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.2-codex': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.2-pro': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.1': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['minimal', 'low', 'medium', 'high'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5-mini': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['minimal', 'low', 'medium', 'high'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5-nano': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['minimal', 'low', 'medium', 'high'],
-            restrictsSamplingParams: true,
-        },
-    },
-    o3: {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high'],
-            restrictsSamplingParams: false,
-        },
-    },
-    'o3-mini': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high'],
-            restrictsSamplingParams: false,
-        },
-    },
-    'o4-mini': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high'],
-            restrictsSamplingParams: false,
-        },
-    },
-    o1: {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high'],
-            restrictsSamplingParams: false,
-        },
-    },
-    'o1-mini': {
-        reasoning: {
-            supportsEffort: false,
-            supportedRange: [],
-            restrictsSamplingParams: false,
-        },
-    },
+    'gpt-5.4': createReasoningCapabilities(RANGE_LOW_TO_MAX, true),
+    'gpt-5.4-pro': createReasoningCapabilities(RANGE_LOW_TO_MAX, true),
+    'gpt-5.2': createReasoningCapabilities(RANGE_LOW_TO_MAX, true),
+    'gpt-5.2-codex': createReasoningCapabilities(RANGE_LOW_TO_MAX, true),
+    'gpt-5.2-pro': createReasoningCapabilities(RANGE_LOW_TO_MAX, true),
+    'gpt-5.1': createReasoningCapabilities(RANGE_LOW_TO_HIGH, true),
+    'gpt-5': createReasoningCapabilities(RANGE_MINIMAL_TO_HIGH, true),
+    'gpt-5-mini': createReasoningCapabilities(RANGE_MINIMAL_TO_HIGH, true),
+    'gpt-5-nano': createReasoningCapabilities(RANGE_MINIMAL_TO_HIGH, true),
+    o3: createReasoningCapabilities(RANGE_LOW_TO_HIGH, false),
+    'o3-mini': createReasoningCapabilities(RANGE_LOW_TO_HIGH, false),
+    'o4-mini': createReasoningCapabilities(RANGE_LOW_TO_HIGH, false),
+    o1: createReasoningCapabilities(RANGE_LOW_TO_HIGH, false),
+    'o1-mini': createReasoningCapabilities([], false, false),
 };
 
 const EFFORT_RANK: Record<ReasoningEffort, number> = {
