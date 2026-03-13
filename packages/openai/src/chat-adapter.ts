@@ -551,17 +551,31 @@ export async function* transformStream(
         return nextToolCall;
     };
 
+    const getNextReasoningStartEvent = (): ReasoningStartEvent | null => {
+        const transition = getReasoningStartTransition(reasoningStarted);
+        reasoningStarted = transition.nextReasoningStarted;
+        return transition.event;
+    };
+
+    const getNextReasoningEndEvent = (
+        providerMetadata: ReasoningEndEvent['providerMetadata']
+    ): ReasoningEndEvent | null => {
+        const transition = getReasoningEndTransition(
+            reasoningStarted,
+            providerMetadata
+        );
+        reasoningStarted = transition.nextReasoningStarted;
+        return transition.event;
+    };
+
     for await (const event of stream) {
         if (event.type === 'response.reasoning_summary_text.delta') {
             seenSummaryDeltas.add(`${event.item_id}:${event.summary_index}`);
             emittedReasoningItems.add(event.item_id);
 
-            const reasoningStartTransition =
-                getReasoningStartTransition(reasoningStarted);
-            reasoningStarted = reasoningStartTransition.nextReasoningStarted;
-
-            if (reasoningStartTransition.event) {
-                yield reasoningStartTransition.event;
+            const reasoningStartEvent = getNextReasoningStartEvent();
+            if (reasoningStartEvent) {
+                yield reasoningStartEvent;
             }
 
             yield {
@@ -576,13 +590,9 @@ export async function* transformStream(
             if (!seenSummaryDeltas.has(key) && event.text.length > 0) {
                 emittedReasoningItems.add(event.item_id);
 
-                const reasoningStartTransition =
-                    getReasoningStartTransition(reasoningStarted);
-                reasoningStarted =
-                    reasoningStartTransition.nextReasoningStarted;
-
-                if (reasoningStartTransition.event) {
-                    yield reasoningStartTransition.event;
+                const reasoningStartEvent = getNextReasoningStartEvent();
+                if (reasoningStartEvent) {
+                    yield reasoningStartEvent;
                 }
 
                 yield {
@@ -665,13 +675,9 @@ export async function* transformStream(
                         event.item.summary
                     );
                     if (summaryText.length > 0) {
-                        const reasoningStartTransition =
-                            getReasoningStartTransition(reasoningStarted);
-                        reasoningStarted =
-                            reasoningStartTransition.nextReasoningStarted;
-
-                        if (reasoningStartTransition.event) {
-                            yield reasoningStartTransition.event;
+                        const reasoningStartEvent = getNextReasoningStartEvent();
+                        if (reasoningStartEvent) {
+                            yield reasoningStartEvent;
                         }
                         yield {
                             type: 'reasoning-delta',
@@ -687,28 +693,21 @@ export async function* transformStream(
                         : undefined;
 
                 if (encryptedContent) {
-                    const reasoningStartTransition =
-                        getReasoningStartTransition(reasoningStarted);
-                    reasoningStarted =
-                        reasoningStartTransition.nextReasoningStarted;
-
-                    if (reasoningStartTransition.event) {
-                        yield reasoningStartTransition.event;
+                    const reasoningStartEvent = getNextReasoningStartEvent();
+                    if (reasoningStartEvent) {
+                        yield reasoningStartEvent;
                     }
                 }
 
-                const reasoningEndTransition = getReasoningEndTransition(
-                    reasoningStarted,
+                const reasoningEndEvent = getNextReasoningEndEvent(
                     {
                         openai: {
                             ...(encryptedContent ? { encryptedContent } : {}),
                         },
                     }
                 );
-                reasoningStarted = reasoningEndTransition.nextReasoningStarted;
-
-                if (reasoningEndTransition.event) {
-                    yield reasoningEndTransition.event;
+                if (reasoningEndEvent) {
+                    yield reasoningEndEvent;
                 }
                 continue;
             }
@@ -749,14 +748,9 @@ export async function* transformStream(
         if (event.type === 'response.completed') {
             latestResponse = event.response;
 
-            const reasoningEndTransition = getReasoningEndTransition(
-                reasoningStarted,
-                { openai: {} }
-            );
-            reasoningStarted = reasoningEndTransition.nextReasoningStarted;
-
-            if (reasoningEndTransition.event) {
-                yield reasoningEndTransition.event;
+            const reasoningEndEvent = getNextReasoningEndEvent({ openai: {} });
+            if (reasoningEndEvent) {
+                yield reasoningEndEvent;
             }
 
             for (const bufferedToolCall of bufferedToolCalls.values()) {
@@ -787,13 +781,9 @@ export async function* transformStream(
         }
     }
 
-    const reasoningEndTransition = getReasoningEndTransition(reasoningStarted, {
-        openai: {},
-    });
-    reasoningStarted = reasoningEndTransition.nextReasoningStarted;
-
-    if (reasoningEndTransition.event) {
-        yield reasoningEndTransition.event;
+    const reasoningEndEvent = getNextReasoningEndEvent({ openai: {} });
+    if (reasoningEndEvent) {
+        yield reasoningEndEvent;
     }
 
     const hasToolCalls = bufferedToolCalls.size > 0;
