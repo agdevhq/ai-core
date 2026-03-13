@@ -55,6 +55,7 @@ export {
     StructuredOutputValidationError,
 } from './errors.ts';
 export { defineTool } from './tool.ts';
+export { zodSchemaToJsonSchema } from './json-schema.ts';
 export { resultToMessage, assistantMessage } from './result-to-message.ts';
 export { generate } from './generate.ts';
 export { generateObject } from './generate-object.ts';

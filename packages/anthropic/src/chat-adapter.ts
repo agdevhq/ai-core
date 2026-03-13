@@ -11,8 +11,7 @@ import type {
     ToolResultBlockParam,
 } from '@anthropic-ai/sdk/resources/messages/messages';
 import type { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ProviderError, getProviderMetadata } from '@core-ai/core-ai';
+import { ProviderError, getProviderMetadata, zodSchemaToJsonSchema } from '@core-ai/core-ai';
 import type {
     AssistantContentPart,
     FinishReason,
@@ -299,8 +298,7 @@ export function createStructuredOutputOptions<TSchema extends z.ZodType>(
 }
 
 function toAnthropicJsonSchema(schema: z.ZodType): Record<string, unknown> {
-    const rawSchema = zodToJsonSchema(schema) as Record<string, unknown>;
-    return normalizeAnthropicJsonSchema(rawSchema);
+    return normalizeAnthropicJsonSchema(zodSchemaToJsonSchema(schema));
 }
 
 function normalizeAnthropicJsonSchema(value: unknown): Record<string, unknown> {

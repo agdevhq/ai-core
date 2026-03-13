@@ -137,7 +137,7 @@ describe('generate', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).rejects.toThrow(/Unrecognized key\(s\) in object: 'config'/);
+        ).rejects.toThrow(/unrecognized_key/);
         expect(generateContent).not.toHaveBeenCalled();
     });
 
@@ -270,7 +270,7 @@ describe('generate', () => {
                 schemaName: 'weather_schema',
                 providerOptions: invalidProviderOptions,
             })
-        ).rejects.toThrow(/Unrecognized key\(s\) in object: 'config'/);
+        ).rejects.toThrow(/unrecognized_key/);
         expect(generateContent).not.toHaveBeenCalled();
     });
 

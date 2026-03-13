@@ -470,7 +470,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected number/);
+        ).toThrowError(/expected number/);
     });
 
     it('should reject null anthropic provider options', () => {
@@ -483,7 +483,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected object, received null/);
+        ).toThrowError(/expected object, received null/);
     });
 
     it('should parse thinking and redacted_thinking blocks from responses', () => {

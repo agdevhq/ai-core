@@ -382,7 +382,7 @@ describe('reasoning support', () => {
                     },
                 },
             })
-        ).toThrowError(/Unrecognized key\(s\) in object: 'include'/);
+        ).toThrowError(/unrecognized_keys/);
     });
 
     it('should reject invalid compat provider options', () => {
@@ -395,7 +395,7 @@ describe('reasoning support', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected integer/);
+        ).toThrowError(/expected.*int/i);
     });
 
     it('should not extract reasoning text from generate responses (Chat Completions API does not expose it)', () => {

@@ -129,7 +129,7 @@ describe('createGoogleGenAIEmbeddingModel', () => {
                 input: 'test',
                 providerOptions: invalidProviderOptions,
             })
-        ).rejects.toThrow(/Unrecognized key\(s\) in object: 'config'/);
+        ).rejects.toThrow(/unrecognized_key/);
         expect(embedContent).not.toHaveBeenCalled();
     });
 });

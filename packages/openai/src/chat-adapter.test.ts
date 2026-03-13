@@ -249,7 +249,7 @@ describe('createGenerateRequest', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected boolean/);
+        ).toThrowError(/expected boolean/);
     });
 
     it('should reject null namespaced provider options', () => {
@@ -262,7 +262,7 @@ describe('createGenerateRequest', () => {
                 messages: [{ role: 'user', content: 'Hi' }],
                 providerOptions: invalidProviderOptions,
             })
-        ).toThrowError(/Expected object, received null/);
+        ).toThrowError(/expected object, received null/);
     });
 
     it('should include reasoning summary and encrypted reasoning include', () => {
