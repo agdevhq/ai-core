@@ -78,6 +78,7 @@
                             "api/core/embed",
                             "api/core/generate-image",
                             "api/core/define-tool",
+                            "api/core/utilities",
                             "api/core/types",
                             "api/core/errors"
                         ]
