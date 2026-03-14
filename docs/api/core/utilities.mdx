@@ -1,0 +1,198 @@
+---
+title: 'Utilities'
+description: 'Helper functions for working with schemas, messages, and provider metadata'
+icon: 'toolbox'
+---
+
+## Overview
+
+core-ai exports several utility functions to help with common tasks like schema conversion, message construction, and metadata extraction.
+
+## zodSchemaToJsonSchema()
+
+Convert a Zod schema to a JSON Schema object using Zod 4's native `z.toJSONSchema()`.
+
+```typescript
+function zodSchemaToJsonSchema(
+    schema: z.ZodType
+): Record<string, unknown>
+```
+
+### Parameters
+
+<ParamField path="schema" type="z.ZodType" required>
+  The Zod schema to convert.
+</ParamField>
+
+### Return value
+
+A JSON Schema object representation of the Zod schema.
+
+### Example
+
+```typescript
+import { zodSchemaToJsonSchema } from '@core-ai/core-ai';
+import { z } from 'zod';
+
+const userSchema = z.object({
+  name: z.string().describe('User name'),
+  age: z.number().min(0).describe('User age')
+});
+
+const jsonSchema = zodSchemaToJsonSchema(userSchema);
+// {
+//   type: 'object',
+//   properties: {
+//     name: { type: 'string', description: 'User name' },
+//     age: { type: 'number', minimum: 0, description: 'User age' }
+//   },
+//   required: ['name', 'age']
+// }
+```
+
+<Note>
+  This utility uses Zod 4's native `z.toJSONSchema()` with `io: 'input'` mode.
+</Note>
+
+## resultToMessage()
+
+Convert a `GenerateResult` to an `AssistantMessage` for multi-turn conversations. This preserves reasoning parts with their provider metadata for multi-turn fidelity.
+
+```typescript
+function resultToMessage(result: GenerateResult): AssistantMessage
+```
+
+### Parameters
+
+<ParamField path="result" type="GenerateResult" required>
+  The generation result to convert.
+</ParamField>
+
+### Return value
+
+An `AssistantMessage` containing all parts from the result.
+
+### Example
+
+```typescript
+import { generate, resultToMessage } from '@core-ai/core-ai';
+import { createOpenAI } from '@core-ai/openai';
+
+const openai = createOpenAI();
+const model = openai.chatModel('gpt-5-mini');
+
+const messages = [
+  { role: 'user' as const, content: 'What is 2+2?' }
+];
+
+const result = await generate({ model, messages });
+
+// Convert result to message for multi-turn conversation
+messages.push(resultToMessage(result));
+messages.push({ role: 'user' as const, content: 'And what is that times 3?' });
+
+const followUp = await generate({ model, messages });
+```
+
+## assistantMessage()
+
+Convenience function to create an `AssistantMessage` with text content.
+
+```typescript
+function assistantMessage(content: string): AssistantMessage
+```
+
+### Parameters
+
+<ParamField path="content" type="string" required>
+  The text content for the assistant message.
+</ParamField>
+
+### Return value
+
+An `AssistantMessage` with a single text part.
+
+### Example
+
+```typescript
+import { assistantMessage } from '@core-ai/core-ai';
+
+const message = assistantMessage('Hello! How can I help you?');
+// {
+//   role: 'assistant',
+//   parts: [{ type: 'text', text: 'Hello! How can I help you?' }]
+// }
+```
+
+## getProviderMetadata()
+
+Extract provider-specific metadata from a reasoning part.
+
+```typescript
+function getProviderMetadata<T extends Record<string, unknown>>(
+    part: ReasoningPart,
+    provider: string
+): T | undefined
+```
+
+### Parameters
+
+<ParamField path="part" type="ReasoningPart" required>
+  The reasoning part to extract metadata from.
+</ParamField>
+
+<ParamField path="provider" type="string" required>
+  The provider identifier (e.g., `'anthropic'`, `'openai'`, `'google'`).
+</ParamField>
+
+### Return value
+
+The provider-specific metadata object, or `undefined` if not present.
+
+### Example
+
+```typescript
+import { generate, getProviderMetadata } from '@core-ai/core-ai';
+import { createAnthropic } from '@core-ai/anthropic';
+
+const anthropic = createAnthropic();
+const model = anthropic.chatModel('claude-sonnet-4.6');
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Explain quantum computing' }],
+  reasoning: { effort: 'high' }
+});
+
+for (const part of result.parts) {
+  if (part.type === 'reasoning') {
+    const anthropicMeta = getProviderMetadata<{ signature: string }>(
+      part,
+      'anthropic'
+    );
+    if (anthropicMeta) {
+      console.log('Signature:', anthropicMeta.signature);
+    }
+  }
+}
+```
+
+## createChatStream()
+
+Create a `ChatStream` from an async iterable of stream events. Used by provider implementations.
+
+```typescript
+function createChatStream(
+    source: AsyncIterable<StreamEvent>
+): ChatStream
+```
+
+## createObjectStream()
+
+Create an `ObjectStream` from an async iterable of object stream events. Used by provider implementations.
+
+```typescript
+function createObjectStream<TSchema extends z.ZodType>(
+    source: AsyncIterable<ObjectStreamEvent<TSchema>>
+): ObjectStream<TSchema>
+```
