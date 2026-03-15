@@ -82,12 +82,12 @@ const mistral = createMistral({
 | Streaming | Yes |
 | Function Calling | Yes |
 | Vision | Limited |
-| Reasoning Effort | No |
+| Reasoning Effort | Output only |
 | Embeddings | Yes |
 | Image Generation | No |
 
 <Note>
-  Mistral models do not support explicit reasoning effort control.
+  Mistral models do not support explicit reasoning effort control via the `reasoning` parameter. However, models that produce thinking/reasoning content (such as thinking tokens) are automatically parsed and surfaced as `reasoning-start`, `reasoning-delta`, and `reasoning-end` stream events, and as reasoning parts in generation results.
 </Note>
 
 ## Examples

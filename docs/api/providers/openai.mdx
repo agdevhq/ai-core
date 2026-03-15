@@ -159,6 +159,22 @@ const result = await generate({
 });
 ```
 
+<Note>
+  Reasoning effort is automatically clamped to the nearest supported level for each model. For example, if you request `'max'` on a model that only supports up to `'high'`, it is clamped to `'high'`.
+</Note>
+
+#### Supported reasoning effort by model
+
+| Models | Supported effort levels |
+|--------|------------------------|
+| gpt-5.4, gpt-5.4-pro, gpt-5.2, gpt-5.2-codex, gpt-5.2-pro | `low`, `medium`, `high`, `max` |
+| gpt-5.1 | `low`, `medium`, `high` |
+| gpt-5, gpt-5-mini, gpt-5-nano | `minimal`, `low`, `medium`, `high` |
+| o3, o3-mini, o4-mini, o1 | `low`, `medium`, `high` |
+| o1-mini | No effort control |
+
+GPT-5 series models restrict sampling parameters (`temperature`, `topP`) when reasoning is enabled. The o-series models do not have this restriction.
+
 ### Embeddings
 
 ```typescript
@@ -218,7 +234,11 @@ const result = await generate({
 });
 ```
 
-Available fields: `store`, `serviceTier` (`'auto'` | `'default'` | `'flex'` | `'scale'` | `'priority'`), `include`, `parallelToolCalls`, `user`.
+Available fields: `store` (defaults to `false`), `serviceTier` (`'auto'` | `'default'` | `'flex'` | `'scale'` | `'priority'`), `include`, `parallelToolCalls`, `user`.
+
+<Note>
+  When reasoning is enabled, `reasoning.encrypted_content` is automatically added to the `include` array.
+</Note>
 
 ### Generate options (Chat Completions API)
 

@@ -216,6 +216,21 @@ const result = await generate({
   Only `claude-opus-4-6` supports `'max'` effort level.
 </Note>
 
+### Restrictions when reasoning is enabled
+
+When you enable reasoning on Anthropic models, certain parameter restrictions apply:
+
+- **temperature** must not be set
+- **topP** must be between `0.95` and `1` (or omitted)
+- **topK** (Anthropic provider option) must not be set
+- **toolChoice** must be `'auto'` or `'none'` only
+
+Violating these constraints throws a `ProviderError` at request time.
+
+<Warning>
+  When using both reasoning and tools, the `interleaved-thinking-2025-05-14` beta is automatically added to the request. You do not need to include it manually in the `betas` provider option.
+</Warning>
+
 ### Manual thinking budget (Claude 4.5 and earlier)
 
 Token budgets: `minimal` -> 1,024, `low` -> 2,048, `medium` -> 8,192, `high` -> 32,768, `max` -> 65,536.
@@ -242,7 +257,7 @@ const result = await generate({
     anthropic: {
       topK: 40,
       stopSequences: ['\n\n'],
-      betas: ['max-tokens-3-5-sonnet-2024-07-15'],
+      betas: ['custom-beta-feature'],
     },
   },
 });
