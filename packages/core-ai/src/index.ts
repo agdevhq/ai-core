@@ -63,5 +63,10 @@ export { stream } from './stream-chat.ts';
 export { streamObject, createObjectStream } from './stream-object.ts';
 export { createChatStream } from './stream.ts';
 export { getProviderMetadata } from './provider-metadata.ts';
+export {
+    asObject,
+    normalizeProviderModelId,
+    safeParseJsonObject,
+} from './provider-utils.ts';
 export { embed } from './embed.ts';
 export { generateImage } from './generate-image.ts';
