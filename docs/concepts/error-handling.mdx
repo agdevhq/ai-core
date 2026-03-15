@@ -7,7 +7,7 @@ description: LLMError, ProviderError, and structured output error types in core-
 
 core-ai provides a hierarchy of error types that help you handle failures gracefully and provide meaningful feedback to users.
 
-## Error Hierarchy
+## Error hierarchy
 
 ```typescript
 Error
@@ -155,7 +155,7 @@ try {
 - Provider API errors
 - Timeout errors
 
-## Structured Output Errors
+## Structured output errors
 
 Errors specific to structured output generation (`generateObject` and `streamObject`).
 
@@ -286,7 +286,7 @@ try {
 - Values that don't match schema constraints
 - Invalid enum values
 
-## Complete Error Handling Example
+## Complete error handling example
 
 ```typescript
 import {
@@ -294,6 +294,7 @@ import {
   generateObject,
   LLMError,
   ProviderError,
+  StructuredOutputError,
   StructuredOutputNoObjectGeneratedError,
   StructuredOutputParseError,
   StructuredOutputValidationError,
@@ -362,9 +363,9 @@ async function generateUserProfile(prompt: string) {
 }
 ```
 
-## Retry Strategies
+## Retry strategies
 
-### Exponential Backoff
+### Exponential backoff
 
 ```typescript
 async function generateWithRetry(
@@ -389,7 +390,7 @@ async function generateWithRetry(
 }
 ```
 
-### Circuit Breaker
+### Circuit breaker
 
 ```typescript
 class CircuitBreaker {
@@ -438,7 +439,7 @@ const result = await breaker.execute(() =>
 );
 ```
 
-## Validation Best Practices
+## Validation best practices
 
 <Tip>
   **Validate inputs before sending:** Check for empty messages, validate file sizes, and ensure proper content types before making API calls to avoid unnecessary errors.
@@ -460,7 +461,7 @@ function validateMessages(messages: Message[]): void {
 }
 ```
 
-## Logging Errors
+## Logging errors
 
 <Tip>
   **Log error details for debugging:** Include provider, model, status codes, and raw output when available to help diagnose issues.
@@ -506,7 +507,7 @@ try {
 }
 ```
 
-## Next Steps
+## Next steps
 
 - Learn about [Providers](/concepts/providers) for provider-specific behavior
 - Explore [Configuration](/concepts/configuration) for controlling generation

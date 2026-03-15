@@ -8,7 +8,7 @@ icon: 'wrench'
 
 The `defineTool()` function defines tools (functions) that language models can call during generation. Tools enable models to access external data, perform calculations, or trigger actions beyond text generation.
 
-## Function Signature
+## Function signature
 
 ```typescript
 export function defineTool(
@@ -40,13 +40,13 @@ type ToolDefinition = {
   Zod schema defining the tool's input parameters. The model will generate arguments matching this schema.
 </ParamField>
 
-## Return Value
+## Return value
 
 Returns the same `ToolDefinition` object that was passed in. This is a type-safe helper that provides IDE autocompletion and validation.
 
 ## Examples
 
-### Basic Tool Definition
+### Basic tool definition
 
 ```typescript
 import { defineTool } from '@core-ai/core-ai';
@@ -61,7 +61,7 @@ const weatherTool = defineTool({
 });
 ```
 
-### Tool with Multiple Parameters
+### Tool with multiple parameters
 
 ```typescript
 const searchTool = defineTool({
@@ -76,7 +76,7 @@ const searchTool = defineTool({
 });
 ```
 
-### Using Tools with generate()
+### Using tools with generate()
 
 ```typescript
 import { generate, defineTool } from '@core-ai/core-ai';
@@ -112,7 +112,7 @@ if (result.toolCalls.length > 0) {
 }
 ```
 
-### Tool Execution Loop
+### Tool execution loop
 
 ```typescript
 const tools = {
@@ -185,7 +185,7 @@ console.log(result.content);
 // Output: "The weather in Tokyo is sunny, 72°F"
 ```
 
-### Complex Parameters with Nested Objects
+### Complex parameters with nested objects
 
 ```typescript
 const createEventTool = defineTool({
@@ -211,7 +211,7 @@ const createEventTool = defineTool({
 });
 ```
 
-### Tool with Enum Parameters
+### Tool with enum parameters
 
 ```typescript
 const analyzeSentimentTool = defineTool({
@@ -229,7 +229,7 @@ const analyzeSentimentTool = defineTool({
 });
 ```
 
-### Multiple Tools in One Call
+### Multiple tools in one call
 
 ```typescript
 const tools = {
@@ -271,7 +271,7 @@ const result = await generate({
 // Model might call get_stock_price then convert_currency
 ```
 
-### Controlling Tool Usage
+### Controlling tool usage
 
 ```typescript
 // Auto: Model decides whether to use tools
@@ -310,7 +310,7 @@ const result4 = await generate({
 });
 ```
 
-## Type Safety
+## Type safety
 
 The tool definition is fully type-safe:
 
@@ -335,7 +335,7 @@ const handler = async (args: ToolParams) => {
 };
 ```
 
-## Best Practices
+## Best practices
 
 <Tip>
   Use descriptive tool names that clearly indicate their purpose. Follow the `snake_case` convention.
@@ -353,9 +353,9 @@ const handler = async (args: ToolParams) => {
   Always validate tool results before passing them back to the model. Handle errors gracefully.
 </Warning>
 
-## Common Patterns
+## Common patterns
 
-### 1. Database Queries
+### 1. Database queries
 
 ```typescript
 const queryTool = defineTool({
@@ -368,7 +368,7 @@ const queryTool = defineTool({
 });
 ```
 
-### 2. API Calls
+### 2. API calls
 
 ```typescript
 const apiTool = defineTool({
@@ -382,7 +382,7 @@ const apiTool = defineTool({
 });
 ```
 
-### 3. File Operations
+### 3. File operations
 
 ```typescript
 const fileTool = defineTool({

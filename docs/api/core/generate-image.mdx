@@ -8,7 +8,7 @@ icon: 'image'
 
 The `generateImage()` function generates images from text prompts using image generation models like DALL-E. It supports generating multiple images, different sizes, and provides both base64 and URL outputs.
 
-## Function Signature
+## Function signature
 
 ```typescript
 export async function generateImage(
@@ -47,7 +47,7 @@ export type GenerateImageParams = ImageGenerateOptions & {
   Provider-specific options, namespaced by provider name (e.g. `{ openai: { quality: 'hd' } }`).
 </ParamField>
 
-## Return Value
+## Return value
 
 Returns a `Promise<ImageGenerateResult>` with the following properties:
 
@@ -71,7 +71,7 @@ Returns a `Promise<ImageGenerateResult>` with the following properties:
 
 ## Examples
 
-### Basic Image Generation
+### Basic image generation
 
 ```typescript
 import { generateImage } from '@core-ai/core-ai';
@@ -88,7 +88,7 @@ console.log(result.images[0].url);
 // Save or display the image URL
 ```
 
-### Generate Multiple Images
+### Generate multiple images
 
 ```typescript
 const result = await generateImage({
@@ -103,7 +103,7 @@ result.images.forEach((image, i) => {
 });
 ```
 
-### Custom Size
+### Custom size
 
 ```typescript
 const result = await generateImage({
@@ -115,7 +115,7 @@ const result = await generateImage({
 console.log('Generated landscape image:', result.images[0].url);
 ```
 
-### Get Base64 Image Data
+### Get base64 image data
 
 ```typescript
 const result = await generateImage({
@@ -135,7 +135,7 @@ if (base64Data) {
 }
 ```
 
-### Check Revised Prompt
+### Check revised prompt
 
 ```typescript
 const result = await generateImage({
@@ -150,7 +150,7 @@ if (result.images[0].revisedPrompt) {
 }
 ```
 
-### Save Image to File
+### Save image to file
 
 ```typescript
 import { writeFile } from 'fs/promises';
@@ -170,7 +170,7 @@ if (imageUrl) {
 }
 ```
 
-### Generate with Style Instructions
+### Generate with style instructions
 
 ```typescript
 const result = await generateImage({
@@ -182,7 +182,7 @@ const result = await generateImage({
 console.log(result.images[0].url);
 ```
 
-### Error Handling
+### Error handling
 
 ```typescript
 import { LLMError } from '@core-ai/core-ai';
@@ -200,7 +200,7 @@ try {
 }
 ```
 
-### Generate Portrait and Landscape Variants
+### Generate portrait and landscape variants
 
 ```typescript
 const prompt = 'A magical forest with glowing mushrooms';
@@ -228,7 +228,7 @@ console.log('Landscape:', landscape.images[0].url);
 console.log('Square:', square.images[0].url);
 ```
 
-## Model Support
+## Model support
 
 Different providers offer different image generation models:
 
@@ -246,7 +246,7 @@ const result = await generateImage({
 });
 ```
 
-## Important Notes
+## Important notes
 
 <Warning>
   DALL-E 3 only supports generating one image at a time (`n: 1`). Use DALL-E 2 for generating multiple variations.
@@ -260,7 +260,7 @@ const result = await generateImage({
   For best results, be specific and descriptive in your prompts. Include details about style, composition, lighting, colors, and mood.
 </Tip>
 
-## Provider-Specific Options
+## Provider-specific options
 
 ### OpenAI
 
@@ -278,7 +278,7 @@ const result = await generateImage({
 });
 ```
 
-## Common Use Cases
+## Common use cases
 
 1. **Content Creation**: Generate illustrations for articles and blog posts
 2. **Marketing**: Create social media graphics and ad visuals
@@ -287,7 +287,7 @@ const result = await generateImage({
 5. **Education**: Create visual aids and diagrams
 6. **Personal Projects**: Generate artwork for presentations or creative projects
 
-## Best Practices
+## Best practices
 
 1. **Be Specific**: Detailed prompts produce better results
 2. **Iterate**: Generate multiple variations to find the best result
