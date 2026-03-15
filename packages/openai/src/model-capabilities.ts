@@ -1,4 +1,4 @@
-import type { ReasoningEffort } from '@core-ai/core-ai';
+import { normalizeProviderModelId, type ReasoningEffort } from '@core-ai/core-ai';
 
 export type OpenAIModelCapabilities = {
     reasoning: {
@@ -133,7 +133,7 @@ export function getOpenAIModelCapabilities(
 }
 
 export function normalizeModelId(modelId: string): string {
-    return modelId.replace(/-\d{8}$/, '');
+    return normalizeProviderModelId(modelId);
 }
 
 export function clampReasoningEffort(
