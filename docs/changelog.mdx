@@ -3,6 +3,15 @@ title: Releases
 description: Release history for all core-ai packages.
 ---
 
+<Update label="0.7.0" description="Zod 4 required, native JSON Schema conversion" tags={["breaking"]}>
+  <Warning>This release contains breaking changes to all packages.</Warning>
+
+  ### All packages
+
+  - Require Zod 4 (`^4.0.0`) and replace `zod-to-json-schema` with Zod 4's native `z.toJSONSchema()`. The third-party library produced empty JSON schemas when given Zod 4 schemas, which broke tool parameter conversion for all providers.
+  - New `zodSchemaToJsonSchema()` utility function exported from `@core-ai/core-ai` for consumers who need direct Zod-to-JSON-Schema conversion.
+</Update>
+
 <Update label="0.6.1" description="New model support, internal refactors" tags={["improvement", "internal"]}>
   ### @core-ai/core-ai
 

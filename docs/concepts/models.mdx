@@ -257,15 +257,15 @@ import { generateImage } from '@core-ai/core-ai';
 import { createOpenAI } from '@core-ai/openai';
 
 const openai = createOpenAI();
-const model = openai.imageModel('dall-e-3');
+const model = openai.imageModel('gpt-image-1');
 
 const result = await generateImage({
   model,
   prompt: 'A futuristic city at sunset with flying cars',
 });
 
-console.log(result.images[0].url);
-// "https://..."
+console.log(result.images[0]);
+// { base64: "...", revisedPrompt: "..." }
 ```
 
 ### Generate Options

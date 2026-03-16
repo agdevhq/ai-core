@@ -52,7 +52,7 @@ const google = createGoogleGenAI({
 ### Chat models
 
 <AccordionGroup>
-  <Accordion title="Gemini 3 (Thinking Level)" icon="star">
+  <Accordion title="Gemini 3.x (Thinking Level)" icon="star">
     - **gemini-3.1-pro** - Most capable multimodal model
     - **gemini-3.1-flash-lite-preview** - Cost-efficient, fast with thinking level control
   </Accordion>
@@ -200,12 +200,12 @@ const result = await generate({
 
 ## Thinking modes
 
-### Thinking level (Gemini 3)
+### Thinking level (Gemini 3.x)
 
-Gemini 3 uses HIGH/LOW thinking control. Mapping: `minimal`/`low`/`medium` -> LOW, `high`/`max` -> HIGH.
+Gemini 3.x uses HIGH/LOW thinking control. Mapping: `minimal`/`low`/`medium` -> LOW, `high`/`max` -> HIGH.
 
 <Note>
-  Gemini 3 models cannot disable thinking completely.
+  Gemini 3.x models cannot disable thinking completely.
 </Note>
 
 ### Thinking budget (Gemini 2.5)
@@ -298,7 +298,8 @@ try {
 
 | Model | Thinking Control | Can Disable | Best For |
 |-------|-----------------|-------------|----------|
-| Gemini 3 Pro | Level (HIGH/LOW) | No | Complex multimodal |
+| Gemini 3.1 Pro | Level (HIGH/LOW) | No | Complex multimodal |
+| Gemini 3.1 Flash Lite Preview | Level (HIGH/LOW) | No | Cost-efficient, fast |
 | Gemini 2.5 Pro | Budget (tokens) | No | Controlled reasoning |
 | Gemini 2.5 Flash | Budget (tokens) | Yes | Fast + flexible |
 | Gemini 2.5 Flash Lite | Budget (tokens) | Yes | Lightweight tasks |
