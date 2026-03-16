@@ -65,3 +65,4 @@ export { createChatStream } from './stream.ts';
 export { getProviderMetadata } from './provider-metadata.ts';
 export { embed } from './embed.ts';
 export { generateImage } from './generate-image.ts';
+export { stripModelDateSuffix } from './model-id.ts';

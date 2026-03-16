@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import { assertNonEmptyMessages } from './assertions.ts';
 import { LLMError } from './errors.ts';
 import { createStream } from './base-stream.ts';
+import { callModelWithOptions } from './model-options.ts';
 import type {
     ChatModel,
     GenerateObjectResult,
@@ -19,9 +20,9 @@ export async function streamObject<TSchema extends z.ZodType>(
     params: StreamObjectParams<TSchema>
 ): Promise<ObjectStream<TSchema>> {
     assertNonEmptyMessages(params.messages);
-
-    const { model, ...options } = params;
-    return model.streamObject(options);
+    return callModelWithOptions(params, (model, options) =>
+        model.streamObject(options)
+    );
 }
 
 export function createObjectStream<TSchema extends z.ZodType>(

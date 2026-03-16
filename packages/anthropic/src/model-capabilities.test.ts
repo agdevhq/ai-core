@@ -33,6 +33,10 @@ describe('effort mapping', () => {
         expect(toAnthropicAdaptiveEffort('max', false)).toBe('high');
     });
 
+    it('should map adaptive minimal to low', () => {
+        expect(toAnthropicAdaptiveEffort('minimal', false)).toBe('low');
+    });
+
     it('should map manual budgets', () => {
         expect(toAnthropicManualBudget('minimal')).toBe(1024);
         expect(toAnthropicManualBudget('max')).toBe(65536);

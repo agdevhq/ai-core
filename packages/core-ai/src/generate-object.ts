@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { assertNonEmptyMessages } from './assertions.ts';
-import { splitModelFromParams } from './model-options.ts';
+import { callModelWithOptions } from './model-options.ts';
 import type {
     ChatModel,
     GenerateObjectOptions,
@@ -16,7 +16,7 @@ export async function generateObject<TSchema extends z.ZodType>(
     params: GenerateObjectParams<TSchema>
 ): Promise<GenerateObjectResult<TSchema>> {
     assertNonEmptyMessages(params.messages);
-
-    const { model, options } = splitModelFromParams(params);
-    return model.generateObject(options);
+    return callModelWithOptions(params, (model, options) =>
+        model.generateObject(options)
+    );
 }

@@ -1,4 +1,7 @@
-import type { ReasoningEffort } from '@core-ai/core-ai';
+import {
+    stripModelDateSuffix,
+    type ReasoningEffort,
+} from '@core-ai/core-ai';
 
 export type AnthropicModelCapabilities = {
     reasoning: {
@@ -71,6 +74,24 @@ const MODEL_CAPABILITIES: Record<string, AnthropicModelCapabilities> = {
     },
 };
 
+const ANTHROPIC_ADAPTIVE_EFFORT_MAP: Record<
+    Exclude<ReasoningEffort, 'max'>,
+    'low' | 'medium' | 'high'
+> = {
+    minimal: 'low',
+    low: 'low',
+    medium: 'medium',
+    high: 'high',
+};
+
+const ANTHROPIC_MANUAL_BUDGET_MAP: Record<ReasoningEffort, number> = {
+    minimal: 1024,
+    low: 2048,
+    medium: 8192,
+    high: 32768,
+    max: 65536,
+};
+
 export function getAnthropicModelCapabilities(
     modelId: string
 ): AnthropicModelCapabilities {
@@ -79,34 +100,19 @@ export function getAnthropicModelCapabilities(
 }
 
 export function normalizeModelId(modelId: string): string {
-    return modelId.replace(/-\d{8}$/, '');
+    return stripModelDateSuffix(modelId);
 }
 
 export function toAnthropicAdaptiveEffort(
     effort: ReasoningEffort,
     supportsMaxEffort: boolean
 ): 'low' | 'medium' | 'high' | 'max' {
-    if (effort === 'minimal') {
-        return 'low';
-    }
     if (effort === 'max') {
         return supportsMaxEffort ? 'max' : 'high';
     }
-    return effort;
+    return ANTHROPIC_ADAPTIVE_EFFORT_MAP[effort];
 }
 
 export function toAnthropicManualBudget(effort: ReasoningEffort): number {
-    if (effort === 'minimal') {
-        return 1024;
-    }
-    if (effort === 'low') {
-        return 2048;
-    }
-    if (effort === 'medium') {
-        return 8192;
-    }
-    if (effort === 'high') {
-        return 32768;
-    }
-    return 65536;
+    return ANTHROPIC_MANUAL_BUDGET_MAP[effort];
 }

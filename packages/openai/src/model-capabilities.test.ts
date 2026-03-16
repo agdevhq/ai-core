@@ -48,4 +48,8 @@ describe('toOpenAIReasoningEffort', () => {
     it('should map max to xhigh', () => {
         expect(toOpenAIReasoningEffort('max')).toBe('xhigh');
     });
+
+    it('should preserve non-max effort values', () => {
+        expect(toOpenAIReasoningEffort('high')).toBe('high');
+    });
 });

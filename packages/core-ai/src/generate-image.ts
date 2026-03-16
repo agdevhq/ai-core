@@ -1,5 +1,5 @@
 import { assertNonEmptyPrompt } from './assertions.ts';
-import { splitModelFromParams } from './model-options.ts';
+import { callModelWithOptions } from './model-options.ts';
 import type {
     ImageGenerateOptions,
     ImageGenerateResult,
@@ -14,7 +14,7 @@ export async function generateImage(
     params: GenerateImageParams
 ): Promise<ImageGenerateResult> {
     assertNonEmptyPrompt(params.prompt);
-
-    const { model, options } = splitModelFromParams(params);
-    return model.generate(options);
+    return callModelWithOptions(params, (model, options) =>
+        model.generate(options)
+    );
 }

@@ -1,4 +1,7 @@
-import type { ReasoningEffort } from '@core-ai/core-ai';
+import {
+    stripModelDateSuffix,
+    type ReasoningEffort,
+} from '@core-ai/core-ai';
 
 export type OpenAIModelCapabilities = {
     reasoning: {
@@ -125,6 +128,17 @@ const EFFORT_RANK: Record<ReasoningEffort, number> = {
     max: 4,
 };
 
+const OPENAI_REASONING_EFFORT_MAP: Record<
+    ReasoningEffort,
+    'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+> = {
+    minimal: 'minimal',
+    low: 'low',
+    medium: 'medium',
+    high: 'high',
+    max: 'xhigh',
+};
+
 export function getOpenAIModelCapabilities(
     modelId: string
 ): OpenAIModelCapabilities {
@@ -133,7 +147,7 @@ export function getOpenAIModelCapabilities(
 }
 
 export function normalizeModelId(modelId: string): string {
-    return modelId.replace(/-\d{8}$/, '');
+    return stripModelDateSuffix(modelId);
 }
 
 export function clampReasoningEffort(
@@ -161,8 +175,5 @@ export function clampReasoningEffort(
 export function toOpenAIReasoningEffort(
     effort: ReasoningEffort
 ): 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' {
-    if (effort === 'max') {
-        return 'xhigh';
-    }
-    return effort;
+    return OPENAI_REASONING_EFFORT_MAP[effort];
 }
