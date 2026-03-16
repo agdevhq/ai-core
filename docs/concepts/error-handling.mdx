@@ -467,7 +467,11 @@ function validateMessages(messages: Message[]): void {
 </Tip>
 
 ```typescript
-import { ProviderError } from '@core-ai/core-ai';
+import {
+  ProviderError,
+  StructuredOutputError,
+  StructuredOutputValidationError,
+} from '@core-ai/core-ai';
 
 function logError(error: unknown, context: Record<string, unknown>) {
   const errorInfo: Record<string, unknown> = {

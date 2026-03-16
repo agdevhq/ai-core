@@ -82,12 +82,12 @@ const mistral = createMistral({
 | Streaming | Yes |
 | Function Calling | Yes |
 | Vision | Limited |
-| Reasoning Effort | No |
+| Reasoning | Yes (native) |
 | Embeddings | Yes |
 | Image Generation | No |
 
 <Note>
-  Mistral models do not support explicit reasoning effort control.
+  Mistral models handle reasoning natively without explicit effort control parameters. Models that support thinking (such as Magistral) automatically include reasoning content in responses.
 </Note>
 
 ## Examples
