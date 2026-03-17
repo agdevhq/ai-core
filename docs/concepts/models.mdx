@@ -257,7 +257,7 @@ import { generateImage } from '@core-ai/core-ai';
 import { createOpenAI } from '@core-ai/openai';
 
 const openai = createOpenAI();
-const model = openai.imageModel('dall-e-3');
+const model = openai.imageModel('gpt-image-1');
 
 const result = await generateImage({
   model,
@@ -303,7 +303,7 @@ type ImageGenerateResult = {
 type GeneratedImage = {
   base64?: string; // Base64-encoded image data
   url?: string; // URL to hosted image
-  revisedPrompt?: string; // Provider-revised prompt (e.g., DALL-E)
+  revisedPrompt?: string; // Provider-revised prompt
 };
 ```
 

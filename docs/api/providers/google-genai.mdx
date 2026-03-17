@@ -55,6 +55,7 @@ const google = createGoogleGenAI({
   <Accordion title="Gemini 3 (Thinking Level)" icon="star">
     - **gemini-3.1-pro** - Most capable multimodal model
     - **gemini-3.1-flash-lite-preview** - Cost-efficient, fast with thinking level control
+    - **gemini-3-pro** - Previous generation with thinking level control
   </Accordion>
   
   <Accordion title="Gemini 2.5 (Thinking Budget)" icon="brain">
@@ -298,7 +299,9 @@ try {
 
 | Model | Thinking Control | Can Disable | Best For |
 |-------|-----------------|-------------|----------|
-| Gemini 3 Pro | Level (HIGH/LOW) | No | Complex multimodal |
+| Gemini 3.1 Pro | Level (HIGH/LOW) | No | Complex multimodal |
+| Gemini 3.1 Flash Lite | Level (HIGH/LOW) | No | Fast with thinking |
+| Gemini 3 Pro | Level (HIGH/LOW) | No | Multimodal tasks |
 | Gemini 2.5 Pro | Budget (tokens) | No | Controlled reasoning |
 | Gemini 2.5 Flash | Budget (tokens) | Yes | Fast + flexible |
 | Gemini 2.5 Flash Lite | Budget (tokens) | Yes | Lightweight tasks |
