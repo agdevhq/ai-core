@@ -8,6 +8,8 @@ import type {
 import {
     ProviderError,
     StreamAbortedError,
+    StructuredOutputNoObjectGeneratedError,
+    StructuredOutputParseError,
     StructuredOutputValidationError,
 } from '@core-ai/core-ai';
 import { createOpenAICompatChatModel } from './chat-model.js';
@@ -391,6 +393,114 @@ describe('generate', () => {
                 schemaName: 'weather_schema',
             })
         ).rejects.toBeInstanceOf(StructuredOutputValidationError);
+    });
+
+    it('should parse structured object from text content fallback', async () => {
+        const create = vi.fn(async () =>
+            asChatCompletion({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: 'stop',
+                        logprobs: null,
+                        message: {
+                            role: 'assistant',
+                            content: '{"city":"Berlin","temperatureC":21}',
+                            refusal: null,
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        const result = await model.generateObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        expect(result.object).toEqual({
+            city: 'Berlin',
+            temperatureC: 21,
+        });
+    });
+
+    it('should throw parse error for malformed JSON content fallback', async () => {
+        const create = vi.fn(async () =>
+            asChatCompletion({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: 'stop',
+                        logprobs: null,
+                        message: {
+                            role: 'assistant',
+                            content: '{"city":"Berlin"',
+                            refusal: null,
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        await expect(
+            model.generateObject({
+                messages: [{ role: 'user', content: 'Return weather JSON' }],
+                schema,
+                schemaName: 'weather_schema',
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputParseError);
+    });
+
+    it('should throw no-object error when structured payload is missing', async () => {
+        const create = vi.fn(async () =>
+            asChatCompletion({
+                choices: [
+                    {
+                        index: 0,
+                        finish_reason: 'stop',
+                        logprobs: null,
+                        message: {
+                            role: 'assistant',
+                            content: '   ',
+                            refusal: null,
+                        },
+                    },
+                ],
+            })
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        await expect(
+            model.generateObject({
+                messages: [{ role: 'user', content: 'Return weather JSON' }],
+                schema,
+                schemaName: 'weather_schema',
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputNoObjectGeneratedError);
     });
 
     it('should wrap provider errors', async () => {
@@ -827,6 +937,60 @@ describe('stream', () => {
             }),
             expect.anything()
         );
+    });
+
+    it('should parse structured object from streamed text fallback', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ChatCompletionChunk>([
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: null,
+                            delta: { content: '{"city":"Berlin",' },
+                        },
+                    ],
+                    usage: null,
+                }),
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: 'stop',
+                            delta: { content: '"temperatureC":21}' },
+                        },
+                    ],
+                    usage: {
+                        prompt_tokens: 10,
+                        completion_tokens: 2,
+                        total_tokens: 12,
+                    },
+                }),
+            ])
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        const objects: Array<{ city: string; temperatureC: number }> = [];
+        for await (const event of objectStream) {
+            if (event.type === 'object') {
+                objects.push(event.object);
+            }
+        }
+
+        expect(objects).toEqual([{ city: 'Berlin', temperatureC: 21 }]);
     });
 });
 
