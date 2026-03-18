@@ -106,7 +106,24 @@ type ReasoningPart = {
 };
 ```
 
-The `providerMetadata` is provider-namespaced. The top-level key is the provider identifier (e.g. `'anthropic'`, `'openai'`).
+The `providerMetadata` is provider-namespaced. The top-level key is the provider identifier (e.g. `'anthropic'`, `'openai'`). Use the `getProviderMetadata` helper for type-safe access:
+
+```typescript
+import { getProviderMetadata } from '@core-ai/core-ai';
+import type { AnthropicReasoningMetadata } from '@core-ai/anthropic';
+
+for (const part of result.parts) {
+  if (part.type === 'reasoning') {
+    const metadata = getProviderMetadata<AnthropicReasoningMetadata>(
+      part.providerMetadata,
+      'anthropic'
+    );
+    if (metadata?.signature) {
+      console.log('Signature:', metadata.signature);
+    }
+  }
+}
+```
 
 ### ToolCallPart
 

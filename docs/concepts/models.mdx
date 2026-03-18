@@ -131,39 +131,9 @@ if (result.toolCalls.length > 0) {
 }
 ```
 
-### Generate Result
+The `generate()` function returns a `GenerateResult` with `content`, `reasoning`, `toolCalls`, `finishReason`, and `usage`. The `stream()` function returns a `ChatStream` that emits `StreamEvent`s including `text-delta`, `reasoning-delta`, `tool-call-start`/`end`, and `finish`.
 
-```typescript
-type GenerateResult = {
-  parts: AssistantContentPart[]; // All content parts (text, reasoning, tool calls)
-  content: string | null; // Concatenated text content
-  reasoning: string | null; // Extended thinking/reasoning if available
-  toolCalls: ToolCall[]; // Tool calls requested by the model
-  finishReason: FinishReason; // Why generation stopped
-  usage: ChatUsage; // Token usage information
-};
-
-type FinishReason =
-  | 'stop' // Natural completion
-  | 'length' // Hit token limit
-  | 'tool-calls' // Requested tool calls
-  | 'content-filter' // Blocked by content filter
-  | 'unknown';
-```
-
-### Stream Events
-
-```typescript
-type StreamEvent =
-  | { type: 'reasoning-start' }
-  | { type: 'reasoning-delta'; text: string }
-  | { type: 'reasoning-end'; providerMetadata?: Record<string, Record<string, unknown>> }
-  | { type: 'text-delta'; text: string }
-  | { type: 'tool-call-start'; toolCallId: string; toolName: string }
-  | { type: 'tool-call-delta'; toolCallId: string; argumentsDelta: string }
-  | { type: 'tool-call-end'; toolCall: ToolCall }
-  | { type: 'finish'; finishReason: FinishReason; usage: ChatUsage };
-```
+See the [Types reference](/api/core/types) for the full type definitions of `GenerateResult`, `StreamEvent`, and related types.
 
 ## Embedding Models
 
@@ -223,18 +193,7 @@ const result = await embed({
 });
 ```
 
-### Embed Result
-
-```typescript
-type EmbedResult = {
-  embeddings: number[][]; // Array of embedding vectors
-  usage?: EmbeddingUsage; // Optional token usage (provider-dependent)
-};
-
-type EmbeddingUsage = {
-  inputTokens: number;
-};
-```
+The `embed()` function returns an `EmbedResult` containing `embeddings` (an array of number arrays) and optional `usage` information. See the [embed() API reference](/api/core/embed) for full details.
 
 ## Image Models
 
@@ -257,55 +216,18 @@ import { generateImage } from '@core-ai/core-ai';
 import { createOpenAI } from '@core-ai/openai';
 
 const openai = createOpenAI();
-const model = openai.imageModel('dall-e-3');
+const model = openai.imageModel('gpt-image-1');
 
 const result = await generateImage({
   model,
   prompt: 'A futuristic city at sunset with flying cars',
 });
 
-console.log(result.images[0].url);
-// "https://..."
+console.log(result.images[0]);
+// { base64: "...", revisedPrompt: "..." }
 ```
 
-### Generate Options
-
-```typescript
-type ImageGenerateOptions = {
-  prompt: string; // Text description of desired image
-  n?: number; // Number of images to generate
-  size?: string; // Image size (e.g., "1024x1024")
-  providerOptions?: ImageProviderOptions; // Provider-specific options
-};
-```
-
-### Multiple Images
-
-```typescript
-const result = await generateImage({
-  model,
-  prompt: 'Abstract art with geometric shapes',
-  n: 4, // Generate 4 variations
-  size: '512x512',
-});
-
-console.log(result.images.length);
-// 4
-```
-
-### Image Result
-
-```typescript
-type ImageGenerateResult = {
-  images: GeneratedImage[];
-};
-
-type GeneratedImage = {
-  base64?: string; // Base64-encoded image data
-  url?: string; // URL to hosted image
-  revisedPrompt?: string; // Provider-revised prompt (e.g., DALL-E)
-};
-```
+You can configure `prompt`, `n` (number of images), `size`, and `providerOptions`. The result contains an array of `GeneratedImage` objects with optional `base64`, `url`, and `revisedPrompt` fields. See the [generateImage() API reference](/api/core/generate-image) for full details.
 
 <Note>
   Different providers may return images as URLs, base64 data, or both. Check the provider documentation for specific behavior.

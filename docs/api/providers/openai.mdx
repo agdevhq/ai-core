@@ -159,6 +159,10 @@ const result = await generate({
 });
 ```
 
+<Note>
+  GPT-5 series models (gpt-5.4, gpt-5.2, gpt-5.1, gpt-5, gpt-5-mini, gpt-5-nano, and pro/codex variants) restrict sampling parameters — `temperature` and `topP` are ignored when set. The o-series models support effort control without these restrictions. `o1-mini` does not support effort control.
+</Note>
+
 ### Embeddings
 
 ```typescript
@@ -219,6 +223,10 @@ const result = await generate({
 ```
 
 Available fields: `store`, `serviceTier` (`'auto'` | `'default'` | `'flex'` | `'scale'` | `'priority'`), `include`, `parallelToolCalls`, `user`.
+
+<Note>
+  The Responses API defaults to `store: false`. Set `store: true` to persist conversations for later retrieval via the OpenAI dashboard.
+</Note>
 
 ### Generate options (Chat Completions API)
 

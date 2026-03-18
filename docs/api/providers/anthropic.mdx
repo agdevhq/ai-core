@@ -58,15 +58,12 @@ const anthropic = createAnthropic({
     - **claude-sonnet-4-6** - Balanced performance and speed
   </Accordion>
   
-  <Accordion title="Claude 4.5 (Manual Thinking)" icon="brain">
-    Previous generation with manual thinking budget control.
+  <Accordion title="Manual Thinking (Claude 4.5 and earlier)" icon="brain">
+    Models with manual thinking budget control.
     
     - **claude-opus-4-5** - High capability
     - **claude-sonnet-4-5** - Efficient reasoning
     - **claude-haiku-4-5** - Fast and lightweight
-  </Accordion>
-  
-  <Accordion title="Claude 4 and earlier" icon="circle">
     - **claude-opus-4-1** - Enhanced reasoning
     - **claude-opus-4** - Strong performance
     - **claude-sonnet-4** - Balanced model
@@ -230,6 +227,15 @@ const result = await generate({
 });
 ```
 
+### Reasoning restrictions
+
+When reasoning is enabled, Anthropic imposes the following restrictions:
+
+- `temperature` must not be set
+- `topP` must not be set (or must be between 0.95 and 1)
+- `toolChoice` must be `'auto'` or `'none'` only
+- `topK` (provider option) must not be set
+
 ## Provider-specific options
 
 Options are namespaced under `anthropic` in `providerOptions`:
@@ -242,7 +248,6 @@ const result = await generate({
     anthropic: {
       topK: 40,
       stopSequences: ['\n\n'],
-      betas: ['max-tokens-3-5-sonnet-2024-07-15'],
     },
   },
 });
