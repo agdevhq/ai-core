@@ -82,12 +82,12 @@ const mistral = createMistral({
 | Streaming | Yes |
 | Function Calling | Yes |
 | Vision | Limited |
-| Reasoning Effort | No |
+| Reasoning Effort | Partial |
 | Embeddings | Yes |
 | Image Generation | No |
 
 <Note>
-  Mistral models do not support explicit reasoning effort control.
+  Mistral models can return reasoning content (thinking blocks) in responses and streams, but do not support the `reasoning.effort` configuration parameter. The `reasoning` config is silently ignored — the model decides when to use extended thinking on its own.
 </Note>
 
 ## Examples
@@ -224,7 +224,17 @@ const result = await generate({
 });
 ```
 
-Available fields: `stopSequences`, `frequencyPenalty`, `presencePenalty`, `randomSeed`, `parallelToolCalls`, `promptMode`, `safePrompt`.
+Available fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `stopSequences` | `string[]` | Sequences that stop generation |
+| `frequencyPenalty` | `number` | Reduces repeated token likelihood |
+| `presencePenalty` | `number` | Reduces likelihood of tokens that appeared |
+| `randomSeed` | `number` | Integer seed for reproducible outputs |
+| `parallelToolCalls` | `boolean` | Enable parallel tool execution |
+| `promptMode` | `string` | Controls prompt formatting mode |
+| `safePrompt` | `boolean` | Enable Mistral's safety guardrails |
 
 <Tip>
   Use `parallelToolCalls` to enable or disable parallel tool execution when using multiple tools.

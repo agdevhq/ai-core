@@ -472,6 +472,64 @@ type GeneratedImage = {
 };
 ```
 
+## Utility functions
+
+### resultToMessage()
+
+Converts a `GenerateResult` into an `AssistantMessage` for multi-turn conversations.
+
+```typescript
+import { resultToMessage } from '@core-ai/core-ai';
+
+const result = await generate({ model, messages });
+const message = resultToMessage(result);
+// message is an AssistantMessage with parts from the result
+```
+
+**Options:**
+
+```typescript
+type ResultToMessageOptions = {
+    includeReasoning?: boolean; // defaults to true
+};
+```
+
+Set `includeReasoning: false` to strip reasoning parts from the resulting message:
+
+```typescript
+const message = resultToMessage(result, { includeReasoning: false });
+```
+
+### assistantMessage()
+
+Shorthand to create an `AssistantMessage` with a single text part.
+
+```typescript
+import { assistantMessage } from '@core-ai/core-ai';
+
+const message = assistantMessage('Hello, how can I help?');
+// { role: 'assistant', parts: [{ type: 'text', text: 'Hello, how can I help?' }] }
+```
+
+### getProviderMetadata()
+
+Extracts a typed provider-specific metadata block from a `providerMetadata` record.
+
+```typescript
+import { getProviderMetadata } from '@core-ai/core-ai';
+import type { AnthropicReasoningMetadata } from '@core-ai/anthropic';
+
+for (const part of result.parts) {
+  if (part.type === 'reasoning') {
+    const meta = getProviderMetadata<AnthropicReasoningMetadata>(
+      part.providerMetadata,
+      'anthropic'
+    );
+    console.log(meta?.signature);
+  }
+}
+```
+
 ## Type usage examples
 
 ### Building type-safe conversations

@@ -195,6 +195,41 @@ const openai = createOpenAI({
 });
 ```
 
+## Reasoning metadata
+
+When reasoning is enabled, the adapter automatically requests encrypted reasoning content. You can access it via provider metadata:
+
+```typescript
+import { getProviderMetadata } from '@core-ai/core-ai';
+import type { OpenAIReasoningMetadata } from '@core-ai/openai';
+
+for (const part of result.parts) {
+  if (part.type === 'reasoning') {
+    const meta = getProviderMetadata<OpenAIReasoningMetadata>(
+      part.providerMetadata,
+      'openai'
+    );
+    console.log(meta?.encryptedContent);
+  }
+}
+```
+
+```typescript
+type OpenAIReasoningMetadata = {
+  encryptedContent?: string;
+};
+```
+
+<Note>
+  When using `createOpenAICompat` (Chat Completions API), reasoning content is not available — `result.reasoning` is always `null`.
+</Note>
+
+## Reasoning constraints
+
+Models that support reasoning restrict certain sampling parameters. When `reasoning` is configured on models like `gpt-5.4`, `gpt-5.2`, `gpt-5.1`, `gpt-5`, `gpt-5-mini`, and `gpt-5-nano`, passing `temperature` or `topP` throws a `ProviderError`.
+
+The o-series models (`o3`, `o3-mini`, `o4-mini`, `o1`) do not restrict sampling parameters.
+
 ## Provider-specific options
 
 Options are namespaced under `openai` in `providerOptions` and validated with Zod schemas.

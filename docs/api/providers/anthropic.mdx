@@ -230,6 +230,46 @@ const result = await generate({
 });
 ```
 
+## Reasoning constraints
+
+When reasoning is enabled, Anthropic enforces these constraints:
+
+- `temperature` must be `undefined` (throws a `ProviderError` if set)
+- `topP` must be between `0.95` and `1.0`, or `undefined`
+- `toolChoice` must be `'auto'` or `'none'` only
+- `providerOptions.anthropic.topK` must be `undefined`
+
+When both reasoning and tools are enabled, the `interleaved-thinking-2025-05-14` beta is automatically added.
+
+## Reasoning metadata
+
+Reasoning parts include provider-specific metadata for round-tripping thinking blocks:
+
+```typescript
+import { getProviderMetadata } from '@core-ai/core-ai';
+import type { AnthropicReasoningMetadata } from '@core-ai/anthropic';
+
+for (const part of result.parts) {
+  if (part.type === 'reasoning') {
+    const meta = getProviderMetadata<AnthropicReasoningMetadata>(
+      part.providerMetadata,
+      'anthropic'
+    );
+    console.log(meta?.signature);     // thinking block signature
+    console.log(meta?.redactedData);  // redacted thinking data
+  }
+}
+```
+
+```typescript
+type AnthropicReasoningMetadata = {
+  signature?: string;
+  redactedData?: string;
+};
+```
+
+When reasoning blocks from Anthropic are sent to a different provider, they are automatically downgraded to plain text wrapped in `<thinking>` tags.
+
 ## Provider-specific options
 
 Options are namespaced under `anthropic` in `providerOptions`:
