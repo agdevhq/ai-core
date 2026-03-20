@@ -1,4 +1,7 @@
-import type { ReasoningEffort } from '@core-ai/core-ai';
+import {
+    normalizeModelId as normalizeSharedModelId,
+    type ReasoningEffort,
+} from '@core-ai/core-ai';
 
 export type AnthropicModelCapabilities = {
     reasoning: {
@@ -71,6 +74,14 @@ const MODEL_CAPABILITIES: Record<string, AnthropicModelCapabilities> = {
     },
 };
 
+const MANUAL_BUDGET_BY_EFFORT: Record<ReasoningEffort, number> = {
+    minimal: 1024,
+    low: 2048,
+    medium: 8192,
+    high: 32768,
+    max: 65536,
+};
+
 export function getAnthropicModelCapabilities(
     modelId: string
 ): AnthropicModelCapabilities {
@@ -79,7 +90,7 @@ export function getAnthropicModelCapabilities(
 }
 
 export function normalizeModelId(modelId: string): string {
-    return modelId.replace(/-\d{8}$/, '');
+    return normalizeSharedModelId(modelId);
 }
 
 export function toAnthropicAdaptiveEffort(
@@ -96,17 +107,5 @@ export function toAnthropicAdaptiveEffort(
 }
 
 export function toAnthropicManualBudget(effort: ReasoningEffort): number {
-    if (effort === 'minimal') {
-        return 1024;
-    }
-    if (effort === 'low') {
-        return 2048;
-    }
-    if (effort === 'medium') {
-        return 8192;
-    }
-    if (effort === 'high') {
-        return 32768;
-    }
-    return 65536;
+    return MANUAL_BUDGET_BY_EFFORT[effort];
 }
