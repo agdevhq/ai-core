@@ -61,6 +61,10 @@ Same options as `createOpenAI`. Returns `OpenAICompatProvider` with the same mod
 
 Use `createOpenAICompat` when you need Chat Completions API compatibility, for example with third-party OpenAI-compatible endpoints.
 
+<Note>
+  The Chat Completions API sends `reasoning_effort` in the request but does not return reasoning content in the response. `reasoning` is always `null` in the result when using `createOpenAICompat`.
+</Note>
+
 ## Provider methods
 
 ### chatModel()
@@ -159,6 +163,10 @@ const result = await generate({
 });
 ```
 
+<Warning>
+  GPT-5 series models (`gpt-5.4`, `gpt-5.2`, `gpt-5.1`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`) restrict sampling parameters when reasoning is enabled. Setting `temperature` or `topP` throws a `ProviderError`.
+</Warning>
+
 ### Embeddings
 
 ```typescript
@@ -219,6 +227,10 @@ const result = await generate({
 ```
 
 Available fields: `store`, `serviceTier` (`'auto'` | `'default'` | `'flex'` | `'scale'` | `'priority'`), `include`, `parallelToolCalls`, `user`.
+
+<Note>
+  The Responses API sets `store: false` by default. Set `store: true` explicitly if you want to store responses.
+</Note>
 
 ### Generate options (Chat Completions API)
 

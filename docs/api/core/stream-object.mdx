@@ -232,6 +232,10 @@ try {
 ## Important notes
 
 <Info>
+  The stream starts the HTTP request immediately when created. You do not need to iterate to begin fetching data.
+</Info>
+
+<Info>
   `ObjectStream` is replayable: iterating after events have already arrived replays the buffered event history.
 </Info>
 

@@ -83,6 +83,7 @@ const anthropic = createAnthropic({
 | Function Calling | Yes |
 | Vision | Yes |
 | Reasoning Effort | Yes |
+| File Inputs | PDF only |
 | Embeddings | No |
 | Image Generation | No |
 
@@ -215,6 +216,16 @@ const result = await generate({
 <Note>
   Only `claude-opus-4-6` supports `'max'` effort level.
 </Note>
+
+<Warning>
+  When reasoning is enabled, Anthropic enforces these constraints:
+  - `temperature` must be `undefined` (do not set it)
+  - `topP` must be between `0.95` and `1.0`, or `undefined`
+  - `toolChoice` must be `'auto'` or `'none'`
+  - The provider option `topK` must be `undefined`
+
+  Violating any of these throws a `ProviderError`.
+</Warning>
 
 ### Manual thinking budget (Claude 4.5 and earlier)
 

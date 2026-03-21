@@ -253,11 +253,15 @@ try {
 ## Important notes
 
 <Info>
+  The stream starts the HTTP request immediately when created. You do not need to iterate to begin fetching data.
+</Info>
+
+<Info>
   `ChatStream` is replayable: iterating after events have already arrived replays the buffered event history before waiting for later events.
 </Info>
 
 <Info>
-  `.result` resolves with the aggregated final response when the stream completes, regardless of whether you consumed the events via iteration.
+  `.result` resolves with the aggregated final response when the stream completes, regardless of whether you consumed the events via iteration. `.events` resolves with all observed events, even on abort or error.
 </Info>
 
 ## Error handling

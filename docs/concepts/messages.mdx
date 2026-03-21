@@ -232,7 +232,7 @@ const filePart: FilePart = {
 ```
 
 <Warning>
-  Not all providers support all content types. Check provider documentation for specific limitations on multi-modal inputs.
+  Not all providers support all content types. For example, Anthropic only supports `application/pdf` file parts -- other MIME types throw an error. Check provider documentation for specific limitations.
 </Warning>
 
 ## Assistant Content Parts
@@ -270,6 +270,10 @@ type ReasoningPart = {
 ```
 
 The `providerMetadata` is provider-namespaced. The top-level key is the provider identifier (e.g. `'anthropic'`).
+
+<Note>
+  When reasoning parts from one provider are sent to a different provider, they are automatically downgraded to plain text wrapped in `<thinking>...</thinking>` tags. This ensures cross-provider compatibility in multi-turn conversations.
+</Note>
 
 **Accessing Reasoning:**
 
@@ -365,6 +369,27 @@ const message = assistantMessage('Hello! How can I help you?');
 ```
 
 This is a convenience function that creates an assistant message with a single text part.
+
+### getProviderMetadata
+
+Extract typed provider-specific metadata from a `providerMetadata` record:
+
+```typescript
+import { getProviderMetadata } from '@core-ai/core-ai';
+import type { AnthropicReasoningMetadata } from '@core-ai/anthropic';
+
+const result = await generate({ model, messages, reasoning: { effort: 'high' } });
+
+for (const part of result.parts) {
+  if (part.type === 'reasoning') {
+    const meta = getProviderMetadata<AnthropicReasoningMetadata>(
+      part.providerMetadata,
+      'anthropic'
+    );
+    console.log('Signature:', meta?.signature);
+  }
+}
+```
 
 ## Tool Call Flow
 

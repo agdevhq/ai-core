@@ -81,13 +81,13 @@ const mistral = createMistral({
 | Chat Completion | Yes |
 | Streaming | Yes |
 | Function Calling | Yes |
-| Vision | Limited |
-| Reasoning Effort | No |
+| Vision | Yes |
+| Reasoning | Yes |
 | Embeddings | Yes |
 | Image Generation | No |
 
 <Note>
-  Mistral models do not support explicit reasoning effort control.
+  Mistral models that support reasoning return thinking content in their responses. The `reasoning` config is accepted and reasoning parts are mapped to Mistral's native thinking chunks.
 </Note>
 
 ## Examples
@@ -184,6 +184,25 @@ const result = await embed({
 for (const [i, embedding] of result.embeddings.entries()) {
   console.log(`Document ${i}: ${embedding.length} dimensions`);
 }
+```
+
+### Reasoning
+
+```typescript
+const result = await generate({
+  model: mistral.chatModel('mistral-large-2512'),
+  messages: [
+    { role: 'user', content: 'Solve this step by step: what is 127 * 43?' },
+  ],
+  reasoning: {
+    effort: 'high',
+  },
+});
+
+if (result.reasoning) {
+  console.log('Thinking:', result.reasoning);
+}
+console.log('Answer:', result.content);
 ```
 
 ### Code generation
