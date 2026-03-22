@@ -82,12 +82,12 @@ const mistral = createMistral({
 | Streaming | Yes |
 | Function Calling | Yes |
 | Vision | Limited |
-| Reasoning Effort | No |
+| Reasoning Effort | Yes (Magistral models) |
 | Embeddings | Yes |
 | Image Generation | No |
 
 <Note>
-  Mistral models do not support explicit reasoning effort control.
+  Reasoning is supported on Magistral models (e.g., `magistral-medium-latest`). The `reasoning` config is passed through and thinking content is extracted as reasoning parts.
 </Note>
 
 ## Examples
@@ -184,6 +184,25 @@ const result = await embed({
 for (const [i, embedding] of result.embeddings.entries()) {
   console.log(`Document ${i}: ${embedding.length} dimensions`);
 }
+```
+
+### Reasoning (Magistral)
+
+```typescript
+const result = await generate({
+  model: mistral.chatModel('magistral-medium-latest'),
+  messages: [
+    { role: 'user', content: 'Solve this step by step: if 3x + 7 = 22, what is x?' },
+  ],
+  reasoning: {
+    effort: 'high',
+  },
+});
+
+if (result.reasoning) {
+  console.log('Thinking:', result.reasoning);
+}
+console.log('Answer:', result.content);
 ```
 
 ### Code generation

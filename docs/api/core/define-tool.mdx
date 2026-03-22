@@ -158,14 +158,14 @@ let result = await generate({
 
 // Execute tools and continue conversation
 while (result.toolCalls.length > 0) {
+  messages.push({
+    role: 'assistant',
+    parts: result.parts
+  });
+
   for (const toolCall of result.toolCalls) {
     const handler = toolHandlers[toolCall.name as keyof typeof toolHandlers];
     const toolResult = await handler(toolCall.arguments as any);
-    
-    messages.push({
-      role: 'assistant',
-      parts: result.parts
-    });
     
     messages.push({
       role: 'tool',
