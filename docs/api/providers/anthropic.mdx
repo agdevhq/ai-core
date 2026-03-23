@@ -238,11 +238,11 @@ Options are namespaced under `anthropic` in `providerOptions`:
 const result = await generate({
   model: anthropic.chatModel('claude-sonnet-4-6'),
   messages: [{ role: 'user', content: 'Hello' }],
-  providerOptions: {
+    providerOptions: {
     anthropic: {
       topK: 40,
       stopSequences: ['\n\n'],
-      betas: ['max-tokens-3-5-sonnet-2024-07-15'],
+      betas: ['interleaved-thinking-2025-05-14'],
     },
   },
 });

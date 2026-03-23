@@ -8,7 +8,7 @@ icon: 'triangle-exclamation'
 
 core-ai provides a hierarchy of error classes for handling different types of failures when working with language models. All errors extend from `LLMError` and provide structured error information.
 
-## Error Hierarchy
+## Error hierarchy
 
 ```
 LLMError
@@ -354,9 +354,9 @@ try {
 }
 ```
 
-## Error Handling Patterns
+## Error handling patterns
 
-### Comprehensive Error Handling
+### Comprehensive error handling
 
 ```typescript
 import {
@@ -414,7 +414,7 @@ try {
 }
 ```
 
-### Retry Logic with Error Handling
+### Retry logic with error handling
 
 ```typescript
 async function generateWithRetry<T>(
@@ -468,7 +468,7 @@ const result = await generateWithRetry(() =>
 );
 ```
 
-### Logging and Monitoring
+### Logging and monitoring
 
 ```typescript
 function logError(error: unknown): void {
@@ -502,7 +502,7 @@ function logError(error: unknown): void {
 }
 ```
 
-### Graceful Degradation
+### Graceful degradation
 
 ```typescript
 async function generateWithFallback(
@@ -535,7 +535,7 @@ async function generateWithFallback(
 }
 ```
 
-## Best Practices
+## Best practices
 
 <Tip>
   Always check for specific error types before general ones. Use `instanceof` checks in order from most specific to least specific.
@@ -557,7 +557,7 @@ async function generateWithFallback(
   Log error details including provider, status codes, and causes for debugging and monitoring.
 </Tip>
 
-## Common HTTP Status Codes
+## Common HTTP status codes
 
 - `400` - Bad Request (invalid parameters)
 - `401` - Unauthorized (invalid API key)

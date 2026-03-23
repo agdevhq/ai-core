@@ -5,7 +5,7 @@ description: Let models use external tools and functions with defineTool()
 
 Tool calling enables language models to interact with external functions and APIs, extending their capabilities beyond text generation.
 
-## Define a Tool
+## Define a tool
 
 Create tools using `defineTool()` with Zod schemas:
 
@@ -23,7 +23,7 @@ const weatherTool = defineTool({
 });
 ```
 
-## Basic Tool Usage
+## Basic tool usage
 
 Implement a complete tool calling flow:
 
@@ -112,7 +112,7 @@ const secondResult = await generate({
 console.log('Final response:', secondResult.content);
 ```
 
-## Tool Choice Strategies
+## Tool choice strategies
 
 Control when and how tools are used:
 
@@ -150,7 +150,7 @@ const result = await generate({
 });
 ```
 
-## Multiple Tools
+## Multiple tools
 
 Provide multiple tools for the model to choose from:
 
@@ -206,7 +206,7 @@ if (result.finishReason === 'tool-calls') {
 }
 ```
 
-## Handling Tool Calls
+## Handling tool calls
 
 Best practices for executing tool calls:
 
@@ -297,7 +297,7 @@ if (result.finishReason === 'tool-calls') {
 }
 ```
 
-## Tool Calling with Streaming
+## Tool calling with streaming
 
 Handle tool calls during streaming:
 
@@ -350,7 +350,7 @@ if (response.finishReason === 'tool-calls') {
 }
 ```
 
-## Advanced Tool Examples
+## Advanced tool examples
 
 <Tabs>
   <Tab title="Database Query">
@@ -427,7 +427,7 @@ if (response.finishReason === 'tool-calls') {
   </Tab>
 </Tabs>
 
-## Tool Result Messages
+## Tool result messages
 
 Structure tool results properly:
 
@@ -450,7 +450,7 @@ const errorMessage: ToolResultMessage = {
 };
 ```
 
-## Helper: Convert Result to Message
+## Helper: convert result to message
 
 Use `resultToMessage()` to simplify conversation building:
 
@@ -480,7 +480,7 @@ if (firstResult.finishReason === 'tool-calls') {
 }
 ```
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Validate tool arguments with Zod">
@@ -559,7 +559,7 @@ if (firstResult.finishReason === 'tool-calls') {
   </Accordion>
 </AccordionGroup>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Chat Completion" icon="message" href="/guides/chat-completion">
