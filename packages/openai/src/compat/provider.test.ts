@@ -3,6 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { createOpenAICompat } from './provider.js';
 
 describe('createOpenAICompat', () => {
+    it('should create a client when one is not provided', () => {
+        const provider = createOpenAICompat({
+            apiKey: 'test-key',
+            baseURL: 'https://api.example.com/v1',
+        });
+
+        const chatModel = provider.chatModel('gpt-5-mini');
+        expect(chatModel.provider).toBe('openai');
+        expect(chatModel.modelId).toBe('gpt-5-mini');
+    });
+
     it('should expose all model factories', () => {
         const provider = createOpenAICompat({
             client: createMockClient(),

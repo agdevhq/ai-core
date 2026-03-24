@@ -992,6 +992,161 @@ describe('stream', () => {
 
         expect(objects).toEqual([{ city: 'Berlin', temperatureC: 21 }]);
     });
+
+    it('should reject streamed text fallback with malformed JSON', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ChatCompletionChunk>([
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: null,
+                            delta: { content: '{"city":"Berlin"' },
+                        },
+                    ],
+                    usage: null,
+                }),
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: 'stop',
+                            delta: {},
+                        },
+                    ],
+                    usage: {
+                        prompt_tokens: 10,
+                        completion_tokens: 2,
+                        total_tokens: 12,
+                    },
+                }),
+            ])
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        await expect(collectObjectEvents(objectStream)).rejects.toBeInstanceOf(
+            StructuredOutputParseError
+        );
+        await expect(objectStream.result).rejects.toBeInstanceOf(
+            StructuredOutputParseError
+        );
+    });
+
+    it('should reject streamed text fallback when payload is empty', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ChatCompletionChunk>([
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: null,
+                            delta: { content: '   ' },
+                        },
+                    ],
+                    usage: null,
+                }),
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: 'stop',
+                            delta: {},
+                        },
+                    ],
+                    usage: {
+                        prompt_tokens: 10,
+                        completion_tokens: 2,
+                        total_tokens: 12,
+                    },
+                }),
+            ])
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        await expect(collectObjectEvents(objectStream)).rejects.toBeInstanceOf(
+            StructuredOutputNoObjectGeneratedError
+        );
+        await expect(objectStream.result).rejects.toBeInstanceOf(
+            StructuredOutputNoObjectGeneratedError
+        );
+    });
+
+    it('should reject streamed text fallback when payload fails schema validation', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ChatCompletionChunk>([
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: null,
+                            delta: {
+                                content: '{"city":"Berlin","temperatureC":"warm"}',
+                            },
+                        },
+                    ],
+                    usage: null,
+                }),
+                asChunk({
+                    choices: [
+                        {
+                            index: 0,
+                            finish_reason: 'stop',
+                            delta: {},
+                        },
+                    ],
+                    usage: {
+                        prompt_tokens: 10,
+                        completion_tokens: 2,
+                        total_tokens: 12,
+                    },
+                }),
+            ])
+        );
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        await expect(collectObjectEvents(objectStream)).rejects.toBeInstanceOf(
+            StructuredOutputValidationError
+        );
+        await expect(objectStream.result).rejects.toBeInstanceOf(
+            StructuredOutputValidationError
+        );
+    });
 });
 
 function createMockClient(
@@ -1030,4 +1185,10 @@ function asChunk(value: Partial<ChatCompletionChunk>): ChatCompletionChunk {
         choices: [],
         ...value,
     };
+}
+
+async function collectObjectEvents(stream: AsyncIterable<unknown>): Promise<void> {
+    for await (const _event of stream) {
+        // Consume the stream until completion or failure.
+    }
 }
