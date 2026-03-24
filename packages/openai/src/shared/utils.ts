@@ -28,16 +28,18 @@ export function validateOpenAIReasoningConfig(
         return;
     }
 
-    if (options.temperature !== undefined) {
-        throw new ProviderError(
-            `OpenAI model "${modelId}" does not support temperature when reasoning is enabled`,
-            'openai'
-        );
-    }
+    const restrictedSamplingParams = [
+        { name: 'temperature', value: options.temperature },
+        { name: 'topP', value: options.topP },
+    ] as const;
 
-    if (options.topP !== undefined) {
+    for (const { name, value } of restrictedSamplingParams) {
+        if (value === undefined) {
+            continue;
+        }
+
         throw new ProviderError(
-            `OpenAI model "${modelId}" does not support topP when reasoning is enabled`,
+            `OpenAI model "${modelId}" does not support ${name} when reasoning is enabled`,
             'openai'
         );
     }

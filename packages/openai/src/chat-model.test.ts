@@ -8,6 +8,8 @@ import type {
 import {
     ProviderError,
     StreamAbortedError,
+    StructuredOutputNoObjectGeneratedError,
+    StructuredOutputParseError,
     StructuredOutputValidationError,
     resultToMessage,
 } from '@core-ai/core-ai';
@@ -286,6 +288,107 @@ describe('generate', () => {
         ).rejects.toBeInstanceOf(StructuredOutputValidationError);
     });
 
+    it('should parse structured object from text content fallback', async () => {
+        const create = vi.fn(async (_request: unknown) =>
+            asResponse({
+                output: [
+                    {
+                        type: 'message',
+                        role: 'assistant',
+                        content: [
+                            {
+                                type: 'output_text',
+                                text: '{"city":"Berlin","temperatureC":21}',
+                            },
+                        ],
+                    },
+                ],
+                status: 'completed',
+            })
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        const result = await model.generateObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        expect(result.object).toEqual({
+            city: 'Berlin',
+            temperatureC: 21,
+        });
+    });
+
+    it('should throw parse error for malformed JSON content fallback', async () => {
+        const create = vi.fn(async (_request: unknown) =>
+            asResponse({
+                output: [
+                    {
+                        type: 'message',
+                        role: 'assistant',
+                        content: [{ type: 'output_text', text: '{"city":"Berlin"' }],
+                    },
+                ],
+                status: 'completed',
+            })
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        await expect(
+            model.generateObject({
+                messages: [{ role: 'user', content: 'Return weather JSON' }],
+                schema,
+                schemaName: 'weather_schema',
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputParseError);
+    });
+
+    it('should throw no-object error when structured payload is missing', async () => {
+        const create = vi.fn(async (_request: unknown) =>
+            asResponse({
+                output: [
+                    {
+                        type: 'message',
+                        role: 'assistant',
+                        content: [{ type: 'output_text', text: '   ' }],
+                    },
+                ],
+                status: 'completed',
+            })
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        await expect(
+            model.generateObject({
+                messages: [{ role: 'user', content: 'Return weather JSON' }],
+                schema,
+                schemaName: 'weather_schema',
+            })
+        ).rejects.toBeInstanceOf(StructuredOutputNoObjectGeneratedError);
+    });
+
     it('should wrap provider errors', async () => {
         const create = vi.fn(async (_request: unknown) => {
             throw new Error('network failed');
@@ -538,6 +641,165 @@ describe('streamObject', () => {
             },
         ]);
     });
+
+    it('should parse structured object from streamed text fallback', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ResponseStreamEvent>([
+                asStreamEvent({
+                    type: 'response.output_text.delta',
+                    delta: '{"city":"Berlin",',
+                }),
+                asStreamEvent({
+                    type: 'response.output_text.delta',
+                    delta: '"temperatureC":21}',
+                }),
+                asStreamEvent({
+                    type: 'response.completed',
+                    response: asResponse({
+                        output: [],
+                        status: 'completed',
+                    }),
+                }),
+            ])
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        const objects: Array<{ city: string; temperatureC: number }> = [];
+        for await (const event of objectStream) {
+            if (event.type === 'object') {
+                objects.push(event.object);
+            }
+        }
+
+        expect(objects).toEqual([{ city: 'Berlin', temperatureC: 21 }]);
+    });
+
+    it('should reject streamed text fallback with malformed JSON', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ResponseStreamEvent>([
+                asStreamEvent({
+                    type: 'response.output_text.delta',
+                    delta: '{"city":"Berlin"',
+                }),
+                asStreamEvent({
+                    type: 'response.completed',
+                    response: asResponse({
+                        output: [],
+                        status: 'completed',
+                    }),
+                }),
+            ])
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        await expect(collectObjectEvents(objectStream)).rejects.toBeInstanceOf(
+            StructuredOutputParseError
+        );
+        await expect(objectStream.result).rejects.toBeInstanceOf(
+            StructuredOutputParseError
+        );
+    });
+
+    it('should reject streamed text fallback when payload is empty', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ResponseStreamEvent>([
+                asStreamEvent({
+                    type: 'response.output_text.delta',
+                    delta: '   ',
+                }),
+                asStreamEvent({
+                    type: 'response.completed',
+                    response: asResponse({
+                        output: [],
+                        status: 'completed',
+                    }),
+                }),
+            ])
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        await expect(collectObjectEvents(objectStream)).rejects.toBeInstanceOf(
+            StructuredOutputNoObjectGeneratedError
+        );
+        await expect(objectStream.result).rejects.toBeInstanceOf(
+            StructuredOutputNoObjectGeneratedError
+        );
+    });
+
+    it('should reject streamed text fallback when payload fails schema validation', async () => {
+        const create = vi.fn(async () =>
+            toAsyncIterable<ResponseStreamEvent>([
+                asStreamEvent({
+                    type: 'response.output_text.delta',
+                    delta: '{"city":"Berlin","temperatureC":"warm"}',
+                }),
+                asStreamEvent({
+                    type: 'response.completed',
+                    response: asResponse({
+                        output: [],
+                        status: 'completed',
+                    }),
+                }),
+            ])
+        );
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const objectStream = await model.streamObject({
+            messages: [{ role: 'user', content: 'Return weather JSON' }],
+            schema,
+            schemaName: 'weather_schema',
+        });
+
+        await expect(collectObjectEvents(objectStream)).rejects.toBeInstanceOf(
+            StructuredOutputValidationError
+        );
+        await expect(objectStream.result).rejects.toBeInstanceOf(
+            StructuredOutputValidationError
+        );
+    });
 });
 
 function createMockClient(
@@ -560,4 +822,10 @@ function asResponse(value: unknown): Response {
 
 function asStreamEvent(value: unknown): ResponseStreamEvent {
     return value as ResponseStreamEvent;
+}
+
+async function collectObjectEvents(stream: AsyncIterable<unknown>): Promise<void> {
+    for await (const _event of stream) {
+        // Consume the stream until completion or failure.
+    }
 }
