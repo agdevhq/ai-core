@@ -58,32 +58,35 @@ export function createStream<TEvent, TResult>(
         signal?.removeEventListener('abort', abortStream);
     }
 
-    function settleCompleted(finalResult: TResult): void {
+    function settleTerminalState(
+        nextState: Exclude<TerminalState<TResult>, { status: 'running' }>
+    ): void {
         if (terminalState.status !== 'running') {
             return;
         }
-        terminalState = {
-            status: 'completed',
-            result: finalResult,
-        };
+        terminalState = nextState;
         cleanupSignalListener();
-        resolveResult?.(finalResult);
+        if (nextState.status === 'completed') {
+            resolveResult?.(nextState.result);
+        } else {
+            rejectResult?.(nextState.error);
+        }
         resolveEvents?.([...bufferedEvents]);
         notifyWaiters();
     }
 
+    function settleCompleted(finalResult: TResult): void {
+        settleTerminalState({
+            status: 'completed',
+            result: finalResult,
+        });
+    }
+
     function settleRejected(error: unknown): void {
-        if (terminalState.status !== 'running') {
-            return;
-        }
-        terminalState = {
+        settleTerminalState({
             status: 'rejected',
             error,
-        };
-        cleanupSignalListener();
-        rejectResult?.(error);
-        resolveEvents?.([...bufferedEvents]);
-        notifyWaiters();
+        });
     }
 
     function closeSourceIterator(): Promise<void> {
@@ -147,6 +150,13 @@ export function createStream<TEvent, TResult>(
 
     void pump();
 
+    function getDoneResult(): IteratorResult<TEvent> {
+        return {
+            done: true,
+            value: undefined,
+        };
+    }
+
     return {
         [Symbol.asyncIterator]() {
             let index = 0;
@@ -154,18 +164,12 @@ export function createStream<TEvent, TResult>(
             return {
                 async next(): Promise<IteratorResult<TEvent>> {
                     if (closed) {
-                        return {
-                            done: true,
-                            value: undefined,
-                        };
+                        return getDoneResult();
                     }
 
                     while (!closed && index >= bufferedEvents.length) {
                         if (terminalState.status === 'completed') {
-                            return {
-                                done: true,
-                                value: undefined,
-                            };
+                            return getDoneResult();
                         }
                         if (terminalState.status === 'rejected') {
                             throw terminalState.error;
@@ -174,10 +178,7 @@ export function createStream<TEvent, TResult>(
                     }
 
                     if (closed) {
-                        return {
-                            done: true,
-                            value: undefined,
-                        };
+                        return getDoneResult();
                     }
 
                     const value = bufferedEvents[index]!;
@@ -190,10 +191,7 @@ export function createStream<TEvent, TResult>(
                 async return(): Promise<IteratorResult<TEvent>> {
                     closed = true;
                     notifyWaiters();
-                    return {
-                        done: true,
-                        value: undefined,
-                    };
+                    return getDoneResult();
                 },
             };
         },
