@@ -115,6 +115,35 @@ export function createChatStream(
         usage = event.usage;
     };
 
+    const collectFinalizedData = () => {
+        const contentSegments: string[] = [];
+        const reasoningSegments: string[] = [];
+        const toolCalls: GenerateResult['toolCalls'] = [];
+
+        for (const part of parts) {
+            if (part.type === 'text') {
+                contentSegments.push(part.text);
+                continue;
+            }
+            if (part.type === 'reasoning') {
+                reasoningSegments.push(part.text);
+                continue;
+            }
+            if (part.type === 'tool-call') {
+                toolCalls.push(part.toolCall);
+            }
+        }
+
+        const content = contentSegments.join('');
+        const reasoning = reasoningSegments.join('');
+
+        return {
+            content: content.length > 0 ? content : null,
+            reasoning: reasoning.length > 0 ? reasoning : null,
+            toolCalls,
+        };
+    };
+
     return createStream({
         source: resolvedSource,
         signal,
@@ -145,23 +174,12 @@ export function createChatStream(
         finalizeResult() {
             flushText();
             flushReasoning();
-
-            const content = parts
-                .flatMap((part) => (part.type === 'text' ? [part.text] : []))
-                .join('');
-            const reasoning = parts
-                .flatMap((part) =>
-                    part.type === 'reasoning' ? [part.text] : []
-                )
-                .join('');
-            const toolCalls = parts.flatMap((part) =>
-                part.type === 'tool-call' ? [part.toolCall] : []
-            );
+            const { content, reasoning, toolCalls } = collectFinalizedData();
 
             return {
                 parts,
-                content: content.length > 0 ? content : null,
-                reasoning: reasoning.length > 0 ? reasoning : null,
+                content,
+                reasoning,
                 toolCalls,
                 finishReason,
                 usage,
