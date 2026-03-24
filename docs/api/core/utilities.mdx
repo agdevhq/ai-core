@@ -1,0 +1,94 @@
+---
+title: 'Utilities'
+description: 'Helper functions for schemas, assistant messages, and provider metadata'
+icon: 'toolbox'
+---
+
+## Overview
+
+core-ai exports a small set of helpers for schema conversion, assistant message construction, and provider-specific metadata access.
+
+## zodSchemaToJsonSchema()
+
+Convert a Zod schema to JSON Schema using Zod 4's native conversion APIs.
+
+```typescript
+import { z } from 'zod';
+import { zodSchemaToJsonSchema } from '@core-ai/core-ai';
+
+const weatherSchema = z.object({
+  city: z.string(),
+  temperatureC: z.number(),
+});
+
+const jsonSchema = zodSchemaToJsonSchema(weatherSchema);
+console.log(jsonSchema);
+```
+
+Use this helper when you need a JSON Schema outside the built-in model and tool helpers.
+
+## resultToMessage()
+
+Convert a `GenerateResult` into an `AssistantMessage` so you can continue a conversation with the assistant's full response parts.
+
+```typescript
+import { generate, resultToMessage } from '@core-ai/core-ai';
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Solve this step by step.' }],
+  reasoning: { effort: 'high' },
+});
+
+const assistantTurn = resultToMessage(result);
+```
+
+### Options
+
+```typescript
+type ResultToMessageOptions = {
+  includeReasoning?: boolean;
+};
+```
+
+Set `includeReasoning: false` if you want to drop reasoning parts when reusing the message.
+
+## assistantMessage()
+
+Create a simple assistant message from plain text.
+
+```typescript
+import { assistantMessage } from '@core-ai/core-ai';
+
+const greeting = assistantMessage('Hello, how can I help?');
+```
+
+This is equivalent to constructing an assistant message with a single text part.
+
+## getProviderMetadata()
+
+Read provider-specific metadata from reasoning parts in a type-safe way.
+
+```typescript
+import { generate, getProviderMetadata } from '@core-ai/core-ai';
+import type { OpenAIReasoningMetadata } from '@core-ai/openai';
+
+const result = await generate({
+  model,
+  messages: [{ role: 'user', content: 'Think carefully before answering.' }],
+  reasoning: { effort: 'high' },
+});
+
+for (const part of result.parts) {
+  if (part.type !== 'reasoning') continue;
+
+  const metadata = getProviderMetadata<OpenAIReasoningMetadata>(
+    part.providerMetadata,
+    'openai'
+  );
+
+  console.log(metadata?.encryptedContent);
+}
+```
+
+The top-level key matches the provider name, such as `'anthropic'`, `'google'`, or `'openai'`.

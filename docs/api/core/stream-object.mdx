@@ -81,12 +81,16 @@ type ObjectStream<TSchema extends z.ZodType> = AsyncIterable<
 ```
 
 <ResponseField name="result" type="Promise<GenerateObjectResult<TSchema>>">
-  Resolves with the final validated object result when the stream completes.
+  Resolves with the final validated object result when the stream completes. Rejects on abort or upstream failure.
 </ResponseField>
 
 <ResponseField name="events" type="Promise<readonly ObjectStreamEvent<TSchema>[]>">
-  Resolves with all observed events.
+  Resolves with all observed events, including abort and failure cases.
 </ResponseField>
+
+<Info>
+  The HTTP request starts as soon as you create the stream. You do not need to iterate before the model begins responding.
+</Info>
 
 ### ObjectStreamEvent types
 
@@ -196,6 +200,23 @@ const finalResult = await objectStream.result;
 console.log(finalResult.object);
 console.log('Usage:', finalResult.usage);
 ```
+
+### Using .events
+
+```typescript
+const objectStream = await streamObject({
+  model,
+  messages: [{ role: 'user', content: 'Generate a user profile' }],
+  schema
+});
+
+const events = await objectStream.events;
+console.log(events.map((event) => event.type));
+```
+
+<Note>
+  `ObjectStream` follows the same lifecycle semantics as `ChatStream`: `.result` settles independently of iteration, `.events` keeps the observed history, and iteration is replayable.
+</Note>
 
 ### Cancellation
 

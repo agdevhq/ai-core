@@ -51,14 +51,14 @@ const anthropic = createAnthropic({
 ## Supported models
 
 <AccordionGroup>
-  <Accordion title="Claude 4.6 (Adaptive Thinking)" icon="sparkles">
+  <Accordion title="Claude 4.6 (adaptive thinking)" icon="sparkles">
     Latest generation with adaptive thinking mode.
     
     - **claude-opus-4-6** - Most capable, supports max effort
     - **claude-sonnet-4-6** - Balanced performance and speed
   </Accordion>
   
-  <Accordion title="Claude 4.5 (Manual Thinking)" icon="brain">
+  <Accordion title="Claude 4.5 (manual thinking)" icon="brain">
     Previous generation with manual thinking budget control.
     
     - **claude-opus-4-5** - High capability
@@ -82,7 +82,7 @@ const anthropic = createAnthropic({
 | Streaming | Yes |
 | Function Calling | Yes |
 | Vision | Yes |
-| Reasoning Effort | Yes |
+| Reasoning | Yes |
 | Embeddings | No |
 | Image Generation | No |
 
@@ -173,7 +173,7 @@ const result = await generate({
 });
 ```
 
-### Vision
+### Vision and file inputs
 
 ```typescript
 const result = await generate({
@@ -196,6 +196,10 @@ const result = await generate({
 });
 ```
 
+<Note>
+  Anthropic accepts image parts and PDF file parts. Other file MIME types are rejected.
+</Note>
+
 ## Thinking modes
 
 ### Adaptive thinking (Claude 4.6)
@@ -213,7 +217,7 @@ const result = await generate({
 ```
 
 <Note>
-  Only `claude-opus-4-6` supports `'max'` effort level.
+  Only `claude-opus-4-6` supports `'max'` effort directly. On `claude-sonnet-4-6`, `'max'` is clamped to `'high'`.
 </Note>
 
 ### Manual thinking budget (Claude 4.5 and earlier)
@@ -230,6 +234,23 @@ const result = await generate({
 });
 ```
 
+## Reasoning restrictions
+
+When reasoning is enabled, Anthropic enforces additional request constraints:
+
+- `temperature` must be omitted
+- `topP` must be between `0.95` and `1`
+- `toolChoice` must be `'auto'` or `'none'`
+- `providerOptions.anthropic.topK` must be omitted
+
+<Warning>
+  Violating these constraints throws a `ProviderError` before the request is sent.
+</Warning>
+
+<Note>
+  When you combine reasoning with tools, the adapter automatically adds the `interleaved-thinking-2025-05-14` beta.
+</Note>
+
 ## Provider-specific options
 
 Options are namespaced under `anthropic` in `providerOptions`:
@@ -240,9 +261,8 @@ const result = await generate({
   messages: [{ role: 'user', content: 'Hello' }],
   providerOptions: {
     anthropic: {
-      topK: 40,
       stopSequences: ['\n\n'],
-      betas: ['max-tokens-3-5-sonnet-2024-07-15'],
+      betas: ['interleaved-thinking-2025-05-14'],
     },
   },
 });

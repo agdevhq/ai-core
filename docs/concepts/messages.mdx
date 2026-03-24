@@ -232,7 +232,7 @@ const filePart: FilePart = {
 ```
 
 <Warning>
-  Not all providers support all content types. Check provider documentation for specific limitations on multi-modal inputs.
+  Not all providers support all content types. For example, Anthropic accepts PDF file parts only. Check the provider pages for model-specific input limits.
 </Warning>
 
 ## Assistant Content Parts
@@ -259,7 +259,7 @@ type AssistantTextPart = {
 
 ### Reasoning Part
 
-Extended thinking and reasoning (supported by some models like Claude):
+Extended thinking and reasoning content from the model:
 
 ```typescript
 type ReasoningPart = {
@@ -269,7 +269,11 @@ type ReasoningPart = {
 };
 ```
 
-The `providerMetadata` is provider-namespaced. The top-level key is the provider identifier (e.g. `'anthropic'`).
+The `providerMetadata` object is provider-namespaced. The top-level key is the provider identifier, such as `'anthropic'`, `'google'`, or `'openai'`.
+
+<Note>
+  Use [`getProviderMetadata()`](/api/core/utilities) when you want typed access to provider-specific metadata.
+</Note>
 
 **Accessing Reasoning:**
 
@@ -331,40 +335,9 @@ messages.push({
 const result2 = await generate({ model, messages });
 ```
 
-## Helper Functions
+## Helper functions
 
-core-ai provides utilities for working with messages:
-
-### resultToMessage
-
-Convert a `GenerateResult` to an `AssistantMessage`:
-
-```typescript
-import { resultToMessage } from '@core-ai/core-ai';
-
-const result = await generate({ model, messages });
-const assistantMessage = resultToMessage(result);
-
-messages.push(assistantMessage);
-```
-
-By default, `resultToMessage` includes reasoning content in the message. You can exclude it:
-
-```typescript
-const assistantMessage = resultToMessage(result, { includeReasoning: false });
-```
-
-### assistantMessage
-
-Create a simple assistant message from text:
-
-```typescript
-import { assistantMessage } from '@core-ai/core-ai';
-
-const message = assistantMessage('Hello! How can I help you?');
-```
-
-This is a convenience function that creates an assistant message with a single text part.
+For message helpers like `resultToMessage()` and `assistantMessage()`, see the [utilities reference](/api/core/utilities).
 
 ## Tool Call Flow
 

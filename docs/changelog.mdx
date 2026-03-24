@@ -3,6 +3,15 @@ title: Releases
 description: Release history for all core-ai packages.
 ---
 
+<Update label="0.7.0" description="Require Zod 4 and native JSON Schema conversion" tags={["breaking"]}>
+  <Warning>This release contains breaking changes across all packages.</Warning>
+
+  ### All packages
+
+  - Require Zod 4 (`^4.0.0`) and switch JSON Schema conversion to Zod 4's native `z.toJSONSchema()` support.
+  - Export `zodSchemaToJsonSchema()` from `@core-ai/core-ai` for direct schema conversion.
+</Update>
+
 <Update label="0.6.1" description="New model support, internal refactors" tags={["improvement", "internal"]}>
   ### @core-ai/core-ai
 
@@ -154,10 +163,10 @@ description: Release history for all core-ai packages.
   - Add structured output support with `generateObject()` and `streamObject()`.
 </Update>
 
-<Update label="0.2.1" description="Zod 4 compatibility" tags={["fix"]}>
+<Update label="0.2.1" description="Initial Zod 4 compatibility" tags={["fix"]}>
   ### All packages
 
-  - Broaden Zod compatibility to support both Zod 3 and Zod 4 across all packages. Updates published Zod ranges and raises the minimum `zod-to-json-schema` version to one that supports Zod 4, preventing peer dependency conflicts for projects already using Zod 4.
+  - Add initial Zod 4 compatibility by broadening package ranges and updating `zod-to-json-schema` to a version that supports Zod 4.
 </Update>
 
 <Update label="0.2.0" description="Mistral provider" tags={["improvement"]}>

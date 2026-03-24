@@ -111,7 +111,7 @@ Each provider defines and validates its own set of options. See the provider pag
 - [OpenAI](/api/providers/openai) -- Responses API (`createOpenAI`): `store`, `serviceTier`, `include`, `parallelToolCalls`, `user`. Chat Completions API (`createOpenAICompat`): adds `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`
 - [Anthropic](/api/providers/anthropic) -- `topK`, `stopSequences`, `betas`, `outputConfig`
 - [Google GenAI](/api/providers/google-genai) -- `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`, `topK`
-- [Mistral](/api/providers/mistral) -- `stopSequences`, `frequencyPenalty`, `presencePenalty`, `randomSeed`, `safePrompt`
+- [Mistral](/api/providers/mistral) -- `stopSequences`, `frequencyPenalty`, `presencePenalty`, `randomSeed`, `parallelToolCalls`, `promptMode`, `safePrompt`
 
 ### stopSequences
 
@@ -243,6 +243,10 @@ console.log('Answer:', result.content);
 
 <Note>
   Reasoning configuration is provider-dependent. Check if your model supports extended thinking before using this option.
+</Note>
+
+<Note>
+  Providers interpret reasoning differently. Anthropic and OpenAI enforce model-specific restrictions, Google maps effort to thinking level or budget, and Mistral accepts the option but does not send effort to the API.
 </Note>
 
 ## Configuration best practices

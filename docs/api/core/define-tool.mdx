@@ -8,7 +8,7 @@ icon: 'wrench'
 
 The `defineTool()` function defines tools (functions) that language models can call during generation. Tools enable models to access external data, perform calculations, or trigger actions beyond text generation.
 
-## Function Signature
+## Function signature
 
 ```typescript
 export function defineTool(
@@ -40,13 +40,13 @@ type ToolDefinition = {
   Zod schema defining the tool's input parameters. The model will generate arguments matching this schema.
 </ParamField>
 
-## Return Value
+## Return value
 
 Returns the same `ToolDefinition` object that was passed in. This is a type-safe helper that provides IDE autocompletion and validation.
 
 ## Examples
 
-### Basic Tool Definition
+### Basic tool definition
 
 ```typescript
 import { defineTool } from '@core-ai/core-ai';
@@ -61,7 +61,7 @@ const weatherTool = defineTool({
 });
 ```
 
-### Tool with Multiple Parameters
+### Tool with multiple parameters
 
 ```typescript
 const searchTool = defineTool({
@@ -76,7 +76,7 @@ const searchTool = defineTool({
 });
 ```
 
-### Using Tools with generate()
+### Using tools with generate()
 
 ```typescript
 import { generate, defineTool } from '@core-ai/core-ai';
@@ -112,7 +112,7 @@ if (result.toolCalls.length > 0) {
 }
 ```
 
-### Tool Execution Loop
+### Tool execution loop
 
 ```typescript
 const tools = {
@@ -158,15 +158,15 @@ let result = await generate({
 
 // Execute tools and continue conversation
 while (result.toolCalls.length > 0) {
+  messages.push({
+    role: 'assistant',
+    parts: result.parts
+  });
+
   for (const toolCall of result.toolCalls) {
     const handler = toolHandlers[toolCall.name as keyof typeof toolHandlers];
     const toolResult = await handler(toolCall.arguments as any);
-    
-    messages.push({
-      role: 'assistant',
-      parts: result.parts
-    });
-    
+
     messages.push({
       role: 'tool',
       toolCallId: toolCall.id,
@@ -185,7 +185,7 @@ console.log(result.content);
 // Output: "The weather in Tokyo is sunny, 72°F"
 ```
 
-### Complex Parameters with Nested Objects
+### Complex parameters with nested objects
 
 ```typescript
 const createEventTool = defineTool({
@@ -211,7 +211,7 @@ const createEventTool = defineTool({
 });
 ```
 
-### Tool with Enum Parameters
+### Tool with enum parameters
 
 ```typescript
 const analyzeSentimentTool = defineTool({

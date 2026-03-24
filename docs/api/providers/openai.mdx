@@ -5,7 +5,7 @@ description: 'Create and configure the OpenAI provider for chat, embeddings, and
 
 ## Overview
 
-The OpenAI provider gives you access to OpenAI's models including GPT-5, GPT-4, o-series reasoning models, embeddings, and image generation.
+The OpenAI provider gives you access to GPT-5 models, o-series reasoning models, embeddings, and image generation.
 
 By default, `createOpenAI` uses the **Responses API**. For the Chat Completions API, use `createOpenAICompat` from `@core-ai/openai/compat`.
 
@@ -106,12 +106,11 @@ const imageGen = openai.imageModel('gpt-image-1');
     - **o1-mini** - Compact reasoning model (no effort control)
   </Accordion>
   
-  <Accordion title="GPT-4 Series" icon="circle">
-    - **gpt-4** - Previous flagship model
-    - **gpt-4-turbo** - Faster GPT-4 variant
-    - **gpt-4o** - Optimized GPT-4
-  </Accordion>
 </AccordionGroup>
+
+<Note>
+  Any valid OpenAI chat model ID is accepted. The models above are the ones with explicit capability handling in core-ai.
+</Note>
 
 ### Embedding models
 
@@ -121,9 +120,7 @@ const imageGen = openai.imageModel('gpt-image-1');
 
 ### Image models
 
-- **gpt-image-1** - Latest image generation model
-- **dall-e-3** - Previous generation
-- **dall-e-2** - Legacy image model
+- **gpt-image-1** - Image generation model used throughout the docs examples
 
 ## Examples
 
@@ -195,6 +192,48 @@ const openai = createOpenAI({
 });
 ```
 
+## Reasoning support
+
+Reasoning support depends on the selected model family:
+
+| Models | Supported effort levels |
+|--------|-------------------------|
+| `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.2`, `gpt-5.2-codex`, `gpt-5.2-pro` | `low`, `medium`, `high`, `max` |
+| `gpt-5.1` | `low`, `medium`, `high` |
+| `gpt-5`, `gpt-5-mini`, `gpt-5-nano` | `minimal`, `low`, `medium`, `high` |
+| `o3`, `o3-mini`, `o4-mini`, `o1` | `low`, `medium`, `high` |
+| `o1-mini` | No effort control |
+
+<Warning>
+  GPT-5 family models throw a `ProviderError` if you set `temperature` or `topP` while reasoning is enabled.
+</Warning>
+
+### Reasoning metadata
+
+When reasoning is enabled on the Responses API, core-ai automatically requests encrypted reasoning content and exposes it through provider metadata.
+
+```typescript
+import { generate, getProviderMetadata } from '@core-ai/core-ai';
+import type { OpenAIReasoningMetadata } from '@core-ai/openai';
+
+const result = await generate({
+  model: openai.chatModel('gpt-5.4'),
+  messages: [{ role: 'user', content: 'Think carefully before answering.' }],
+  reasoning: { effort: 'high' },
+});
+
+for (const part of result.parts) {
+  if (part.type !== 'reasoning') continue;
+
+  const metadata = getProviderMetadata<OpenAIReasoningMetadata>(
+    part.providerMetadata,
+    'openai'
+  );
+
+  console.log(metadata?.encryptedContent);
+}
+```
+
 ## Provider-specific options
 
 Options are namespaced under `openai` in `providerOptions` and validated with Zod schemas.
@@ -219,6 +258,10 @@ const result = await generate({
 ```
 
 Available fields: `store`, `serviceTier` (`'auto'` | `'default'` | `'flex'` | `'scale'` | `'priority'`), `include`, `parallelToolCalls`, `user`.
+
+<Note>
+  Responses requests default to `store: false`. If reasoning is enabled, core-ai also ensures `reasoning.encrypted_content` is included automatically.
+</Note>
 
 ### Generate options (Chat Completions API)
 
@@ -247,6 +290,10 @@ const result = await generate({
   },
 });
 ```
+
+<Note>
+  Chat Completions uses `reasoning_effort` instead of the Responses API reasoning payload shape. The compat options do not support the `include` field.
+</Note>
 
 ### Embed options
 

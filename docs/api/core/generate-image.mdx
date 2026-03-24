@@ -6,9 +6,9 @@ icon: 'image'
 
 ## Overview
 
-The `generateImage()` function generates images from text prompts using image generation models like DALL-E. It supports generating multiple images, different sizes, and provides both base64 and URL outputs.
+The `generateImage()` function generates images from text prompts using image generation models. It supports generating multiple images, different sizes, and both base64 and URL outputs.
 
-## Function Signature
+## Function signature
 
 ```typescript
 export async function generateImage(
@@ -47,7 +47,7 @@ export type GenerateImageParams = ImageGenerateOptions & {
   Provider-specific options, namespaced by provider name (e.g. `{ openai: { quality: 'hd' } }`).
 </ParamField>
 
-## Return Value
+## Return value
 
 Returns a `Promise<ImageGenerateResult>` with the following properties:
 
@@ -71,7 +71,7 @@ Returns a `Promise<ImageGenerateResult>` with the following properties:
 
 ## Examples
 
-### Basic Image Generation
+### Basic image generation
 
 ```typescript
 import { generateImage } from '@core-ai/core-ai';
@@ -88,11 +88,11 @@ console.log(result.images[0].url);
 // Save or display the image URL
 ```
 
-### Generate Multiple Images
+### Generate multiple images
 
 ```typescript
 const result = await generateImage({
-  model: openai.imageModel('dall-e-2'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'A cute robot playing guitar',
   n: 4 // Generate 4 variations
 });
@@ -103,11 +103,11 @@ result.images.forEach((image, i) => {
 });
 ```
 
-### Custom Size
+### Custom size
 
 ```typescript
 const result = await generateImage({
-  model: openai.imageModel('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'A futuristic city skyline',
   size: '1792x1024' // Wide landscape format
 });
@@ -115,11 +115,11 @@ const result = await generateImage({
 console.log('Generated landscape image:', result.images[0].url);
 ```
 
-### Get Base64 Image Data
+### Get base64 image data
 
 ```typescript
 const result = await generateImage({
-  model: openai.imageModel('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'A detailed illustration of a dragon',
   providerOptions: {
     openai: { responseFormat: 'b64_json' },
@@ -135,11 +135,11 @@ if (base64Data) {
 }
 ```
 
-### Check Revised Prompt
+### Check revised prompt
 
 ```typescript
 const result = await generateImage({
-  model: openai.imageModel('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'cat'
 });
 
@@ -150,13 +150,13 @@ if (result.images[0].revisedPrompt) {
 }
 ```
 
-### Save Image to File
+### Save image to file
 
 ```typescript
 import { writeFile } from 'fs/promises';
 
 const result = await generateImage({
-  model: openai.imageModel('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'Abstract art with vibrant colors'
 });
 
@@ -170,11 +170,11 @@ if (imageUrl) {
 }
 ```
 
-### Generate with Style Instructions
+### Generate with style instructions
 
 ```typescript
 const result = await generateImage({
-  model: openai.imageModel('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'A portrait of a wise old wizard, oil painting style, ' +
           'detailed brushstrokes, warm lighting, fantasy art'
 });
@@ -182,14 +182,14 @@ const result = await generateImage({
 console.log(result.images[0].url);
 ```
 
-### Error Handling
+### Error handling
 
 ```typescript
 import { LLMError } from '@core-ai/core-ai';
 
 try {
   const result = await generateImage({
-    model: openai.imageModel('dall-e-3'),
+    model: openai.imageModel('gpt-image-1'),
     prompt: '' // Empty prompt
   });
 } catch (error) {
@@ -200,24 +200,24 @@ try {
 }
 ```
 
-### Generate Portrait and Landscape Variants
+### Generate portrait and landscape variants
 
 ```typescript
 const prompt = 'A magical forest with glowing mushrooms';
 
 const [portrait, landscape, square] = await Promise.all([
   generateImage({
-    model: openai.imageModel('dall-e-3'),
+    model: openai.imageModel('gpt-image-1'),
     prompt,
     size: '1024x1792' // Portrait
   }),
   generateImage({
-    model: openai.imageModel('dall-e-3'),
+    model: openai.imageModel('gpt-image-1'),
     prompt,
     size: '1792x1024' // Landscape
   }),
   generateImage({
-    model: openai.imageModel('dall-e-3'),
+    model: openai.imageModel('gpt-image-1'),
     prompt,
     size: '1024x1024' // Square
   })
@@ -230,43 +230,37 @@ console.log('Square:', square.images[0].url);
 
 ## Model Support
 
-Different providers offer different image generation models:
+Different providers expose image generation models through `imageModel()`:
 
 ```typescript
 import { createOpenAI } from '@core-ai/openai';
 const openai = createOpenAI();
 
-const dalle3 = openai.imageModel('dall-e-3');
 const gptImage = openai.imageModel('gpt-image-1');
 
-// Usage
 const result = await generateImage({
-  model: dalle3,
+  model: gptImage,
   prompt: 'A beautiful sunset'
 });
 ```
 
-## Important Notes
-
-<Warning>
-  DALL-E 3 only supports generating one image at a time (`n: 1`). Use DALL-E 2 for generating multiple variations.
-</Warning>
+## Important notes
 
 <Info>
-  The `revisedPrompt` field is particularly useful with DALL-E 3, which automatically enhances short prompts with more detail.
+  Check `revisedPrompt` when you want to inspect how the provider expanded or filtered your original prompt.
 </Info>
 
 <Tip>
   For best results, be specific and descriptive in your prompts. Include details about style, composition, lighting, colors, and mood.
 </Tip>
 
-## Provider-Specific Options
+## Provider-specific options
 
 ### OpenAI
 
 ```typescript
 const result = await generateImage({
-  model: openai.imageModel('dall-e-3'),
+  model: openai.imageModel('gpt-image-1'),
   prompt: 'A cat',
   providerOptions: {
     openai: {
@@ -278,7 +272,7 @@ const result = await generateImage({
 });
 ```
 
-## Common Use Cases
+## Common use cases
 
 1. **Content Creation**: Generate illustrations for articles and blog posts
 2. **Marketing**: Create social media graphics and ad visuals
@@ -287,12 +281,12 @@ const result = await generateImage({
 5. **Education**: Create visual aids and diagrams
 6. **Personal Projects**: Generate artwork for presentations or creative projects
 
-## Best Practices
+## Best practices
 
 1. **Be Specific**: Detailed prompts produce better results
 2. **Iterate**: Generate multiple variations to find the best result
 3. **Use Style Keywords**: Include art style, medium, and technique terms
-4. **Check Revised Prompts**: Learn what works from DALL-E 3's enhancements
+4. **Check Revised Prompts**: Inspect provider prompt rewrites when outputs differ from your original request
 5. **Handle Errors**: Prompts may be rejected for safety reasons
 
 ## Errors
@@ -307,7 +301,7 @@ import { LLMError, ProviderError } from '@core-ai/core-ai';
 
 try {
   const result = await generateImage({
-    model: openai.imageModel('dall-e-3'),
+    model: openai.imageModel('gpt-image-1'),
     prompt: 'inappropriate content'
   });
 } catch (error) {

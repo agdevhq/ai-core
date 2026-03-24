@@ -55,6 +55,7 @@ const mistral = createMistral({
   
   <Accordion title="Medium Models" icon="bolt">
     - **mistral-medium-2508** - Strong performance at lower cost (Mistral Medium 3.1)
+    - **magistral-medium-latest** - Reasoning-capable Magistral model
   </Accordion>
   
   <Accordion title="Small Models" icon="zap">
@@ -81,13 +82,13 @@ const mistral = createMistral({
 | Chat Completion | Yes |
 | Streaming | Yes |
 | Function Calling | Yes |
-| Vision | Limited |
-| Reasoning Effort | No |
+| Vision | Yes |
+| Reasoning | Output only |
 | Embeddings | Yes |
 | Image Generation | No |
 
 <Note>
-  Mistral models do not support explicit reasoning effort control.
+  Mistral can return reasoning content from thinking-capable models, but it does not map `reasoning.effort` into the request. The `reasoning` option is accepted as a no-op.
 </Note>
 
 ## Examples
@@ -128,6 +129,26 @@ for await (const event of chatStream) {
   }
 }
 ```
+
+### Reasoning output
+
+```typescript
+const result = await generate({
+  model: mistral.chatModel('magistral-medium-latest'),
+  messages: [
+    { role: 'user', content: 'Solve this step by step: if 3x + 7 = 22, what is x?' },
+  ],
+  reasoning: {
+    effort: 'high',
+  },
+});
+
+console.log(result.reasoning);
+```
+
+<Note>
+  `reasoning.effort` is not sent to the Mistral API. Thinking-capable models decide their own reasoning behavior and the adapter extracts the resulting reasoning parts.
+</Note>
 
 ### Tool calling
 
@@ -218,6 +239,7 @@ const result = await generate({
       frequencyPenalty: 0.5,
       presencePenalty: 0.3,
       randomSeed: 42,
+      parallelToolCalls: true,
       safePrompt: true,
     },
   },
