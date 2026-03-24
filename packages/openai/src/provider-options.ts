@@ -68,48 +68,52 @@ export type OpenAIImageProviderOptions = z.infer<
     typeof openaiImageProviderOptionsSchema
 >;
 
-export function parseOpenAIResponsesGenerateProviderOptions(
-    providerOptions: GenerateProviderOptions | undefined
-): OpenAIResponsesGenerateProviderOptions | undefined {
+function parseOpenAIProviderOptions<TOptions>(
+    providerOptions: { openai?: unknown } | undefined,
+    schema: z.ZodType<TOptions>
+): TOptions | undefined {
     const rawOptions = providerOptions?.openai;
     if (rawOptions === undefined) {
         return undefined;
     }
 
-    return openaiResponsesGenerateProviderOptionsSchema.parse(rawOptions);
+    return schema.parse(rawOptions);
+}
+
+export function parseOpenAIResponsesGenerateProviderOptions(
+    providerOptions: GenerateProviderOptions | undefined
+): OpenAIResponsesGenerateProviderOptions | undefined {
+    return parseOpenAIProviderOptions(
+        providerOptions,
+        openaiResponsesGenerateProviderOptionsSchema
+    );
 }
 
 export function parseOpenAICompatGenerateProviderOptions(
     providerOptions: GenerateProviderOptions | undefined
 ): OpenAICompatGenerateProviderOptions | undefined {
-    const rawOptions = providerOptions?.openai;
-    if (rawOptions === undefined) {
-        return undefined;
-    }
-
-    return openaiCompatGenerateProviderOptionsSchema.parse(rawOptions);
+    return parseOpenAIProviderOptions(
+        providerOptions,
+        openaiCompatGenerateProviderOptionsSchema
+    );
 }
 
 export function parseOpenAIEmbedProviderOptions(
     providerOptions: EmbedProviderOptions | undefined
 ): OpenAIEmbedProviderOptions | undefined {
-    const rawOptions = providerOptions?.openai;
-    if (rawOptions === undefined) {
-        return undefined;
-    }
-
-    return openaiEmbedProviderOptionsSchema.parse(rawOptions);
+    return parseOpenAIProviderOptions(
+        providerOptions,
+        openaiEmbedProviderOptionsSchema
+    );
 }
 
 export function parseOpenAIImageProviderOptions(
     providerOptions: ImageProviderOptions | undefined
 ): OpenAIImageProviderOptions | undefined {
-    const rawOptions = providerOptions?.openai;
-    if (rawOptions === undefined) {
-        return undefined;
-    }
-
-    return openaiImageProviderOptionsSchema.parse(rawOptions);
+    return parseOpenAIProviderOptions(
+        providerOptions,
+        openaiImageProviderOptionsSchema
+    );
 }
 
 declare module '@core-ai/core-ai' {
