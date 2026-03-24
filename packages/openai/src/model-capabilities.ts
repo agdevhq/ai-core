@@ -1,4 +1,7 @@
-import type { ReasoningEffort } from '@core-ai/core-ai';
+import {
+    stripModelDateSuffix,
+    type ReasoningEffort,
+} from '@core-ai/core-ai';
 
 export type OpenAIModelCapabilities = {
     reasoning: {
@@ -16,42 +19,36 @@ const DEFAULT_CAPABILITIES: OpenAIModelCapabilities = {
     },
 };
 
+const GPT_5_MAX_REASONING_CAPABILITIES: OpenAIModelCapabilities = {
+    reasoning: {
+        supportsEffort: true,
+        supportedRange: ['low', 'medium', 'high', 'max'],
+        restrictsSamplingParams: true,
+    },
+};
+
+const GPT_5_MINIMAL_REASONING_CAPABILITIES: OpenAIModelCapabilities = {
+    reasoning: {
+        supportsEffort: true,
+        supportedRange: ['minimal', 'low', 'medium', 'high'],
+        restrictsSamplingParams: true,
+    },
+};
+
+const NO_REASONING_EFFORT_CAPABILITIES: OpenAIModelCapabilities = {
+    reasoning: {
+        supportsEffort: false,
+        supportedRange: [],
+        restrictsSamplingParams: false,
+    },
+};
+
 const MODEL_CAPABILITIES: Record<string, OpenAIModelCapabilities> = {
-    'gpt-5.4': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.4-pro': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.2': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.2-codex': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5.2-pro': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['low', 'medium', 'high', 'max'],
-            restrictsSamplingParams: true,
-        },
-    },
+    'gpt-5.4': GPT_5_MAX_REASONING_CAPABILITIES,
+    'gpt-5.4-pro': GPT_5_MAX_REASONING_CAPABILITIES,
+    'gpt-5.2': GPT_5_MAX_REASONING_CAPABILITIES,
+    'gpt-5.2-codex': GPT_5_MAX_REASONING_CAPABILITIES,
+    'gpt-5.2-pro': GPT_5_MAX_REASONING_CAPABILITIES,
     'gpt-5.1': {
         reasoning: {
             supportsEffort: true,
@@ -59,27 +56,9 @@ const MODEL_CAPABILITIES: Record<string, OpenAIModelCapabilities> = {
             restrictsSamplingParams: true,
         },
     },
-    'gpt-5': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['minimal', 'low', 'medium', 'high'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5-mini': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['minimal', 'low', 'medium', 'high'],
-            restrictsSamplingParams: true,
-        },
-    },
-    'gpt-5-nano': {
-        reasoning: {
-            supportsEffort: true,
-            supportedRange: ['minimal', 'low', 'medium', 'high'],
-            restrictsSamplingParams: true,
-        },
-    },
+    'gpt-5': GPT_5_MINIMAL_REASONING_CAPABILITIES,
+    'gpt-5-mini': GPT_5_MINIMAL_REASONING_CAPABILITIES,
+    'gpt-5-nano': GPT_5_MINIMAL_REASONING_CAPABILITIES,
     o3: {
         reasoning: {
             supportsEffort: true,
@@ -108,13 +87,7 @@ const MODEL_CAPABILITIES: Record<string, OpenAIModelCapabilities> = {
             restrictsSamplingParams: false,
         },
     },
-    'o1-mini': {
-        reasoning: {
-            supportsEffort: false,
-            supportedRange: [],
-            restrictsSamplingParams: false,
-        },
-    },
+    'o1-mini': NO_REASONING_EFFORT_CAPABILITIES,
 };
 
 const EFFORT_RANK: Record<ReasoningEffort, number> = {
@@ -125,6 +98,17 @@ const EFFORT_RANK: Record<ReasoningEffort, number> = {
     max: 4,
 };
 
+const OPENAI_REASONING_EFFORT_MAP: Record<
+    ReasoningEffort,
+    'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+> = {
+    minimal: 'minimal',
+    low: 'low',
+    medium: 'medium',
+    high: 'high',
+    max: 'xhigh',
+};
+
 export function getOpenAIModelCapabilities(
     modelId: string
 ): OpenAIModelCapabilities {
@@ -133,7 +117,7 @@ export function getOpenAIModelCapabilities(
 }
 
 export function normalizeModelId(modelId: string): string {
-    return modelId.replace(/-\d{8}$/, '');
+    return stripModelDateSuffix(modelId);
 }
 
 export function clampReasoningEffort(
@@ -161,8 +145,5 @@ export function clampReasoningEffort(
 export function toOpenAIReasoningEffort(
     effort: ReasoningEffort
 ): 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' {
-    if (effort === 'max') {
-        return 'xhigh';
-    }
-    return effort;
+    return OPENAI_REASONING_EFFORT_MAP[effort];
 }

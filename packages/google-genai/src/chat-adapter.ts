@@ -324,7 +324,7 @@ export function createGenerateRequest(
             ? { toolConfig: convertToolChoice(options.toolChoice) }
             : {}),
         ...mapSamplingToConfig(options),
-        ...mapReasoningToConfig(modelId, options, googleOptions),
+        ...mapReasoningToConfig(modelId, options),
         ...mapGoogleProviderOptionsToConfig(googleOptions),
         ...(options.signal ? { abortSignal: options.signal } : {}),
     };
@@ -564,8 +564,7 @@ export async function* transformStream(
 
 function mapReasoningToConfig(
     modelId: string,
-    options: GenerateOptions,
-    _googleProviderOptions: GoogleGenerateProviderOptions | undefined
+    options: GenerateOptions
 ): Record<string, unknown> {
     if (!options.reasoning) {
         return {};
