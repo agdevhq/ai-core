@@ -119,6 +119,14 @@ npx tsx examples/01-chat-completion.ts
   >
     Streaming structured output with `streamObject()`. Demonstrates real-time streaming of structured JSON with incremental validation.
   </Card>
+
+  <Card
+    title="Stream Abort"
+    icon="circle-stop"
+    href="https://github.com/agdevhq/core-ai/blob/main/examples/13-stream-abort.ts"
+  >
+    Aborting a stream with `AbortSignal` and handling `StreamAbortedError`. Shows how to cancel in-progress streams gracefully.
+  </Card>
 </CardGroup>
 
 ## Provider Examples
@@ -171,7 +179,11 @@ Work with typed, validated outputs:
 - **11-generate-object.ts** - Generate structured JSON
 - **12-stream-object.ts** - Stream structured data
 
-### 4. Multi-Provider
+### 4. Stream Control
+Manage stream lifecycle:
+- **13-stream-abort.ts** - Cancel streams with AbortSignal
+
+### 5. Multi-Provider
 Experience true provider portability:
 - **08-anthropic-provider.ts** - Claude models
 - **09-google-genai-provider.ts** - Gemini models
