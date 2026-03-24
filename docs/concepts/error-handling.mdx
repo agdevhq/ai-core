@@ -5,7 +5,7 @@ description: LLMError, ProviderError, and structured output error types in core-
 
 ## Overview
 
-core-ai provides a hierarchy of error types that help you handle failures gracefully and provide meaningful feedback to users.
+core-ai provides a hierarchy of error types that help you handle failures gracefully. For the complete API surface, see the [errors reference](/api/core/errors).
 
 ## Error Hierarchy
 
@@ -96,6 +96,10 @@ try {
   }
 }
 ```
+
+<Note>
+  `StreamAbortedError` applies to an in-flight stream. Validation errors such as empty `messages` still throw `LLMError`.
+</Note>
 
 ## ProviderError
 
@@ -294,6 +298,7 @@ import {
   generateObject,
   LLMError,
   ProviderError,
+  StructuredOutputError,
   StructuredOutputNoObjectGeneratedError,
   StructuredOutputParseError,
   StructuredOutputValidationError,

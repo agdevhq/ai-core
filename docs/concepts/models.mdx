@@ -131,39 +131,15 @@ if (result.toolCalls.length > 0) {
 }
 ```
 
-### Generate Result
+### Generate result
 
-```typescript
-type GenerateResult = {
-  parts: AssistantContentPart[]; // All content parts (text, reasoning, tool calls)
-  content: string | null; // Concatenated text content
-  reasoning: string | null; // Extended thinking/reasoning if available
-  toolCalls: ToolCall[]; // Tool calls requested by the model
-  finishReason: FinishReason; // Why generation stopped
-  usage: ChatUsage; // Token usage information
-};
+`generate()` returns a `GenerateResult` with `parts`, `content`, `reasoning`, `toolCalls`, `finishReason`, and `usage`.
 
-type FinishReason =
-  | 'stop' // Natural completion
-  | 'length' // Hit token limit
-  | 'tool-calls' // Requested tool calls
-  | 'content-filter' // Blocked by content filter
-  | 'unknown';
-```
+### Stream events
 
-### Stream Events
+`stream()` returns a replayable `ChatStream` that emits reasoning, text, tool-call, and `finish` events while also exposing `.result` and `.events`.
 
-```typescript
-type StreamEvent =
-  | { type: 'reasoning-start' }
-  | { type: 'reasoning-delta'; text: string }
-  | { type: 'reasoning-end'; providerMetadata?: Record<string, Record<string, unknown>> }
-  | { type: 'text-delta'; text: string }
-  | { type: 'tool-call-start'; toolCallId: string; toolName: string }
-  | { type: 'tool-call-delta'; toolCallId: string; argumentsDelta: string }
-  | { type: 'tool-call-end'; toolCall: ToolCall }
-  | { type: 'finish'; finishReason: FinishReason; usage: ChatUsage };
-```
+See the [types reference](/api/core/types) for the full `GenerateResult`, `StreamEvent`, and `FinishReason` type definitions.
 
 ## Embedding Models
 
@@ -257,15 +233,15 @@ import { generateImage } from '@core-ai/core-ai';
 import { createOpenAI } from '@core-ai/openai';
 
 const openai = createOpenAI();
-const model = openai.imageModel('dall-e-3');
+const model = openai.imageModel('gpt-image-1');
 
 const result = await generateImage({
   model,
   prompt: 'A futuristic city at sunset with flying cars',
 });
 
-console.log(result.images[0].url);
-// "https://..."
+console.log(result.images[0]);
+// { base64: "...", revisedPrompt: "..." }
 ```
 
 ### Generate Options
@@ -303,7 +279,7 @@ type ImageGenerateResult = {
 type GeneratedImage = {
   base64?: string; // Base64-encoded image data
   url?: string; // URL to hosted image
-  revisedPrompt?: string; // Provider-revised prompt (e.g., DALL-E)
+  revisedPrompt?: string; // Provider-revised prompt
 };
 ```
 

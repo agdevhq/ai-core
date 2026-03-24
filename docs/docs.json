@@ -79,6 +79,7 @@
                             "api/core/generate-image",
                             "api/core/define-tool",
                             "api/core/types",
+                            "api/core/utilities",
                             "api/core/errors"
                         ]
                     },

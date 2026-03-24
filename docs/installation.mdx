@@ -10,6 +10,7 @@ core-ai is distributed as npm packages. Install the core package along with your
 ## Requirements
 
 - Node.js 22 or higher
+- Zod 4 (`zod@^4.0.0`)
 - TypeScript 5.7+ (recommended)
 
 ## Install the core package
@@ -49,7 +50,7 @@ You need at least one provider adapter to use core-ai. Install the package for y
     </CodeGroup>
 
     <Note>
-      The OpenAI adapter supports chat completion, streaming, embeddings, and image generation with DALL-E.
+      The OpenAI adapter supports chat completion, streaming, structured outputs, embeddings, and image generation.
     </Note>
   </Tab>
 
@@ -69,7 +70,7 @@ You need at least one provider adapter to use core-ai. Install the package for y
     </CodeGroup>
 
     <Note>
-      The Anthropic adapter supports chat completion and streaming with Claude models.
+      The Anthropic adapter supports chat completion, streaming, structured outputs, tool calling, vision, and reasoning with Claude models.
     </Note>
   </Tab>
 
@@ -89,7 +90,7 @@ You need at least one provider adapter to use core-ai. Install the package for y
     </CodeGroup>
 
     <Note>
-      The Google GenAI adapter supports Gemini models with chat, streaming, embeddings, and image generation.
+      The Google GenAI adapter supports chat, streaming, structured outputs, embeddings, multimodal input, and image generation.
     </Note>
   </Tab>
 
@@ -109,7 +110,7 @@ You need at least one provider adapter to use core-ai. Install the package for y
     </CodeGroup>
 
     <Note>
-      The Mistral adapter supports chat completion, streaming, and embeddings.
+      The Mistral adapter supports chat completion, streaming, structured outputs, tool calling, multimodal input, reasoning output, and embeddings.
     </Note>
   </Tab>
 </Tabs>

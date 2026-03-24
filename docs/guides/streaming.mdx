@@ -136,7 +136,7 @@ console.log('Token usage:', response.usage);
 ```
 
 <Note>
-  `.result` resolves when the stream completes, regardless of whether you iterated the events. Streams are replayable -- iterating after events have arrived replays the buffered history.
+  Streaming starts immediately when you create the handle. `.result` resolves when the stream completes, `.events` resolves with the observed history even on abort or failure, and the handle is replayable for late iterators.
 </Note>
 
 ## Streaming with configuration

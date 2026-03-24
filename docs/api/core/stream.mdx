@@ -87,6 +87,10 @@ type ChatStream = AsyncIterable<StreamEvent> & {
   Resolves with all observed events, including abort and failure cases.
 </ResponseField>
 
+<Info>
+  The HTTP request starts as soon as you create the stream. You do not need to iterate before the model begins responding.
+</Info>
+
 ### StreamEvent types
 
 <ResponseField name="reasoning-start" type="{ type: 'reasoning-start' }">
@@ -192,6 +196,22 @@ const finalResult = await chatStream.result;
 console.log(finalResult.content);
 console.log('Usage:', finalResult.usage);
 ```
+
+### Using .events
+
+```typescript
+const chatStream = await stream({
+  model,
+  messages: [{ role: 'user', content: 'Explain streaming' }],
+});
+
+const events = await chatStream.events;
+console.log(events.map((event) => event.type));
+```
+
+<Note>
+  `.result` resolves when the stream completes, regardless of event consumption. `.events` resolves with the observed history even on abort or upstream failure. Streams are replayable, so late iteration replays buffered events before continuing live.
+</Note>
 
 ### Streaming with tools
 
