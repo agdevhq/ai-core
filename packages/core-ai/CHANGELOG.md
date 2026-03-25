@@ -1,5 +1,12 @@
 # @core-ai/core-ai
 
+## 0.7.1
+
+### Patch Changes
+
+- 3f8addd: Refactor stream internals to reduce duplicate terminal state and result aggregation logic without changing behavior.
+- d94fd45: Refactor shared model-id, provider utility, and capability mapping helpers across providers without changing public behavior.
+
 ## 0.7.0
 
 ### Minor Changes
