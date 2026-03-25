@@ -83,6 +83,7 @@ const anthropic = createAnthropic({
 | Function Calling | Yes |
 | Vision | Yes |
 | Reasoning | Yes |
+| Prompt Caching | Yes |
 | Embeddings | No |
 | Image Generation | No |
 
@@ -268,7 +269,54 @@ const result = await generate({
 });
 ```
 
-Available fields: `topK`, `stopSequences`, `betas`, `outputConfig`.
+Available fields: `topK`, `stopSequences`, `betas`, `outputConfig`, `cacheControl`.
+
+## Prompt caching
+
+Use `cacheControl` to enable Anthropic prompt caching. This maps to Anthropic's top-level `cache_control` request field and uses automatic caching for the reusable prompt prefix.
+
+```typescript
+const result = await generate({
+  model: anthropic.chatModel('claude-sonnet-4-6'),
+  messages: [
+    { role: 'system', content: 'You are a careful technical editor.' },
+    { role: 'user', content: 'Summarize this document and keep all key dates.' },
+  ],
+  providerOptions: {
+    anthropic: {
+      cacheControl: { type: 'ephemeral' },
+    },
+  },
+});
+
+console.log(result.usage.inputTokenDetails.cacheReadTokens);
+console.log(result.usage.inputTokenDetails.cacheWriteTokens);
+```
+
+You can request a 1-hour cache TTL when you expect follow-up requests to arrive later than Anthropic's default 5-minute cache window:
+
+```typescript
+const result = await generate({
+  model: anthropic.chatModel('claude-sonnet-4-6'),
+  messages: [{ role: 'user', content: 'Summarize this large document.' }],
+  providerOptions: {
+    anthropic: {
+      cacheControl: { type: 'ephemeral', ttl: '1h' },
+    },
+  },
+});
+```
+
+Anthropic reports cache usage in `result.usage.inputTokenDetails`:
+
+- `cacheReadTokens`: Tokens served from an existing cache entry
+- `cacheWriteTokens`: Tokens written to the cache for future requests
+
+Anthropic only caches prompts above the model's minimum cacheable length:
+
+- 1024 tokens for Claude Sonnet 4.5, Claude Opus 4.1, Claude Opus 4, Claude Sonnet 4, and Claude Sonnet 3.7
+- 2048 tokens for Claude Sonnet 4.6
+- 4096 tokens for Claude Opus 4.6, Claude Opus 4.5, and Claude Haiku 4.5
 
 ## Error handling
 

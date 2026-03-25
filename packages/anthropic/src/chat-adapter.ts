@@ -528,6 +528,9 @@ function mapAnthropicProviderOptionsToRequest<TRequest extends object>(
 
     const mergedRequest = {
         ...baseRequest,
+        ...(providerOptions.cacheControl
+            ? { cache_control: providerOptions.cacheControl }
+            : {}),
         ...(providerOptions.topK !== undefined
             ? { top_k: providerOptions.topK }
             : {}),
