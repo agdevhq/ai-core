@@ -24,7 +24,11 @@ import type {
     ToolSet,
     UserContentPart,
 } from '@core-ai/core-ai';
-import { zodSchemaToJsonSchema } from '@core-ai/core-ai';
+import {
+    asObject,
+    safeParseJsonObject,
+    zodSchemaToJsonSchema,
+} from '@core-ai/core-ai';
 import {
     parseMistralGenerateProviderOptions,
     type MistralGenerateProviderOptions,
@@ -645,20 +649,4 @@ function toObject(value: unknown): Record<string, unknown> {
         return safeParseJsonObject(value);
     }
     return asObject(value);
-}
-
-function safeParseJsonObject(json: string): Record<string, unknown> {
-    try {
-        const parsed = JSON.parse(json) as unknown;
-        return asObject(parsed);
-    } catch {
-        return {};
-    }
-}
-
-function asObject(value: unknown): Record<string, unknown> {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-        return value as Record<string, unknown>;
-    }
-    return {};
 }

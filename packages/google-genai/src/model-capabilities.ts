@@ -1,4 +1,7 @@
-import type { ReasoningEffort } from '@core-ai/core-ai';
+import {
+    stripModelDateSuffix,
+    type ReasoningEffort,
+} from '@core-ai/core-ai';
 
 export type GoogleModelCapabilities = {
     reasoning: {
@@ -53,6 +56,22 @@ const MODEL_CAPABILITIES: Record<string, GoogleModelCapabilities> = {
     },
 };
 
+const GOOGLE_THINKING_LEVEL_MAP: Record<ReasoningEffort, 'LOW' | 'HIGH'> = {
+    minimal: 'LOW',
+    low: 'LOW',
+    medium: 'LOW',
+    high: 'HIGH',
+    max: 'HIGH',
+};
+
+const GOOGLE_THINKING_BUDGET_MAP: Record<ReasoningEffort, number> = {
+    minimal: 1024,
+    low: 4096,
+    medium: 16384,
+    high: 32768,
+    max: 32768,
+};
+
 export function getGoogleModelCapabilities(
     modelId: string
 ): GoogleModelCapabilities {
@@ -61,25 +80,13 @@ export function getGoogleModelCapabilities(
 }
 
 export function normalizeModelId(modelId: string): string {
-    return modelId.replace(/-\d{8}$/, '');
+    return stripModelDateSuffix(modelId);
 }
 
 export function toGoogleThinkingLevel(effort: ReasoningEffort): 'LOW' | 'HIGH' {
-    if (effort === 'high' || effort === 'max') {
-        return 'HIGH';
-    }
-    return 'LOW';
+    return GOOGLE_THINKING_LEVEL_MAP[effort];
 }
 
 export function toGoogleThinkingBudget(effort: ReasoningEffort): number {
-    if (effort === 'minimal') {
-        return 1024;
-    }
-    if (effort === 'low') {
-        return 4096;
-    }
-    if (effort === 'medium') {
-        return 16384;
-    }
-    return 32768;
+    return GOOGLE_THINKING_BUDGET_MAP[effort];
 }

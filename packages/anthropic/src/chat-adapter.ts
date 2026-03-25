@@ -11,7 +11,13 @@ import type {
     ToolResultBlockParam,
 } from '@anthropic-ai/sdk/resources/messages/messages';
 import type { z } from 'zod';
-import { ProviderError, getProviderMetadata, zodSchemaToJsonSchema } from '@core-ai/core-ai';
+import {
+    asObject,
+    getProviderMetadata,
+    ProviderError,
+    safeParseJsonObject,
+    zodSchemaToJsonSchema,
+} from '@core-ai/core-ai';
 import type {
     AssistantContentPart,
     FinishReason,
@@ -833,22 +839,6 @@ function mapStopReason(reason: StopReason | null): FinishReason {
         return 'content-filter';
     }
     return 'unknown';
-}
-
-function safeParseJsonObject(json: string): Record<string, unknown> {
-    try {
-        const parsed = JSON.parse(json) as unknown;
-        return asObject(parsed);
-    } catch {
-        return {};
-    }
-}
-
-function asObject(value: unknown): Record<string, unknown> {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-        return value as Record<string, unknown>;
-    }
-    return {};
 }
 
 function asStringArray(value: unknown): string[] {

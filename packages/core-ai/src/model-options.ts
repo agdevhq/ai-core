@@ -12,3 +12,19 @@ export function splitModelFromParams<
         options,
     };
 }
+
+export function callModelWithOptions<
+    TParams extends {
+        model: unknown;
+    },
+    TResult,
+>(
+    params: TParams,
+    call: (
+        model: TParams['model'],
+        options: Omit<TParams, 'model'>
+    ) => Promise<TResult>
+): Promise<TResult> {
+    const { model, options } = splitModelFromParams(params);
+    return call(model, options);
+}
