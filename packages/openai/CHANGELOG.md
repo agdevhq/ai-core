@@ -1,5 +1,15 @@
 # @core-ai/openai
 
+## 0.7.1
+
+### Patch Changes
+
+- 5b66e51: Refactor OpenAI structured output, provider factory wiring, option parsing, and reasoning transition handling without changing public behavior.
+- d94fd45: Refactor shared model-id, provider utility, and capability mapping helpers across providers without changing public behavior.
+- Updated dependencies [3f8addd]
+- Updated dependencies [d94fd45]
+    - @core-ai/core-ai@0.7.1
+
 ## 0.7.0
 
 ### Minor Changes

@@ -1,5 +1,15 @@
 # @core-ai/anthropic
 
+## 0.7.1
+
+### Patch Changes
+
+- b206e97: Add Anthropic prompt caching support through the `cacheControl` provider option.
+- d94fd45: Refactor shared model-id, provider utility, and capability mapping helpers across providers without changing public behavior.
+- Updated dependencies [3f8addd]
+- Updated dependencies [d94fd45]
+    - @core-ai/core-ai@0.7.1
+
 ## 0.7.0
 
 ### Minor Changes
