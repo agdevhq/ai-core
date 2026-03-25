@@ -401,6 +401,49 @@ describe('reasoning support', () => {
         expect(manual).not.toHaveProperty('betas');
     });
 
+    it('should include cache_control when cacheControl provider option is set', () => {
+        const request = createGenerateRequest('claude-sonnet-4-6', 4096, {
+            messages: [{ role: 'user', content: 'Hello' }],
+            providerOptions: {
+                anthropic: {
+                    cacheControl: { type: 'ephemeral' },
+                },
+            },
+        });
+
+        expect(request).toHaveProperty('cache_control', { type: 'ephemeral' });
+    });
+
+    it('should pass ttl in cache_control when specified', () => {
+        const request = createGenerateRequest('claude-sonnet-4-6', 4096, {
+            messages: [{ role: 'user', content: 'Hello' }],
+            providerOptions: {
+                anthropic: {
+                    cacheControl: { type: 'ephemeral', ttl: '1h' },
+                },
+            },
+        });
+
+        expect(request).toHaveProperty('cache_control', {
+            type: 'ephemeral',
+            ttl: '1h',
+        });
+    });
+
+    it('should include cache_control in stream request', () => {
+        const request = createStreamRequest('claude-sonnet-4-6', 4096, {
+            messages: [{ role: 'user', content: 'Hello' }],
+            providerOptions: {
+                anthropic: {
+                    cacheControl: { type: 'ephemeral' },
+                },
+            },
+        });
+
+        expect(request).toHaveProperty('cache_control', { type: 'ephemeral' });
+        expect(request).toHaveProperty('stream', true);
+    });
+
     it('should validate incompatible config when reasoning is enabled', () => {
         expect(() =>
             createGenerateRequest('claude-sonnet-4', 4096, {

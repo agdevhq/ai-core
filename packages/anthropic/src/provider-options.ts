@@ -1,12 +1,22 @@
 import type { GenerateProviderOptions } from '@core-ai/core-ai';
 import { z } from 'zod';
 
+export const anthropicCacheControlSchema = z
+    .object({
+        type: z.literal('ephemeral'),
+        ttl: z.enum(['5m', '1h']).optional(),
+    })
+    .strict();
+
+export type AnthropicCacheControl = z.infer<typeof anthropicCacheControlSchema>;
+
 export const anthropicGenerateProviderOptionsSchema = z
     .object({
         topK: z.number().int().optional(),
         stopSequences: z.array(z.string()).optional(),
         betas: z.array(z.string()).optional(),
         outputConfig: z.record(z.string(), z.unknown()).optional(),
+        cacheControl: anthropicCacheControlSchema.optional(),
     })
     .strict();
 
