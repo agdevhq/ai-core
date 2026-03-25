@@ -59,7 +59,6 @@ export { zodSchemaToJsonSchema } from './json-schema.ts';
 export { stripModelDateSuffix } from './model-id.ts';
 export {
     asObject,
-    normalizeProviderModelId,
     safeParseJsonObject,
 } from './provider-utils.ts';
 export { resultToMessage, assistantMessage } from './result-to-message.ts';
