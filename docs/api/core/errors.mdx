@@ -158,7 +158,7 @@ export class ProviderError extends CoreAIError {
         statusCode?: number,
         cause?: unknown
     ) {
-        super(message, { cause, provider });
+        super(message, cause, provider);
         this.name = 'ProviderError';
         this.statusCode = statusCode;
     }
@@ -218,7 +218,7 @@ export class StructuredOutputError extends CoreAIError {
         provider: string,
         options: StructuredOutputErrorOptions = {}
     ) {
-        super(message, { cause: options.cause, provider });
+        super(message, options.cause, provider);
         this.name = 'StructuredOutputError';
         this.statusCode = options.statusCode;
         this.rawOutput = options.rawOutput;
