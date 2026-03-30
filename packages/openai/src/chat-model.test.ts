@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { APIUserAbortError } from 'openai';
 import type OpenAI from 'openai';
 import type {
     Response,
     ResponseStreamEvent,
 } from 'openai/resources/responses/responses';
 import {
+    AbortedError,
     ProviderError,
     StreamAbortedError,
     StructuredOutputNoObjectGeneratedError,
@@ -14,10 +16,7 @@ import {
     resultToMessage,
 } from '@core-ai/core-ai';
 import { createOpenAIChatModel } from './chat-model.js';
-import {
-    toAsyncIterable,
-    createPushableAsyncIterable,
-} from '@core-ai/testing';
+import { toAsyncIterable, createPushableAsyncIterable } from '@core-ai/testing';
 
 describe('createOpenAIChatModel', () => {
     it('should create model metadata', () => {
@@ -334,7 +333,9 @@ describe('generate', () => {
                     {
                         type: 'message',
                         role: 'assistant',
-                        content: [{ type: 'output_text', text: '{"city":"Berlin"' }],
+                        content: [
+                            { type: 'output_text', text: '{"city":"Berlin"' },
+                        ],
                     },
                 ],
                 status: 'completed',
@@ -404,6 +405,23 @@ describe('generate', () => {
             })
         ).rejects.toBeInstanceOf(ProviderError);
     });
+
+    it('should map SDK abort errors to AbortedError', async () => {
+        const abortError = new APIUserAbortError();
+        const create = vi.fn(async (_request: unknown) => {
+            throw abortError;
+        });
+        const model = createOpenAIChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+        const request = model.generate({
+            messages: [{ role: 'user', content: 'hello' }],
+        });
+
+        await expect(request).rejects.toBeInstanceOf(AbortedError);
+        await expect(request).rejects.toMatchObject({ provider: 'openai' });
+    });
 });
 
 describe('stream', () => {
@@ -468,9 +486,9 @@ describe('stream', () => {
             messages: [{ role: 'user', content: 'hello' }],
             signal: controller.signal,
         });
-        const resultRejection = expect(chatStream.result).rejects.toBeInstanceOf(
-            StreamAbortedError
-        );
+        const resultRejection = expect(
+            chatStream.result
+        ).rejects.toBeInstanceOf(StreamAbortedError);
 
         const consumeStream = (async () => {
             for await (const event of chatStream) {
@@ -824,7 +842,9 @@ function asStreamEvent(value: unknown): ResponseStreamEvent {
     return value as ResponseStreamEvent;
 }
 
-async function collectObjectEvents(stream: AsyncIterable<unknown>): Promise<void> {
+async function collectObjectEvents(
+    stream: AsyncIterable<unknown>
+): Promise<void> {
     for await (const _event of stream) {
         // Consume the stream until completion or failure.
     }

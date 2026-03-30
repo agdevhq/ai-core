@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
-    ProviderError,
+    ValidationError,
     defineTool,
     type GenerateOptions,
     type Message,
@@ -451,7 +451,7 @@ describe('reasoning support', () => {
                 reasoning: { effort: 'high' },
                 temperature: 0.2,
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
 
         expect(() =>
             createStreamRequest('claude-sonnet-4', 4096, {
@@ -459,7 +459,7 @@ describe('reasoning support', () => {
                 reasoning: { effort: 'high' },
                 topP: 0.9,
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
 
         expect(() =>
             createGenerateRequest('claude-sonnet-4', 4096, {
@@ -467,7 +467,7 @@ describe('reasoning support', () => {
                 reasoning: { effort: 'high' },
                 toolChoice: { type: 'tool', toolName: 'search' },
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
 
         expect(() =>
             createGenerateRequest('claude-sonnet-4', 4096, {
@@ -500,7 +500,7 @@ describe('reasoning support', () => {
                 reasoning: { effort: 'high' },
                 providerOptions: { anthropic: { topK: 5 } },
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
     });
 
     it('should reject invalid anthropic provider options', () => {

@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { APIUserAbortError } from '@anthropic-ai/sdk';
 import type Anthropic from '@anthropic-ai/sdk';
 import type {
     Message,
     RawMessageStreamEvent,
 } from '@anthropic-ai/sdk/resources/messages/messages';
 import {
+    AbortedError,
     ProviderError,
     StructuredOutputNoObjectGeneratedError,
     StructuredOutputValidationError,
@@ -335,6 +337,23 @@ describe('generate', () => {
                 messages: [{ role: 'user', content: 'hello' }],
             })
         ).rejects.toBeInstanceOf(ProviderError);
+    });
+
+    it('should map SDK abort errors to AbortedError', async () => {
+        const create = vi.fn(async () => {
+            throw new APIUserAbortError();
+        });
+        const model = createAnthropicChatModel(
+            createMockClient(create),
+            'claude-sonnet-4',
+            4096
+        );
+        const request = model.generate({
+            messages: [{ role: 'user', content: 'hello' }],
+        });
+
+        await expect(request).rejects.toBeInstanceOf(AbortedError);
+        await expect(request).rejects.toMatchObject({ provider: 'anthropic' });
     });
 
     it('should pass reasoning config and map reasoning parts', async () => {

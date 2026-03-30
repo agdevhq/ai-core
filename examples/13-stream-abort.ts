@@ -52,7 +52,7 @@ async function main(): Promise<void> {
 
         const response = await resultPromise;
         if (response === null) {
-            throw new StreamAbortedError('stream aborted');
+            throw new StreamAbortedError();
         }
         console.log('\n\nStream completed without aborting.');
         console.log('Finish reason:', response.finishReason);

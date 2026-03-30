@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LLMError } from './errors.ts';
+import { ValidationError } from './errors.ts';
 import { stream } from './stream-chat.ts';
 import type {
     ChatModel,
@@ -89,7 +89,7 @@ describe('stream', () => {
         expect(chatStream).toBe(expected);
     });
 
-    it('should throw LLMError for empty messages', async () => {
+    it('should throw ValidationError for empty messages', async () => {
         const model: ChatModel = {
             provider: 'test',
             modelId: 'test-model',
@@ -110,6 +110,6 @@ describe('stream', () => {
                 model,
                 messages: [],
             })
-        ).rejects.toBeInstanceOf(LLMError);
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 });

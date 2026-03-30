@@ -46,7 +46,9 @@ export type {
     GeneratedImage,
 } from './types.ts';
 export {
-    LLMError,
+    CoreAIError,
+    ValidationError,
+    AbortedError,
     StreamAbortedError,
     ProviderError,
     StructuredOutputError,

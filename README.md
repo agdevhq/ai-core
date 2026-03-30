@@ -370,7 +370,7 @@ const result = await generate({
 ## Error Handling
 
 ```typescript
-import { LLMError, ProviderError } from '@core-ai/core-ai';
+import { CoreAIError, ProviderError } from '@core-ai/core-ai';
 
 try {
     await generate({ model, messages });
@@ -379,7 +379,7 @@ try {
         console.error(
             `[${error.provider}] ${error.message} (${error.statusCode})`
         );
-    } else if (error instanceof LLMError) {
+    } else if (error instanceof CoreAIError) {
         console.error(error.message);
     }
 }

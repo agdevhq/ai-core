@@ -1,7 +1,18 @@
-import { APIError } from 'openai';
-import { ProviderError } from '@core-ai/core-ai';
+import { APIError, APIUserAbortError } from 'openai';
+import { AbortedError, ProviderError } from '@core-ai/core-ai';
 
-export function wrapOpenAIError(error: unknown): ProviderError {
+function isOpenAIAbortError(error: unknown): error is Error {
+    return (
+        error instanceof APIUserAbortError ||
+        (error instanceof Error && error.name === 'AbortError')
+    );
+}
+
+export function wrapOpenAIError(error: unknown): AbortedError | ProviderError {
+    if (isOpenAIAbortError(error)) {
+        return new AbortedError(error, 'openai');
+    }
+
     if (error instanceof APIError) {
         return new ProviderError(error.message, 'openai', error.status, error);
     }

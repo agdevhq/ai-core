@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LLMError } from './errors.ts';
+import { ValidationError } from './errors.ts';
 import { generateImage } from './generate-image.ts';
 import type { ImageModel } from './types.ts';
 
@@ -33,6 +33,6 @@ describe('generateImage', () => {
                 model,
                 prompt: '',
             })
-        ).rejects.toBeInstanceOf(LLMError);
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 });

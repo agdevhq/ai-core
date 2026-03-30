@@ -1,6 +1,6 @@
 ---
 title: Error Handling
-description: LLMError, ProviderError, and structured output error types in core-ai
+description: CoreAIError, ProviderError, and structured output error types in core-ai
 ---
 
 ## Overview
@@ -11,31 +11,34 @@ core-ai provides a hierarchy of error types that help you handle failures gracef
 
 ```typescript
 Error
-└── LLMError
-    ├── StreamAbortedError
-    └── ProviderError
-        └── StructuredOutputError
-            ├── StructuredOutputNoObjectGeneratedError
-            ├── StructuredOutputParseError
-            └── StructuredOutputValidationError
+└── CoreAIError
+    ├── ValidationError
+    ├── AbortedError
+    │   └── StreamAbortedError
+    ├── ProviderError
+    └── StructuredOutputError
+        ├── StructuredOutputNoObjectGeneratedError
+        ├── StructuredOutputParseError
+        └── StructuredOutputValidationError
 ```
 
-## LLMError
+## CoreAIError
 
 Base error class for all core-ai errors.
 
 ```typescript
-class LLMError extends Error {
+class CoreAIError extends Error {
+  public readonly provider?: string;
   public readonly cause?: unknown;
 
-  constructor(message: string, cause?: unknown);
+  constructor(message: string, cause?: unknown, provider?: string);
 }
 ```
 
 **Usage:**
 
 ```typescript
-import { generate, LLMError } from '@core-ai/core-ai';
+import { CoreAIError, generate } from '@core-ai/core-ai';
 
 try {
   const result = await generate({
@@ -43,8 +46,8 @@ try {
     messages: [], // Empty messages array
   });
 } catch (error) {
-  if (error instanceof LLMError) {
-    console.error('LLM error:', error.message);
+  if (error instanceof CoreAIError) {
+    console.error('core-ai error:', error.message);
     if (error.cause) {
       console.error('Caused by:', error.cause);
     }
@@ -52,23 +55,43 @@ try {
 }
 ```
 
+<Tip>
+  Check for the most specific error types first, then fall back to `CoreAIError` to catch any standardized library error.
+</Tip>
+
+## ValidationError
+
+Thrown when core-ai rejects invalid caller input or local request configuration before making a provider call.
+
+```typescript
+class ValidationError extends CoreAIError {
+  constructor(message: string, cause?: unknown, provider?: string);
+}
+```
+
 **When thrown:**
 - Empty messages array
 - Empty input for embeddings
 - Empty prompt for image generation
-- Invalid configuration or parameters
+- Invalid local request configuration
 
-<Tip>
-  Always check for `LLMError` first to catch all core-ai errors, then check for more specific error types.
-</Tip>
+## AbortedError
+
+Thrown when an operation is cancelled via an `AbortSignal`.
+
+```typescript
+class AbortedError extends CoreAIError {
+  constructor(cause?: unknown, provider?: string);
+}
+```
 
 ## StreamAbortedError
 
 Thrown when a streaming operation is aborted via an `AbortSignal`.
 
 ```typescript
-class StreamAbortedError extends LLMError {
-  constructor(message?: string, cause?: unknown);
+class StreamAbortedError extends AbortedError {
+  constructor(cause?: unknown, provider?: string);
 }
 ```
 
@@ -98,7 +121,7 @@ try {
 ```
 
 <Note>
-  `StreamAbortedError` applies to an in-flight stream. Validation errors such as empty `messages` still throw `LLMError`.
+  `StreamAbortedError` applies to an in-flight stream. Validation errors such as empty `messages` throw `ValidationError`.
 </Note>
 
 ## ProviderError
@@ -106,8 +129,7 @@ try {
 Error specific to provider API failures (network errors, API errors, rate limits, etc.).
 
 ```typescript
-class ProviderError extends LLMError {
-  public readonly provider: string;
+class ProviderError extends CoreAIError {
   public readonly statusCode?: number;
 
   constructor(
@@ -168,8 +190,9 @@ Errors specific to structured output generation (`generateObject` and `streamObj
 Base class for all structured output errors.
 
 ```typescript
-class StructuredOutputError extends ProviderError {
+class StructuredOutputError extends CoreAIError {
   public readonly rawOutput?: string;
+  public readonly statusCode?: number;
 
   constructor(
     message: string,
@@ -294,9 +317,9 @@ try {
 
 ```typescript
 import {
+  CoreAIError,
   generate,
   generateObject,
-  LLMError,
   ProviderError,
   StructuredOutputError,
   StructuredOutputNoObjectGeneratedError,
@@ -354,9 +377,9 @@ async function generateUserProfile(prompt: string) {
       throw new Error('AI service unavailable');
     }
     
-    // Handle generic LLM errors
-    if (error instanceof LLMError) {
-      console.error('LLM error:', error.message);
+    // Handle generic core-ai errors
+    if (error instanceof CoreAIError) {
+      console.error('core-ai error:', error.message);
       throw new Error('AI request failed');
     }
     
@@ -452,13 +475,13 @@ const result = await breaker.execute(() =>
 ```typescript
 function validateMessages(messages: Message[]): void {
   if (messages.length === 0) {
-    throw new LLMError('messages must not be empty');
+    throw new ValidationError('messages must not be empty');
   }
   
   for (const message of messages) {
     if (message.role === 'user' && typeof message.content === 'string') {
       if (message.content.trim().length === 0) {
-        throw new LLMError('user message content must not be empty');
+        throw new ValidationError('user message content must not be empty');
       }
     }
   }

@@ -4,7 +4,7 @@ import {
     toAsyncIterable,
     createPushableAsyncIterable,
 } from '@core-ai/testing';
-import { LLMError, StreamAbortedError } from './errors.ts';
+import { CoreAIError, StreamAbortedError, ValidationError } from './errors.ts';
 import { createObjectStream, streamObject } from './stream-object.ts';
 import type {
     ChatModel,
@@ -73,7 +73,7 @@ describe('streamObject', () => {
         expect(streamObjectMock).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw LLMError for empty messages', async () => {
+    it('should throw ValidationError for empty messages', async () => {
         const model: ChatModel = {
             provider: 'test',
             modelId: 'test-model',
@@ -97,7 +97,7 @@ describe('streamObject', () => {
                 messages: [],
                 schema: weatherSchema,
             })
-        ).rejects.toBeInstanceOf(LLMError);
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 });
 
@@ -192,7 +192,7 @@ describe('createObjectStream', () => {
 
         const objectStream = createObjectStream(toAsyncIterable(events));
 
-        await expect(objectStream.result).rejects.toBeInstanceOf(LLMError);
+        await expect(objectStream.result).rejects.toBeInstanceOf(CoreAIError);
         await expect(objectStream.events).resolves.toEqual(events);
     });
 
@@ -228,7 +228,7 @@ describe('createObjectStream', () => {
                         seenEvents.push(event);
                     }
                 })()
-            ).rejects.toBeInstanceOf(LLMError);
+            ).rejects.toBeInstanceOf(CoreAIError);
 
             expect(seenEvents).toEqual(events);
             await new Promise((resolve) => setTimeout(resolve, 0));

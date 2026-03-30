@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { APIUserAbortError } from 'openai';
 import type OpenAI from 'openai';
 import type {
     ChatCompletion,
     ChatCompletionChunk,
 } from 'openai/resources/chat/completions/completions';
 import {
+    AbortedError,
     ProviderError,
     StreamAbortedError,
     StructuredOutputNoObjectGeneratedError,
@@ -13,10 +15,7 @@ import {
     StructuredOutputValidationError,
 } from '@core-ai/core-ai';
 import { createOpenAICompatChatModel } from './chat-model.js';
-import {
-    toAsyncIterable,
-    createPushableAsyncIterable,
-} from '@core-ai/testing';
+import { toAsyncIterable, createPushableAsyncIterable } from '@core-ai/testing';
 
 describe('createOpenAICompatChatModel', () => {
     it('should create model metadata', () => {
@@ -519,6 +518,23 @@ describe('generate', () => {
         ).rejects.toBeInstanceOf(ProviderError);
     });
 
+    it('should map SDK abort errors to AbortedError', async () => {
+        const abortError = new APIUserAbortError();
+        const create = vi.fn(async () => {
+            throw abortError;
+        });
+        const model = createOpenAICompatChatModel(
+            createMockClient(create),
+            'gpt-5-mini'
+        );
+
+        await expect(
+            model.generate({
+                messages: [{ role: 'user', content: 'hello' }],
+            })
+        ).rejects.toBeInstanceOf(AbortedError);
+    });
+
     it('should pass reasoning effort in request but not extract reasoning text (Chat Completions API)', async () => {
         const create = vi.fn(async () => {
             return asChatCompletion({
@@ -704,9 +720,9 @@ describe('stream', () => {
             messages: [{ role: 'user', content: 'hello' }],
             signal: controller.signal,
         });
-        const resultRejection = expect(chatStream.result).rejects.toBeInstanceOf(
-            StreamAbortedError
-        );
+        const resultRejection = expect(
+            chatStream.result
+        ).rejects.toBeInstanceOf(StreamAbortedError);
 
         const consumeStream = (async () => {
             for await (const event of chatStream) {
@@ -1104,7 +1120,8 @@ describe('stream', () => {
                             index: 0,
                             finish_reason: null,
                             delta: {
-                                content: '{"city":"Berlin","temperatureC":"warm"}',
+                                content:
+                                    '{"city":"Berlin","temperatureC":"warm"}',
                             },
                         },
                     ],
@@ -1187,7 +1204,9 @@ function asChunk(value: Partial<ChatCompletionChunk>): ChatCompletionChunk {
     };
 }
 
-async function collectObjectEvents(stream: AsyncIterable<unknown>): Promise<void> {
+async function collectObjectEvents(
+    stream: AsyncIterable<unknown>
+): Promise<void> {
     for await (const _event of stream) {
         // Consume the stream until completion or failure.
     }

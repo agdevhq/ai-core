@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LLMError } from './errors.ts';
+import { ValidationError } from './errors.ts';
 import { embed } from './embed.ts';
 import type { EmbeddingModel } from './types.ts';
 
@@ -55,7 +55,7 @@ describe('embed', () => {
                 model,
                 input: '',
             })
-        ).rejects.toBeInstanceOf(LLMError);
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 
     it('should throw for empty array input', async () => {
@@ -73,6 +73,6 @@ describe('embed', () => {
                 model,
                 input: [],
             })
-        ).rejects.toBeInstanceOf(LLMError);
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 });

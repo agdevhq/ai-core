@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { LLMError, ProviderError, generate } from '@core-ai/core-ai';
+import { CoreAIError, ProviderError, generate } from '@core-ai/core-ai';
 import { createOpenAI } from '@core-ai/openai';
 
 function getRequiredEnv(name: 'OPENAI_API_KEY'): string {
@@ -19,8 +19,8 @@ function handleError(error: unknown): void {
         return;
     }
 
-    if (error instanceof LLMError) {
-        console.error('LLMError');
+    if (error instanceof CoreAIError) {
+        console.error('CoreAIError');
         console.error(error.message);
         return;
     }

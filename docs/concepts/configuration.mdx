@@ -364,7 +364,7 @@ if (result.usage.outputTokenDetails.reasoningTokens) {
 Cancel long-running requests with `AbortSignal`:
 
 ```typescript
-import { LLMError } from '@core-ai/core-ai';
+import { CoreAIError } from '@core-ai/core-ai';
 
 const controller = new AbortController();
 
@@ -377,7 +377,7 @@ try {
     signal: controller.signal,
   });
 } catch (error) {
-  if (error instanceof LLMError) {
+  if (error instanceof CoreAIError) {
     console.log('Request was cancelled:', error.message);
   }
 }
