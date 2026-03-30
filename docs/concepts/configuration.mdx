@@ -108,8 +108,8 @@ type GenerateProviderOptions = {
 
 Each provider defines and validates its own set of options. See the provider pages for the full schema:
 
-- [OpenAI](/api/providers/openai) -- Responses API (`createOpenAI`): `store`, `serviceTier`, `include`, `parallelToolCalls`, `user`. Chat Completions API (`createOpenAICompat`): adds `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`
-- [Anthropic](/api/providers/anthropic) -- `topK`, `stopSequences`, `betas`, `outputConfig`
+- [OpenAI](/api/providers/openai) -- Responses API (`createOpenAI`): `store`, `serviceTier`, `include`, `parallelToolCalls`, `user`. Chat Completions API (`createOpenAICompat`): `store`, `serviceTier`, `parallelToolCalls`, `user`, `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`
+- [Anthropic](/api/providers/anthropic) -- `topK`, `stopSequences`, `betas`, `outputConfig`, `cacheControl`
 - [Google GenAI](/api/providers/google-genai) -- `stopSequences`, `frequencyPenalty`, `presencePenalty`, `seed`, `topK`
 - [Mistral](/api/providers/mistral) -- `stopSequences`, `frequencyPenalty`, `presencePenalty`, `randomSeed`, `parallelToolCalls`, `promptMode`, `safePrompt`
 

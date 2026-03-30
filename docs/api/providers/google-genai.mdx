@@ -217,6 +217,36 @@ Token budgets: `minimal` -> 1,024, `low` -> 4,096, `medium` -> 16,384, `high`/`m
   `gemini-2.5-flash` and `gemini-2.5-flash-lite` can skip thinking by omitting the reasoning parameter.
 </Note>
 
+### Reasoning metadata
+
+When reasoning is enabled, Google GenAI reasoning parts include a thought signature for multi-turn fidelity. Use `getProviderMetadata` to access it in a type-safe way.
+
+```typescript
+import { generate, getProviderMetadata } from '@core-ai/core-ai';
+import type { GoogleReasoningMetadata } from '@core-ai/google-genai';
+
+const result = await generate({
+  model: google.chatModel('gemini-3.1-pro'),
+  messages: [{ role: 'user', content: 'Think step by step.' }],
+  reasoning: { effort: 'high' },
+});
+
+for (const part of result.parts) {
+  if (part.type !== 'reasoning') continue;
+
+  const metadata = getProviderMetadata<GoogleReasoningMetadata>(
+    part.providerMetadata,
+    'google'
+  );
+
+  console.log(metadata?.thoughtSignature);
+}
+```
+
+The `GoogleReasoningMetadata` type contains:
+
+- `thoughtSignature` -- signature for preserving thought context across multi-turn conversations
+
 ## Provider-specific options
 
 Options are namespaced under `google` in `providerOptions`:
