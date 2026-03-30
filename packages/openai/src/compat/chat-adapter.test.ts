@@ -11,7 +11,7 @@ import {
     mapGenerateResponse,
 } from './chat-adapter.js';
 import {
-    ProviderError,
+    ValidationError,
     defineTool,
     type GenerateOptions,
     type Message,
@@ -329,7 +329,7 @@ describe('reasoning support', () => {
                 reasoning: { effort: 'medium' },
                 temperature: 0.2,
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
 
         expect(() =>
             createStreamRequest('gpt-5.2', {
@@ -337,7 +337,7 @@ describe('reasoning support', () => {
                 reasoning: { effort: 'medium' },
                 topP: 0.9,
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
 
         expect(() =>
             createGenerateRequest('o3', {
