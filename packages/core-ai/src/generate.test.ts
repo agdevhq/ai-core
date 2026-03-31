@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LLMError } from './errors.ts';
+import { ValidationError } from './errors.ts';
 import { generate } from './generate.ts';
 import type { ChatModel, GenerateResult } from './types.ts';
 
@@ -48,7 +48,7 @@ describe('generate', () => {
         expect(result).toEqual(expected);
     });
 
-    it('should throw LLMError for empty messages', async () => {
+    it('should throw ValidationError for empty messages', async () => {
         const model = createMockChatModel({
             parts: [],
             content: null,
@@ -71,6 +71,6 @@ describe('generate', () => {
                 model,
                 messages: [],
             })
-        ).rejects.toBeInstanceOf(LLMError);
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 });

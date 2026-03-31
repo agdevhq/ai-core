@@ -1,37 +1,54 @@
 ---
 title: 'Errors'
-description: 'Error classes for handling LLM and provider failures'
+description: 'Error classes for handling core-ai and provider failures'
 icon: 'triangle-exclamation'
 ---
 
 ## Overview
 
-core-ai provides a hierarchy of error classes for handling different types of failures when working with language models. All errors extend from `LLMError` and provide structured error information.
+core-ai provides a hierarchy of error classes for handling different types of failures when working with language models. All errors extend from `CoreAIError` and provide structured error information.
 
 ## Error Hierarchy
 
 ```
-LLMError
-├── StreamAbortedError
-└── ProviderError
-    └── StructuredOutputError
-        ├── StructuredOutputNoObjectGeneratedError
-        ├── StructuredOutputParseError
-        └── StructuredOutputValidationError
+CoreAIError
+├── ValidationError
+├── AbortedError
+│   └── StreamAbortedError
+├── ProviderError
+└── StructuredOutputError
+    ├── StructuredOutputNoObjectGeneratedError
+    ├── StructuredOutputParseError
+    └── StructuredOutputValidationError
 ```
 
-## LLMError
+## CoreAIError
 
 Base error class for all core-ai errors.
 
 ```typescript
-export class LLMError extends Error {
+export class CoreAIError extends Error {
+    public readonly provider?: string;
     public readonly cause?: unknown;
 
-    constructor(message: string, cause?: unknown) {
+    constructor(message: string, cause?: unknown, provider?: string) {
         super(message);
-        this.name = 'LLMError';
+        this.name = 'CoreAIError';
         this.cause = cause;
+        this.provider = provider;
+    }
+}
+```
+
+## ValidationError
+
+Thrown when core-ai rejects invalid caller input or local request configuration before calling a provider.
+
+```typescript
+export class ValidationError extends CoreAIError {
+    constructor(message: string, cause?: unknown, provider?: string) {
+        super(message, cause, provider);
+        this.name = 'ValidationError';
     }
 }
 ```
@@ -46,25 +63,42 @@ export class LLMError extends Error {
   Optional underlying cause of the error (e.g., network error, API error).
 </ParamField>
 
+<ParamField path="provider" type="string | undefined">
+  Optional provider context when the error can be attributed to a provider.
+</ParamField>
+
 <ParamField path="name" type="string">
-  Error name, always `'LLMError'`.
+  Error name, always `'CoreAIError'`.
 </ParamField>
 
 ### Example
 
 ```typescript
-import { LLMError } from '@core-ai/core-ai';
+import { CoreAIError } from '@core-ai/core-ai';
 
 try {
   // Some operation
-  throw new LLMError('Something went wrong');
+  throw new CoreAIError('Something went wrong');
 } catch (error) {
-  if (error instanceof LLMError) {
-    console.error('LLM Error:', error.message);
+  if (error instanceof CoreAIError) {
+    console.error('CoreAIError:', error.message);
     if (error.cause) {
       console.error('Caused by:', error.cause);
     }
   }
+}
+```
+
+## AbortedError
+
+Thrown when an operation is cancelled via an `AbortSignal`.
+
+```typescript
+export class AbortedError extends CoreAIError {
+    constructor(cause?: unknown, provider?: string) {
+        super('operation aborted', cause, provider);
+        this.name = 'AbortedError';
+    }
 }
 ```
 
@@ -73,10 +107,11 @@ try {
 Thrown when a streaming operation is aborted via an `AbortSignal`.
 
 ```typescript
-export class StreamAbortedError extends LLMError {
-    constructor(message = 'stream aborted', cause?: unknown) {
-        super(message, cause);
+export class StreamAbortedError extends AbortedError {
+    constructor(cause?: unknown, provider?: string) {
+        super(cause, provider);
         this.name = 'StreamAbortedError';
+        this.message = 'stream aborted';
     }
 }
 ```
@@ -114,8 +149,7 @@ try {
 Error specific to provider/API failures.
 
 ```typescript
-export class ProviderError extends LLMError {
-    public readonly provider: string;
+export class ProviderError extends CoreAIError {
     public readonly statusCode?: number;
 
     constructor(
@@ -124,9 +158,8 @@ export class ProviderError extends LLMError {
         statusCode?: number,
         cause?: unknown
     ) {
-        super(message, cause);
+        super(message, cause, provider);
         this.name = 'ProviderError';
-        this.provider = provider;
         this.statusCode = statusCode;
     }
 }
@@ -176,7 +209,8 @@ try {
 Base class for errors related to structured output generation (objects).
 
 ```typescript
-export class StructuredOutputError extends ProviderError {
+export class StructuredOutputError extends CoreAIError {
+    public readonly statusCode?: number;
     public readonly rawOutput?: string;
 
     constructor(
@@ -184,8 +218,9 @@ export class StructuredOutputError extends ProviderError {
         provider: string,
         options: StructuredOutputErrorOptions = {}
     ) {
-        super(message, provider, options.statusCode, options.cause);
+        super(message, options.cause, provider);
         this.name = 'StructuredOutputError';
+        this.statusCode = options.statusCode;
         this.rawOutput = options.rawOutput;
     }
 }
@@ -360,7 +395,7 @@ try {
 
 ```typescript
 import {
-  LLMError,
+  CoreAIError,
   ProviderError,
   StructuredOutputError,
   StructuredOutputNoObjectGeneratedError,
@@ -403,10 +438,10 @@ try {
     return handleProviderError(error);
   }
   
-  // Handle general LLM errors
-  if (error instanceof LLMError) {
-    console.error('LLM error:', error.message);
-    return handleLLMError(error);
+  // Handle general core-ai errors
+  if (error instanceof CoreAIError) {
+    console.error('core-ai error:', error.message);
+    return handleCoreAIError(error);
   }
   
   // Unknown error
@@ -492,9 +527,9 @@ function logError(error: unknown): void {
       statusCode: error.statusCode,
       message: error.message
     });
-  } else if (error instanceof LLMError) {
+  } else if (error instanceof CoreAIError) {
     console.error({
-      type: 'llm_error',
+      type: 'core_ai_error',
       message: error.message,
       cause: error.cause
     });

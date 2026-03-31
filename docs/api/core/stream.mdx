@@ -282,14 +282,16 @@ try {
 
 ## Error handling
 
-Throws `LLMError` if:
+Throws `ValidationError` if:
 - Messages array is empty
-- Model encounters an error during streaming
+
+May also throw:
+- `ProviderError` if the provider returns an error during streaming
 
 Throws `StreamAbortedError` if the stream is aborted via the `signal`.
 
 ```typescript
-import { LLMError, StreamAbortedError } from '@core-ai/core-ai';
+import { StreamAbortedError, ValidationError } from '@core-ai/core-ai';
 
 try {
   const chatStream = await stream({
@@ -299,7 +301,7 @@ try {
 } catch (error) {
   if (error instanceof StreamAbortedError) {
     console.error('Stream was aborted');
-  } else if (error instanceof LLMError) {
+  } else if (error instanceof ValidationError) {
     console.error('Stream failed:', error.message);
   }
 }

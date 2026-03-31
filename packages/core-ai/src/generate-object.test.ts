@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { LLMError } from './errors.ts';
+import { ValidationError } from './errors.ts';
 import { generateObject } from './generate-object.ts';
 import type { ChatModel } from './types.ts';
 
@@ -49,7 +49,7 @@ describe('generateObject', () => {
         expect(generateObjectMock).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw LLMError for empty messages', async () => {
+    it('should throw ValidationError for empty messages', async () => {
         const schema = z.object({
             answer: z.string(),
         });
@@ -76,6 +76,6 @@ describe('generateObject', () => {
                 messages: [],
                 schema,
             })
-        ).rejects.toBeInstanceOf(LLMError);
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 });

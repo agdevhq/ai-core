@@ -198,12 +198,14 @@ const result = await generate({
 
 ## Error handling
 
-Throws `LLMError` if:
+Throws `ValidationError` if:
 - Messages array is empty
-- Model encounters an error during generation
+
+May also throw:
+- `ProviderError` if the provider returns an error during generation
 
 ```typescript
-import { LLMError } from '@core-ai/core-ai';
+import { ValidationError } from '@core-ai/core-ai';
 
 try {
   const result = await generate({
@@ -211,7 +213,7 @@ try {
     messages: []
   });
 } catch (error) {
-  if (error instanceof LLMError) {
+  if (error instanceof ValidationError) {
     console.error('Generation failed:', error.message);
   }
 }

@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { assertNonEmptyMessages } from './assertions.ts';
-import { LLMError } from './errors.ts';
+import { CoreAIError } from './errors.ts';
 import { createStream } from './base-stream.ts';
 import { callModelWithOptions } from './model-options.ts';
 import type {
@@ -64,7 +64,7 @@ export function createObjectStream<TSchema extends z.ZodType>(
         },
         finalizeResult() {
             if (objectState.status !== 'ready') {
-                throw new LLMError(
+                throw new CoreAIError(
                     'object stream completed without emitting a final object'
                 );
             }

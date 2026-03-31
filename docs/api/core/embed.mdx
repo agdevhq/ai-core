@@ -189,13 +189,15 @@ const embeddings = result.embeddings;
 
 ## Error Handling
 
-Throws `LLMError` if:
+Throws `ValidationError` if:
 - Input is an empty string
 - Input is an empty array
-- Model encounters an error during embedding
+
+May also throw:
+- `ProviderError` if the provider returns an error during embedding
 
 ```typescript
-import { LLMError } from '@core-ai/core-ai';
+import { ValidationError } from '@core-ai/core-ai';
 
 try {
   const result = await embed({
@@ -203,7 +205,7 @@ try {
     input: '' // Empty string
   });
 } catch (error) {
-  if (error instanceof LLMError) {
+  if (error instanceof ValidationError) {
     console.error('Embedding failed:', error.message);
     // Output: "input must not be empty"
   }
@@ -215,7 +217,7 @@ try {
     input: [] // Empty array
   });
 } catch (error) {
-  if (error instanceof LLMError) {
+  if (error instanceof ValidationError) {
     console.error('Embedding failed:', error.message);
     // Output: "input must not be empty"
   }

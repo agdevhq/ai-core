@@ -179,7 +179,7 @@ const result = await generateObject({
 
 ```typescript
 import {
-  LLMError,
+  CoreAIError,
   StructuredOutputError,
   StructuredOutputNoObjectGeneratedError,
   StructuredOutputParseError,
@@ -204,7 +204,7 @@ try {
     console.error('Parse error:', error.message);
   } else if (error instanceof StructuredOutputNoObjectGeneratedError) {
     console.error('No object generated');
-  } else if (error instanceof LLMError) {
+  } else if (error instanceof CoreAIError) {
     console.error('Generation failed:', error.message);
   }
 }

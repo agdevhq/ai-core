@@ -262,10 +262,12 @@ try {
 
 ## Error handling
 
-Throws `LLMError` if:
+Throws `ValidationError` if:
 - Messages array is empty
-- Stream completes without generating an object
-- Model encounters an error during streaming
+
+May also throw:
+- `CoreAIError` if the stream completes without generating an object
+- `ProviderError` if the provider returns an error during streaming
 
 May also throw structured output errors:
 - `StructuredOutputValidationError`
@@ -273,7 +275,7 @@ May also throw structured output errors:
 
 ```typescript
 import { 
-  LLMError, 
+  ValidationError,
   StructuredOutputValidationError 
 } from '@core-ai/core-ai';
 
@@ -290,7 +292,7 @@ try {
 } catch (error) {
   if (error instanceof StructuredOutputValidationError) {
     console.error('Validation failed:', error.issues);
-  } else if (error instanceof LLMError) {
+  } else if (error instanceof ValidationError) {
     console.error('Stream failed:', error.message);
   }
 }

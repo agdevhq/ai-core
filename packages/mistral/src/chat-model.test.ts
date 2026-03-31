@@ -5,7 +5,9 @@ import type {
     ChatCompletionResponse,
     CompletionEvent,
 } from '@mistralai/mistralai/models/components';
+import { RequestAbortedError } from '@mistralai/mistralai/models/errors/httpclienterrors';
 import {
+    AbortedError,
     ProviderError,
     StructuredOutputValidationError,
 } from '@core-ai/core-ai';
@@ -366,6 +368,22 @@ describe('generate', () => {
                 messages: [{ role: 'user', content: 'hello' }],
             })
         ).rejects.toBeInstanceOf(ProviderError);
+    });
+
+    it('should map SDK abort errors to AbortedError', async () => {
+        const complete = vi.fn(async () => {
+            throw new RequestAbortedError('Request aborted by client');
+        });
+        const model = createMistralChatModel(
+            createMockClient({ complete }),
+            'mistral-large-latest'
+        );
+        const request = model.generate({
+            messages: [{ role: 'user', content: 'hello' }],
+        });
+
+        await expect(request).rejects.toBeInstanceOf(AbortedError);
+        await expect(request).rejects.toMatchObject({ provider: 'mistral' });
     });
 
     it('should pass reasoning config and map thinking content', async () => {

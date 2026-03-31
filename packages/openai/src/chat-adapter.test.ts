@@ -4,7 +4,7 @@ import type {
     ResponseStreamEvent,
 } from 'openai/resources/responses/responses';
 import {
-    ProviderError,
+    ValidationError,
     type GenerateOptions,
     type Message,
 } from '@core-ai/core-ai';
@@ -1033,7 +1033,7 @@ describe('validateOpenAIReasoningConfig', () => {
                 reasoning: { effort: 'medium' },
                 temperature: 0.2,
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
 
         expect(() =>
             validateOpenAIReasoningConfig('gpt-5.1', {
@@ -1041,7 +1041,7 @@ describe('validateOpenAIReasoningConfig', () => {
                 reasoning: { effort: 'medium' },
                 topP: 0.9,
             })
-        ).toThrowError(ProviderError);
+        ).toThrowError(ValidationError);
     });
 });
 

@@ -109,7 +109,7 @@ export function createStream<TEvent, TResult>(
         if (terminalState.status !== 'running') {
             return;
         }
-        settleRejected(new StreamAbortedError('stream aborted'));
+        settleRejected(new StreamAbortedError());
         void closeSourceIterator();
     }
 

@@ -1,22 +1,38 @@
-export class LLMError extends Error {
+export class CoreAIError extends Error {
     public readonly cause?: unknown;
+    public readonly provider?: string;
 
-    constructor(message: string, cause?: unknown) {
+    constructor(message: string, cause?: unknown, provider?: string) {
         super(message);
-        this.name = 'LLMError';
+        this.name = 'CoreAIError';
         this.cause = cause;
+        this.provider = provider;
     }
 }
 
-export class StreamAbortedError extends LLMError {
-    constructor(message = 'stream aborted', cause?: unknown) {
-        super(message, cause);
+export class ValidationError extends CoreAIError {
+    constructor(message: string, cause?: unknown, provider?: string) {
+        super(message, cause, provider);
+        this.name = 'ValidationError';
+    }
+}
+
+export class AbortedError extends CoreAIError {
+    constructor(cause?: unknown, provider?: string) {
+        super('operation aborted', cause, provider);
+        this.name = 'AbortedError';
+    }
+}
+
+export class StreamAbortedError extends AbortedError {
+    constructor(cause?: unknown, provider?: string) {
+        super(cause, provider);
         this.name = 'StreamAbortedError';
+        this.message = 'stream aborted';
     }
 }
 
-export class ProviderError extends LLMError {
-    public readonly provider: string;
+export class ProviderError extends CoreAIError {
     public readonly statusCode?: number;
 
     constructor(
@@ -25,9 +41,8 @@ export class ProviderError extends LLMError {
         statusCode?: number,
         cause?: unknown
     ) {
-        super(message, cause);
+        super(message, cause, provider);
         this.name = 'ProviderError';
-        this.provider = provider;
         this.statusCode = statusCode;
     }
 }
@@ -38,7 +53,8 @@ type StructuredOutputErrorOptions = {
     rawOutput?: string;
 };
 
-export class StructuredOutputError extends ProviderError {
+export class StructuredOutputError extends CoreAIError {
+    public readonly statusCode?: number;
     public readonly rawOutput?: string;
 
     constructor(
@@ -46,8 +62,9 @@ export class StructuredOutputError extends ProviderError {
         provider: string,
         options: StructuredOutputErrorOptions = {}
     ) {
-        super(message, provider, options.statusCode, options.cause);
+        super(message, options.cause, provider);
         this.name = 'StructuredOutputError';
+        this.statusCode = options.statusCode;
         this.rawOutput = options.rawOutput;
     }
 }

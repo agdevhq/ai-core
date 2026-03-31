@@ -46,7 +46,7 @@ npx tsx examples/01-chat-completion.ts
 - `04-multi-modal.ts`: Multi-modal input using text + image URL
 - `05-embeddings.ts`: Embeddings with `embed()`
 - `06-image-generation.ts`: Image generation with `generateImage()`
-- `07-error-handling.ts`: Handling `LLMError` and `ProviderError`
+- `07-error-handling.ts`: Handling `CoreAIError` and `ProviderError`
 - `08-anthropic-provider.ts`: Using Anthropic with the same `generate()` API
 - `09-google-genai-provider.ts`: Using Google GenAI (Gemini) with the same `generate()` API
 - `10-mistral-provider.ts`: Using Mistral with the same `generate()` API

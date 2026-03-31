@@ -1,5 +1,5 @@
 import type { GenerateOptions } from '@core-ai/core-ai';
-import { ProviderError } from '@core-ai/core-ai';
+import { ValidationError } from '@core-ai/core-ai';
 
 import { getOpenAIModelCapabilities } from '../model-capabilities.js';
 
@@ -38,8 +38,9 @@ export function validateOpenAIReasoningConfig(
             continue;
         }
 
-        throw new ProviderError(
+        throw new ValidationError(
             `OpenAI model "${modelId}" does not support ${name} when reasoning is enabled`,
+            undefined,
             'openai'
         );
     }

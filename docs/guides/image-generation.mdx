@@ -308,7 +308,7 @@ Write effective prompts for better results:
 Handle image generation errors:
 
 ```typescript
-import { LLMError, ProviderError } from '@core-ai/core-ai';
+import { CoreAIError, ProviderError } from '@core-ai/core-ai';
 
 try {
   const result = await generateImage({
@@ -329,8 +329,8 @@ try {
   if (error instanceof ProviderError) {
     console.error('Provider error:', error.message);
     console.error('Status code:', error.statusCode);
-  } else if (error instanceof LLMError) {
-    console.error('LLM error:', error.message);
+  } else if (error instanceof CoreAIError) {
+    console.error('CoreAIError:', error.message);
   } else {
     console.error('Unknown error:', error);
   }

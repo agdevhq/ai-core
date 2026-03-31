@@ -342,7 +342,7 @@ try {
 Handle errors during streaming:
 
 ```typescript
-import { LLMError, ProviderError } from '@core-ai/core-ai';
+import { CoreAIError, ProviderError } from '@core-ai/core-ai';
 
 try {
   const result = await stream({ model, messages });
@@ -358,8 +358,8 @@ try {
 } catch (error) {
   if (error instanceof ProviderError) {
     console.error('Provider error:', error.message);
-  } else if (error instanceof LLMError) {
-    console.error('LLM error:', error.message);
+  } else if (error instanceof CoreAIError) {
+    console.error('CoreAIError:', error.message);
   } else {
     console.error('Unknown error:', error);
   }

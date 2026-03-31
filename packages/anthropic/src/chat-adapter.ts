@@ -1,4 +1,4 @@
-import { APIError } from '@anthropic-ai/sdk';
+import { APIError, APIUserAbortError } from '@anthropic-ai/sdk';
 import type {
     Message as AnthropicMessage,
     RawMessageStreamEvent,
@@ -12,9 +12,11 @@ import type {
 } from '@anthropic-ai/sdk/resources/messages/messages';
 import type { z } from 'zod';
 import {
+    AbortedError,
     asObject,
     getProviderMetadata,
     ProviderError,
+    ValidationError,
     safeParseJsonObject,
     zodSchemaToJsonSchema,
 } from '@core-ai/core-ai';
@@ -437,8 +439,9 @@ function validateAnthropicReasoningConfig(
     }
 
     if (options.temperature !== undefined) {
-        throw new ProviderError(
+        throw new ValidationError(
             `Anthropic model "${modelId}" does not support temperature when reasoning is enabled`,
+            undefined,
             'anthropic'
         );
     }
@@ -447,8 +450,9 @@ function validateAnthropicReasoningConfig(
         options.topP !== undefined &&
         (options.topP < 0.95 || options.topP > 1)
     ) {
-        throw new ProviderError(
+        throw new ValidationError(
             `Anthropic model "${modelId}" requires topP between 0.95 and 1 when reasoning is enabled`,
+            undefined,
             'anthropic'
         );
     }
@@ -458,15 +462,17 @@ function validateAnthropicReasoningConfig(
         options.toolChoice !== 'auto' &&
         options.toolChoice !== 'none'
     ) {
-        throw new ProviderError(
+        throw new ValidationError(
             `Anthropic model "${modelId}" only supports toolChoice "auto" or "none" when reasoning is enabled`,
+            undefined,
             'anthropic'
         );
     }
 
     if (anthropicOptions?.topK !== undefined) {
-        throw new ProviderError(
+        throw new ValidationError(
             `Anthropic model "${modelId}" does not support top_k when reasoning is enabled`,
+            undefined,
             'anthropic'
         );
     }
@@ -874,7 +880,14 @@ function extractThinkingText(value: unknown): string {
         .join('');
 }
 
-export function wrapError(error: unknown): ProviderError {
+export function wrapError(error: unknown): AbortedError | ProviderError {
+    if (
+        error instanceof APIUserAbortError ||
+        (error instanceof Error && error.name === 'AbortError')
+    ) {
+        return new AbortedError(error, 'anthropic');
+    }
+
     if (error instanceof APIError) {
         return new ProviderError(
             error.message,
