@@ -1,5 +1,16 @@
 # @core-ai/mistral
 
+## 0.8.0
+
+### Minor Changes
+
+- abb5d6f: Standardize library error handling with `CoreAIError`, `ValidationError`, and provider-aware abort errors.
+
+### Patch Changes
+
+- Updated dependencies [abb5d6f]
+    - @core-ai/core-ai@0.8.0
+
 ## 0.7.1
 
 ### Patch Changes
