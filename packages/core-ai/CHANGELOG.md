@@ -1,5 +1,11 @@
 # @core-ai/core-ai
 
+## 0.8.0
+
+### Minor Changes
+
+- abb5d6f: Standardize library error handling with `CoreAIError`, `ValidationError`, and provider-aware abort errors.
+
 ## 0.7.1
 
 ### Patch Changes
