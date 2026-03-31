@@ -3,6 +3,34 @@ title: Releases
 description: Release history for all core-ai packages.
 ---
 
+<Update label="0.8.0" description="Standardized error hierarchy" tags={["improvement"]}>
+  ### @core-ai/core-ai
+
+  - Standardize library error handling around `CoreAIError`, `ValidationError`, `ProviderError`, and abort error classes so callers can distinguish validation, abort, provider, and structured output failures without relying on provider SDK exceptions.
+
+  ### @core-ai/openai
+
+  - Wrap provider SDK errors in the standardized `CoreAIError` hierarchy.
+
+  ### @core-ai/anthropic
+
+  - Wrap provider SDK errors in the standardized `CoreAIError` hierarchy.
+
+  ### @core-ai/mistral
+
+  - Wrap provider SDK errors in the standardized `CoreAIError` hierarchy.
+</Update>
+
+<Update label="0.7.1" description="Prompt caching, internal refactors" tags={["improvement", "internal"]}>
+  ### @core-ai/anthropic
+
+  - Add prompt caching support through the `cacheControl` provider option for automatic cache reuse and cache token metrics.
+
+  ### All packages
+
+  - Internal refactors to stream handling, shared provider helpers, and structured output internals without changing public behavior.
+</Update>
+
 <Update label="0.7.0" description="Require Zod 4 and native JSON Schema conversion" tags={["breaking"]}>
   <Warning>This release contains breaking changes across all packages.</Warning>
 
