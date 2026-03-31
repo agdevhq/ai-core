@@ -1,12 +1,12 @@
 ---
 title: 'Utilities'
-description: 'Helper functions for schemas, assistant messages, and provider metadata'
+description: 'Helper functions for schemas, messages, streams, and provider metadata'
 icon: 'toolbox'
 ---
 
 ## Overview
 
-core-ai exports a small set of helpers for schema conversion, assistant message construction, and provider-specific metadata access.
+core-ai exports helpers for schema conversion, assistant message construction, stream creation, and provider-specific metadata access.
 
 ## zodSchemaToJsonSchema()
 
@@ -92,3 +92,72 @@ for (const part of result.parts) {
 ```
 
 The top-level key matches the provider name, such as `'anthropic'`, `'google'`, or `'openai'`.
+
+## createChatStream()
+
+Create a `ChatStream` from an async iterable of `StreamEvent`s. This is useful when building custom providers or testing.
+
+```typescript
+import { createChatStream } from '@core-ai/core-ai';
+import type { StreamEvent } from '@core-ai/core-ai';
+
+const events: StreamEvent[] = [
+  { type: 'text-delta', text: 'Hello' },
+  { type: 'finish', finishReason: 'stop', usage: { inputTokens: 5, outputTokens: 1, inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 }, outputTokenDetails: {} } },
+];
+
+async function* generate() {
+  for (const event of events) yield event;
+}
+
+const chatStream = createChatStream(generate());
+```
+
+The `source` parameter accepts an `AsyncIterable<StreamEvent>` or a `() => Promise<AsyncIterable<StreamEvent>>` factory function. You can pass an optional `{ signal: AbortSignal }` options object.
+
+## createObjectStream()
+
+Create an `ObjectStream` from an async iterable of `ObjectStreamEvent`s.
+
+```typescript
+import { createObjectStream } from '@core-ai/core-ai';
+
+const objectStream = createObjectStream(asyncIterable);
+```
+
+Like `createChatStream`, this accepts an optional `{ signal: AbortSignal }` options object.
+
+## stripModelDateSuffix()
+
+Remove a trailing `-YYYYMMDD` date suffix from a model ID. This is used internally for model capability lookups.
+
+```typescript
+import { stripModelDateSuffix } from '@core-ai/core-ai';
+
+stripModelDateSuffix('gpt-5-mini-20250101'); // 'gpt-5-mini'
+stripModelDateSuffix('gpt-5-mini');          // 'gpt-5-mini'
+```
+
+## asObject()
+
+Safely cast an unknown value to `Record<string, unknown>`. Returns an empty object if the input is not an object.
+
+```typescript
+import { asObject } from '@core-ai/core-ai';
+
+const obj = asObject(someValue);
+```
+
+## safeParseJsonObject()
+
+Safely parse a JSON string into an object. Returns `undefined` if parsing fails or the result is not an object.
+
+```typescript
+import { safeParseJsonObject } from '@core-ai/core-ai';
+
+const result = safeParseJsonObject('{"key": "value"}');
+// { key: 'value' }
+
+const invalid = safeParseJsonObject('not json');
+// undefined
+```

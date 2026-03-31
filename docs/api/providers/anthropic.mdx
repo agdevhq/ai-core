@@ -252,6 +252,38 @@ When reasoning is enabled, Anthropic enforces additional request constraints:
   When you combine reasoning with tools, the adapter automatically adds the `interleaved-thinking-2025-05-14` beta.
 </Note>
 
+### Reasoning metadata
+
+When reasoning is enabled, Anthropic reasoning parts include provider metadata with signature and redacted data fields. Use `getProviderMetadata` to access them in a type-safe way.
+
+```typescript
+import { generate, getProviderMetadata } from '@core-ai/core-ai';
+import type { AnthropicReasoningMetadata } from '@core-ai/anthropic';
+
+const result = await generate({
+  model: anthropic.chatModel('claude-opus-4-6'),
+  messages: [{ role: 'user', content: 'Think step by step.' }],
+  reasoning: { effort: 'high' },
+});
+
+for (const part of result.parts) {
+  if (part.type !== 'reasoning') continue;
+
+  const metadata = getProviderMetadata<AnthropicReasoningMetadata>(
+    part.providerMetadata,
+    'anthropic'
+  );
+
+  console.log(metadata?.signature);
+  console.log(metadata?.redactedData);
+}
+```
+
+The `AnthropicReasoningMetadata` type contains:
+
+- `signature` -- cryptographic signature for multi-turn reasoning fidelity
+- `redactedData` -- redacted thinking content, if present
+
 ## Provider-specific options
 
 Options are namespaced under `anthropic` in `providerOptions`:
