@@ -38,6 +38,12 @@ From the repository root:
 npx tsx examples/01-chat-completion.ts
 ```
 
+The telemetry example uses a real OpenAI model and requires `OPENAI_API_KEY`:
+
+```bash
+npx tsx examples/14-telemetry-console-exporter.ts
+```
+
 ## Available Examples
 
 - `01-chat-completion.ts`: Basic `generate()` chat completion with OpenAI
@@ -53,3 +59,4 @@ npx tsx examples/01-chat-completion.ts
 - `11-generate-object.ts`: Typed structured output with `generateObject()`
 - `12-stream-object.ts`: Streaming structured output with `streamObject()`
 - `13-stream-abort.ts`: Cancelling a streaming call with `AbortController`
+- `14-telemetry-console-exporter.ts`: OpenAI-backed telemetry example that exports spans with the OpenTelemetry console exporter

@@ -107,6 +107,13 @@ export type ToolChoice =
     | 'required'
     | { type: 'tool'; toolName: string };
 
+export type TelemetryConfig = {
+    isEnabled: boolean;
+    functionId?: string;
+    metadata?: Record<string, string>;
+    recordContent?: boolean;
+};
+
 export type ChatModel = {
     readonly provider: string;
     readonly modelId: string;
@@ -140,6 +147,7 @@ export type BaseGenerateOptions = {
     reasoning?: ReasoningConfig;
     providerOptions?: GenerateProviderOptions;
     signal?: AbortSignal;
+    telemetry?: TelemetryConfig;
 };
 
 export type GenerateOptions = BaseGenerateOptions & {
@@ -280,6 +288,7 @@ export type EmbedOptions = {
     input: string | string[];
     dimensions?: number;
     providerOptions?: EmbedProviderOptions;
+    telemetry?: TelemetryConfig;
 };
 
 export type EmbedResult = {
@@ -307,6 +316,7 @@ export type ImageGenerateOptions = {
     n?: number;
     size?: string;
     providerOptions?: ImageProviderOptions;
+    telemetry?: TelemetryConfig;
 };
 
 export type ImageGenerateResult = {

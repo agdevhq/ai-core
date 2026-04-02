@@ -18,6 +18,7 @@ export type {
     ToolDefinition,
     ToolSet,
     ToolChoice,
+    TelemetryConfig,
     ChatModel,
     BaseGenerateOptions,
     GenerateProviderOptions,

@@ -1,4 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { trace } from '@opentelemetry/api';
+import {
+    BasicTracerProvider,
+    InMemorySpanExporter,
+    SimpleSpanProcessor,
+} from '@opentelemetry/sdk-trace-base';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import {
     toAsyncIterable,
@@ -45,6 +51,23 @@ function createMockObjectStream(): ObjectStream<
 }
 
 describe('streamObject', () => {
+    let exporter: InMemorySpanExporter;
+    let provider: BasicTracerProvider;
+
+    beforeEach(() => {
+        trace.disable();
+        exporter = new InMemorySpanExporter();
+        provider = new BasicTracerProvider({
+            spanProcessors: [new SimpleSpanProcessor(exporter)],
+        });
+        trace.setGlobalTracerProvider(provider);
+    });
+
+    afterEach(async () => {
+        await provider.shutdown();
+        trace.disable();
+    });
+
     it('should delegate to model.streamObject', async () => {
         const expected = createMockObjectStream();
         const streamObjectMock = vi.fn(async () => expected);
@@ -71,6 +94,56 @@ describe('streamObject', () => {
 
         expect(objectStream).toBe(expected);
         expect(streamObjectMock).toHaveBeenCalledTimes(1);
+        expect(streamObjectMock).toHaveBeenCalledWith({
+            messages: [{ role: 'user', content: 'return weather json' }],
+            schema: weatherSchema,
+        });
+    });
+
+    it('records telemetry and strips telemetry before delegating', async () => {
+        const expected = createMockObjectStream();
+        const streamObjectMock = vi.fn(async () => expected);
+        const model: ChatModel = {
+            provider: 'test',
+            modelId: 'test-model',
+            generate: vi.fn(async () => {
+                throw new Error('not implemented');
+            }),
+            stream: vi.fn(async () => {
+                throw new Error('not implemented');
+            }),
+            generateObject: vi.fn(async () => {
+                throw new Error('not implemented');
+            }) as ChatModel['generateObject'],
+            streamObject: streamObjectMock as ChatModel['streamObject'],
+        };
+
+        const objectStream = await streamObject({
+            model,
+            messages: [{ role: 'user', content: 'return weather json' }],
+            schema: weatherSchema,
+            telemetry: {
+                isEnabled: true,
+            },
+        });
+
+        await objectStream.result;
+        await Promise.resolve();
+
+        expect(streamObjectMock).toHaveBeenCalledWith({
+            messages: [{ role: 'user', content: 'return weather json' }],
+            schema: weatherSchema,
+        });
+
+        const span = exporter.getFinishedSpans()[0];
+
+        expect(span?.name).toBe('chat test-model');
+        expect(span?.attributes['gen_ai.provider.name']).toBe('test');
+        expect(span?.attributes['gen_ai.response.finish_reasons']).toEqual(['stop']);
+        expect(span?.attributes['gen_ai.output.type']).toBe('json');
+        expect(span?.attributes['output.value']).toBe(
+            JSON.stringify({ city: 'Berlin', temperatureC: 21 })
+        );
     });
 
     it('should throw ValidationError for empty messages', async () => {
