@@ -29,7 +29,7 @@ export async function streamObject<TSchema extends z.ZodType>(
 ): Promise<ObjectStream<TSchema>> {
     assertNonEmptyMessages(params.messages);
     const { telemetry, ...rest } = params;
-    const span = startSpan({
+    const activeSpan = startSpan({
         name: `chat ${params.model.modelId}`,
         attributes: {
             'gen_ai.provider.name': params.model.provider,
@@ -43,15 +43,18 @@ export async function streamObject<TSchema extends z.ZodType>(
         },
         telemetry,
     });
+    const span = activeSpan?.span;
 
     try {
         if (span && telemetry?.recordContent !== false) {
             recordChatInputContent(span, params.messages);
         }
 
-        const objectStream = await callModelWithOptions(rest, (model, options) =>
-            model.streamObject(options)
-        );
+        const doCall = () =>
+            callModelWithOptions(rest, (model, options) => model.streamObject(options));
+        const objectStream = activeSpan
+            ? await activeSpan.withContext(doCall)
+            : await doCall();
 
         if (span) {
             void objectStream.result

@@ -17,7 +17,7 @@ export type StreamParams = GenerateOptions & {
 export async function stream(params: StreamParams): Promise<ChatStream> {
     assertNonEmptyMessages(params.messages);
     const { telemetry, ...rest } = params;
-    const span = startSpan({
+    const activeSpan = startSpan({
         name: `chat ${params.model.modelId}`,
         attributes: {
             'gen_ai.provider.name': params.model.provider,
@@ -30,15 +30,18 @@ export async function stream(params: StreamParams): Promise<ChatStream> {
         },
         telemetry,
     });
+    const span = activeSpan?.span;
 
     try {
         if (span && telemetry?.recordContent !== false) {
             recordChatInputContent(span, params.messages, params.tools);
         }
 
-        const chatStream = await callModelWithOptions(rest, (model, options) =>
-            model.stream(options)
-        );
+        const doCall = () =>
+            callModelWithOptions(rest, (model, options) => model.stream(options));
+        const chatStream = activeSpan
+            ? await activeSpan.withContext(doCall)
+            : await doCall();
 
         if (span) {
             void chatStream.result

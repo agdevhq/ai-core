@@ -1,4 +1,5 @@
-import { trace, SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { context, trace, SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import {
     BasicTracerProvider,
     InMemorySpanExporter,
@@ -31,9 +32,14 @@ function expectDefined<T>(value: T | undefined): T {
 describe('telemetry', () => {
     let exporter: InMemorySpanExporter;
     let provider: BasicTracerProvider;
+    let contextManager: AsyncLocalStorageContextManager;
 
     beforeEach(() => {
         trace.disable();
+        context.disable();
+        contextManager = new AsyncLocalStorageContextManager();
+        contextManager.enable();
+        context.setGlobalContextManager(contextManager);
         exporter = new InMemorySpanExporter();
         provider = new BasicTracerProvider({
             spanProcessors: [new SimpleSpanProcessor(exporter)],
@@ -43,6 +49,7 @@ describe('telemetry', () => {
 
     afterEach(async () => {
         await provider.shutdown();
+        context.disable();
         trace.disable();
         vi.resetModules();
         vi.doUnmock('node:module');
@@ -128,7 +135,7 @@ describe('telemetry', () => {
     });
 
     it('returns undefined from startSpan when telemetry is disabled', () => {
-        const span = startSpan({
+        const activeSpan = startSpan({
             name: 'gen_ai chat',
             attributes: {},
             telemetry: {
@@ -136,12 +143,12 @@ describe('telemetry', () => {
             },
         });
 
-        expect(span).toBeUndefined();
+        expect(activeSpan).toBeUndefined();
         expect(exporter.getFinishedSpans()).toHaveLength(0);
     });
 
     it('creates a span with startSpan without ending it', () => {
-        const span = expectDefined(
+        const activeSpan = expectDefined(
             startSpan({
                 name: 'gen_ai chat',
                 attributes: {
@@ -154,7 +161,7 @@ describe('telemetry', () => {
         );
         expect(exporter.getFinishedSpans()).toHaveLength(0);
 
-        endSpan(span);
+        endSpan(activeSpan.span);
 
         const finishedSpan = expectDefined(exporter.getFinishedSpans()[0]);
         expect(finishedSpan.name).toBe('gen_ai chat');
@@ -162,8 +169,37 @@ describe('telemetry', () => {
         expect(finishedSpan.attributes['gen_ai.provider.name']).toBe('test');
     });
 
+    it('activates span context via withContext so child spans are parented', () => {
+        const activeSpan = expectDefined(
+            startSpan({
+                name: 'parent',
+                attributes: {},
+                telemetry: { isEnabled: true },
+            })
+        );
+
+        activeSpan.withContext(() => {
+            const tracer = trace.getTracer('test');
+            const child = tracer.startSpan('child');
+            child.end();
+        });
+
+        endSpan(activeSpan.span);
+
+        const spans = exporter.getFinishedSpans();
+        const childSpan = spans.find((s) => s.name === 'child');
+        const parentSpan = spans.find((s) => s.name === 'parent');
+
+        expect(childSpan).toBeDefined();
+        expect(parentSpan).toBeDefined();
+        expect(childSpan!.spanContext().traceId).toBe(parentSpan!.spanContext().traceId);
+        expect(childSpan!.parentSpanContext?.spanId).toBe(
+            parentSpan!.spanContext().spanId
+        );
+    });
+
     it('records structured and generic input attributes for chat content', () => {
-        const span = expectDefined(
+        const { span } = expectDefined(
             startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
@@ -261,7 +297,7 @@ describe('telemetry', () => {
     });
 
     it('records structured and generic output attributes for chat content', () => {
-        const span = expectDefined(
+        const { span } = expectDefined(
             startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
@@ -311,7 +347,7 @@ describe('telemetry', () => {
     });
 
     it('records output attributes for object results', () => {
-        const span = expectDefined(
+        const { span } = expectDefined(
             startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
@@ -357,7 +393,7 @@ describe('telemetry', () => {
     });
 
     it('records generic input attributes for embedding and image operations', () => {
-        const embedSpan = expectDefined(
+        const { span: embedSpan } = expectDefined(
             startSpan({
                 name: 'gen_ai embeddings',
                 attributes: {},
@@ -366,7 +402,7 @@ describe('telemetry', () => {
                 },
             })
         );
-        const imageSpan = expectDefined(
+        const { span: imageSpan } = expectDefined(
             startSpan({
                 name: 'gen_ai image_generation',
                 attributes: {},
@@ -387,6 +423,63 @@ describe('telemetry', () => {
             JSON.stringify(['hello', 'world'])
         );
         expect(finishedSpans[1]?.attributes['input.value']).toBe('draw a cat');
+    });
+
+    it('does not throw when messages contain non-serializable values', () => {
+        const { span } = expectDefined(
+            startSpan({
+                name: 'gen_ai chat',
+                attributes: {},
+                telemetry: { isEnabled: true },
+            })
+        );
+
+        const circular: Record<string, unknown> = { text: 'hi' };
+        circular['self'] = circular;
+
+        const messages: Message[] = [
+            {
+                role: 'user',
+                content: 'Hello',
+                providerMetadata: circular,
+            } as unknown as Message,
+        ];
+
+        expect(() => recordChatInputContent(span, messages)).not.toThrow();
+        endSpan(span);
+
+        const finishedSpan = expectDefined(exporter.getFinishedSpans()[0]);
+        expect(finishedSpan.attributes['input.value']).toBeUndefined();
+    });
+
+    it('records "undefined" string for undefined object results', () => {
+        const { span } = expectDefined(
+            startSpan({
+                name: 'gen_ai chat',
+                attributes: {},
+                telemetry: { isEnabled: true },
+            })
+        );
+
+        const result = {
+            object: undefined,
+            finishReason: 'stop' as const,
+            usage: {
+                inputTokens: 1,
+                outputTokens: 2,
+                inputTokenDetails: {
+                    cacheReadTokens: 0,
+                    cacheWriteTokens: 0,
+                },
+                outputTokenDetails: {},
+            },
+        };
+
+        recordObjectOutputContent(span, result as GenerateObjectResult<z.ZodUndefined>);
+        endSpan(span);
+
+        const finishedSpan = expectDefined(exporter.getFinishedSpans()[0]);
+        expect(finishedSpan.attributes['output.value']).toBe('undefined');
     });
 
     it('falls back to a no-op when the OTel package cannot be loaded', async () => {

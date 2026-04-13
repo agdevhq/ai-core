@@ -44,6 +44,14 @@ function getOTel(): OTelApi | undefined {
     return cachedOtel ?? undefined;
 }
 
+function safeJsonStringify(value: unknown): string | undefined {
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return undefined;
+    }
+}
+
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) {
         return error.message;
@@ -187,7 +195,12 @@ export function withSpan<T>(
     );
 }
 
-export function startSpan(config: SpanConfig): Span | undefined {
+export type ActiveSpan = {
+    span: Span;
+    withContext: <T>(fn: () => T) => T;
+};
+
+export function startSpan(config: SpanConfig): ActiveSpan | undefined {
     if (!config.telemetry?.isEnabled) {
         return undefined;
     }
@@ -203,7 +216,13 @@ export function startSpan(config: SpanConfig): Span | undefined {
         kind: otel.SpanKind.CLIENT,
     });
     setSpanAttributes(span, config);
-    return span;
+
+    const ctx = otel.trace.setSpan(otel.context.active(), span);
+
+    return {
+        span,
+        withContext: <T>(fn: () => T): T => otel.context.with(ctx, fn),
+    };
 }
 
 export function endSpan(span: Span, error?: unknown): void {
@@ -276,27 +295,34 @@ export function recordChatInputContent(
     }
 
     if (systemInstructions.length > 0) {
-        span.setAttribute(
-            'gen_ai.system_instructions',
-            JSON.stringify(systemInstructions)
-        );
+        const serialized = safeJsonStringify(systemInstructions);
+        if (serialized) {
+            span.setAttribute('gen_ai.system_instructions', serialized);
+        }
     }
 
-    span.setAttribute('gen_ai.input.messages', JSON.stringify(inputMessages));
-    span.setAttribute('input.value', JSON.stringify(messages));
+    const inputMessagesSerialized = safeJsonStringify(inputMessages);
+    if (inputMessagesSerialized) {
+        span.setAttribute('gen_ai.input.messages', inputMessagesSerialized);
+    }
+
+    const inputValueSerialized = safeJsonStringify(messages);
+    if (inputValueSerialized) {
+        span.setAttribute('input.value', inputValueSerialized);
+    }
 
     if (tools && Object.keys(tools).length > 0) {
-        span.setAttribute(
-            'gen_ai.tool.definitions',
-            JSON.stringify(
-                Object.entries(tools).map(([name, definition]) => ({
-                    type: 'function',
-                    name,
-                    description: definition.description,
-                    parameters: zodSchemaToJsonSchema(definition.parameters),
-                }))
-            )
+        const toolsSerialized = safeJsonStringify(
+            Object.entries(tools).map(([name, definition]) => ({
+                type: 'function',
+                name,
+                description: definition.description,
+                parameters: zodSchemaToJsonSchema(definition.parameters),
+            }))
         );
+        if (toolsSerialized) {
+            span.setAttribute('gen_ai.tool.definitions', toolsSerialized);
+        }
     }
 }
 
@@ -329,7 +355,12 @@ export function recordObjectOutputContent<TSchema extends z.ZodType>(
     span: Span,
     result: GenerateObjectResult<TSchema>
 ): void {
-    const objectContent = JSON.stringify(result.object);
+    const objectContent =
+        result.object === undefined ? 'undefined' : safeJsonStringify(result.object);
+
+    if (!objectContent) {
+        return;
+    }
 
     span.setAttribute(
         'gen_ai.output.messages',
