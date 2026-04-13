@@ -5,7 +5,8 @@ import {
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-base';
-import { generate, stream } from '@core-ai/core-ai';
+import { generate, stream, wrapChatModel } from '@core-ai/core-ai';
+import { createOtelMiddleware } from '@core-ai/opentelemetry';
 import { createOpenAI } from '@core-ai/openai';
 
 function getRequiredEnv(name: 'OPENAI_API_KEY'): string {
@@ -23,7 +24,15 @@ async function main(): Promise<void> {
 
     trace.setGlobalTracerProvider(provider);
     const openai = createOpenAI({ apiKey: getRequiredEnv('OPENAI_API_KEY') });
-    const model = openai.chatModel('gpt-5-mini');
+    const baseModel = openai.chatModel('gpt-5-mini');
+    const model = wrapChatModel({
+        model: baseModel,
+        middleware: [createOtelMiddleware({ recordContent: true })],
+    });
+    const redactedModel = wrapChatModel({
+        model: baseModel,
+        middleware: [createOtelMiddleware({ recordContent: false })],
+    });
 
     console.log('Running generate() with content recording enabled...\n');
 
@@ -41,8 +50,7 @@ async function main(): Promise<void> {
                         'Explain in one short paragraph what OpenTelemetry spans are.',
                 },
             ],
-            telemetry: {
-                isEnabled: true,
+            metadata: {
                 functionId: 'examples.telemetry.generate',
             },
         });
@@ -52,7 +60,7 @@ async function main(): Promise<void> {
         console.log('Running stream() with content recording disabled...\n');
 
         const chatStream = await stream({
-            model,
+            model: redactedModel,
             messages: [
                 {
                     role: 'user',
@@ -60,10 +68,8 @@ async function main(): Promise<void> {
                         'Write a two-line poem about traces and telemetry.',
                 },
             ],
-            telemetry: {
-                isEnabled: true,
+            metadata: {
                 functionId: 'examples.telemetry.stream',
-                recordContent: false,
             },
         });
 

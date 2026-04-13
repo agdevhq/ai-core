@@ -107,13 +107,6 @@ export type ToolChoice =
     | 'required'
     | { type: 'tool'; toolName: string };
 
-export type TelemetryConfig = {
-    isEnabled: boolean;
-    functionId?: string;
-    metadata?: Record<string, string>;
-    recordContent?: boolean;
-};
-
 export type ChatModel = {
     readonly provider: string;
     readonly modelId: string;
@@ -139,15 +132,58 @@ export interface ImageProviderOptions {
     [key: string]: Record<string, unknown> | undefined;
 }
 
+export type ChatModelMiddleware = {
+    generate?: (args: {
+        execute: (options?: GenerateOptions) => Promise<GenerateResult>;
+        options: GenerateOptions;
+        model: ChatModel;
+    }) => Promise<GenerateResult>;
+    stream?: (args: {
+        execute: (options?: GenerateOptions) => Promise<ChatStream>;
+        options: GenerateOptions;
+        model: ChatModel;
+    }) => Promise<ChatStream>;
+    generateObject?: <TSchema extends z.ZodType>(args: {
+        execute: (
+            options?: GenerateObjectOptions<TSchema>
+        ) => Promise<GenerateObjectResult<TSchema>>;
+        options: GenerateObjectOptions<TSchema>;
+        model: ChatModel;
+    }) => Promise<GenerateObjectResult<TSchema>>;
+    streamObject?: <TSchema extends z.ZodType>(args: {
+        execute: (
+            options?: StreamObjectOptions<TSchema>
+        ) => Promise<ObjectStream<TSchema>>;
+        options: StreamObjectOptions<TSchema>;
+        model: ChatModel;
+    }) => Promise<ObjectStream<TSchema>>;
+};
+
+export type EmbeddingModelMiddleware = {
+    embed?: (args: {
+        execute: (options?: EmbedOptions) => Promise<EmbedResult>;
+        options: EmbedOptions;
+        model: EmbeddingModel;
+    }) => Promise<EmbedResult>;
+};
+
+export type ImageModelMiddleware = {
+    generate?: (args: {
+        execute: (options?: ImageGenerateOptions) => Promise<ImageGenerateResult>;
+        options: ImageGenerateOptions;
+        model: ImageModel;
+    }) => Promise<ImageGenerateResult>;
+};
+
 export type BaseGenerateOptions = {
     messages: Message[];
     temperature?: number;
     maxTokens?: number;
     topP?: number;
     reasoning?: ReasoningConfig;
+    metadata?: Record<string, unknown>;
     providerOptions?: GenerateProviderOptions;
     signal?: AbortSignal;
-    telemetry?: TelemetryConfig;
 };
 
 export type GenerateOptions = BaseGenerateOptions & {
@@ -287,8 +323,8 @@ export type EmbeddingModel = {
 export type EmbedOptions = {
     input: string | string[];
     dimensions?: number;
+    metadata?: Record<string, unknown>;
     providerOptions?: EmbedProviderOptions;
-    telemetry?: TelemetryConfig;
 };
 
 export type EmbedResult = {
@@ -315,8 +351,8 @@ export type ImageGenerateOptions = {
     prompt: string;
     n?: number;
     size?: string;
+    metadata?: Record<string, unknown>;
     providerOptions?: ImageProviderOptions;
-    telemetry?: TelemetryConfig;
 };
 
 export type ImageGenerateResult = {

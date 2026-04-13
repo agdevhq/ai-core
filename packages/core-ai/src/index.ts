@@ -18,8 +18,8 @@ export type {
     ToolDefinition,
     ToolSet,
     ToolChoice,
-    TelemetryConfig,
     ChatModel,
+    ChatModelMiddleware,
     BaseGenerateOptions,
     GenerateProviderOptions,
     EmbedProviderOptions,
@@ -38,10 +38,12 @@ export type {
     ObjectStreamEvent,
     ObjectStream,
     EmbeddingModel,
+    EmbeddingModelMiddleware,
     EmbedOptions,
     EmbedResult,
     EmbeddingUsage,
     ImageModel,
+    ImageModelMiddleware,
     ImageGenerateOptions,
     ImageGenerateResult,
     GeneratedImage,
@@ -70,6 +72,9 @@ export { generateObject } from './generate-object.ts';
 export { stream } from './stream-chat.ts';
 export { streamObject, createObjectStream } from './stream-object.ts';
 export { createChatStream } from './stream.ts';
+export { wrapChatModel } from './wrap-chat-model.ts';
+export { wrapEmbeddingModel } from './wrap-embedding-model.ts';
+export { wrapImageModel } from './wrap-image-model.ts';
 export { getProviderMetadata } from './provider-metadata.ts';
 export { embed } from './embed.ts';
 export { generateImage } from './generate-image.ts';
