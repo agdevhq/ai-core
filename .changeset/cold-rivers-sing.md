@@ -1,5 +1,6 @@
 ---
 '@core-ai/core-ai': minor
+'@core-ai/opentelemetry': minor
 ---
 
-Add opt-in OpenTelemetry tracing and content attributes for core-ai model operations.
+Add model-level middleware wrappers to core-ai and provide first-party OpenTelemetry middleware in `@core-ai/opentelemetry`.
