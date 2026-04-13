@@ -7,7 +7,7 @@ description: Understanding message types, content parts, and multi-modal inputs 
 
 Messages are the fundamental building blocks of conversations in core-ai. They represent the dialogue between users, the assistant, and tools.
 
-## Message Types
+## Message types
 
 core-ai supports four message types:
 
@@ -19,7 +19,7 @@ type Message =
   | ToolResultMessage;
 ```
 
-### System Message
+### System message
 
 System messages set the context and behavior for the assistant.
 
@@ -39,7 +39,7 @@ const systemMessage: SystemMessage = {
 };
 ```
 
-### User Message
+### User message
 
 User messages represent input from the user. They can be simple text or multi-modal content with images and files.
 
@@ -77,7 +77,7 @@ const userMessage: UserMessage = {
 };
 ```
 
-### Assistant Message
+### Assistant message
 
 Assistant messages contain the model's responses, including text, reasoning, and tool calls.
 
@@ -108,7 +108,7 @@ const assistantMessage: AssistantMessage = {
   Assistant messages use a `parts` array to support multiple content types (text, reasoning, tool calls) in a single message.
 </Note>
 
-### Tool Result Message
+### Tool result message
 
 Tool result messages provide the results of tool calls back to the model.
 
@@ -131,7 +131,7 @@ const toolResult: ToolResultMessage = {
 };
 ```
 
-## User Content Parts
+## User content parts
 
 User messages can include multiple types of content:
 
@@ -139,7 +139,7 @@ User messages can include multiple types of content:
 type UserContentPart = TextPart | ImagePart | FilePart;
 ```
 
-### Text Part
+### Text part
 
 Simple text content:
 
@@ -159,7 +159,7 @@ const textPart: TextPart = {
 };
 ```
 
-### Image Part
+### Image part
 
 Images can be provided as URLs or base64-encoded data:
 
@@ -202,7 +202,7 @@ const base64Image: ImagePart = {
 };
 ```
 
-### File Part
+### File part
 
 Files can be attached with mime type information:
 
@@ -235,7 +235,7 @@ const filePart: FilePart = {
   Not all providers support all content types. For example, Anthropic accepts PDF file parts only. Check the provider pages for model-specific input limits.
 </Warning>
 
-## Assistant Content Parts
+## Assistant content parts
 
 Assistant messages can contain text, reasoning, and tool calls:
 
@@ -246,7 +246,7 @@ type AssistantContentPart =
   | ToolCallPart;
 ```
 
-### Text Part
+### Text part
 
 Regular text responses:
 
@@ -257,7 +257,7 @@ type AssistantTextPart = {
 };
 ```
 
-### Reasoning Part
+### Reasoning part
 
 Extended thinking and reasoning content from the model:
 
@@ -289,7 +289,7 @@ if (result.reasoning) {
 }
 ```
 
-### Tool Call Part
+### Tool call part
 
 Requests to call external tools:
 
@@ -306,7 +306,7 @@ type ToolCall = {
 };
 ```
 
-## Multi-Turn Conversations
+## Multi-turn conversations
 
 Build conversations by passing message history:
 
@@ -339,7 +339,7 @@ const result2 = await generate({ model, messages });
 
 For message helpers like `resultToMessage()` and `assistantMessage()`, see the [utilities reference](/api/core/utilities).
 
-## Tool Call Flow
+## Tool call flow
 
 Here's a complete example of handling tool calls:
 
@@ -382,7 +382,7 @@ if (result1.toolCalls.length > 0) {
 }
 ```
 
-## Best Practices
+## Best practices
 
 <Tip>
   **Keep system messages concise:** System messages set the tone but shouldn't contain too much information. For large context, consider using user messages with retrieved content.
@@ -396,7 +396,7 @@ if (result1.toolCalls.length > 0) {
   **Multi-modal order matters:** When combining text and images, place the text part first to provide context for what you're asking about the image.
 </Tip>
 
-## Next Steps
+## Next steps
 
 - Configure generation with [Configuration](/concepts/configuration) options
 - Learn about [Error Handling](/concepts/error-handling)

@@ -7,7 +7,7 @@ description: Learn how providers work in core-ai and how to use OpenAI, Anthropi
 
 Providers are the bridge between core-ai and LLM services like OpenAI, Anthropic, Google GenAI, and Mistral. Each provider implements a unified interface that abstracts away provider-specific details, allowing you to switch between providers with minimal code changes.
 
-## Provider Interface
+## Provider interface
 
 All providers implement methods to create model instances:
 
@@ -27,7 +27,7 @@ type Provider = {
 
 OpenAI is one of the most popular providers, offering chat, embedding, and image generation models.
 
-### Creating a Provider
+### Creating a provider
 
 ```typescript
 import { createOpenAI } from '@core-ai/openai';
@@ -38,7 +38,7 @@ const openai = createOpenAI({
 });
 ```
 
-### Provider Options
+### Provider options
 
 ```typescript
 type OpenAIProviderOptions = {
@@ -48,7 +48,7 @@ type OpenAIProviderOptions = {
 };
 ```
 
-### Getting Models
+### Getting models
 
 ```typescript
 const gpt5 = openai.chatModel('gpt-5-mini');
@@ -64,7 +64,7 @@ const imageModel = openai.imageModel('gpt-image-1');
 
 Anthropic provides powerful chat models like Claude, with advanced capabilities for extended thinking and reasoning.
 
-### Creating a Provider
+### Creating a provider
 
 ```typescript
 import { createAnthropic } from '@core-ai/anthropic';
@@ -75,7 +75,7 @@ const anthropic = createAnthropic({
 });
 ```
 
-### Provider Options
+### Provider options
 
 ```typescript
 type AnthropicProviderOptions = {
@@ -86,7 +86,7 @@ type AnthropicProviderOptions = {
 };
 ```
 
-### Getting Models
+### Getting models
 
 ```typescript
 const claude = anthropic.chatModel('claude-sonnet-4-6');
@@ -101,7 +101,7 @@ const claudeOpus = anthropic.chatModel('claude-opus-4-6');
 
 Google GenAI provides access to Gemini models for chat, embeddings, and image generation.
 
-### Creating a Provider
+### Creating a provider
 
 ```typescript
 import { createGoogleGenAI } from '@core-ai/google-genai';
@@ -113,7 +113,7 @@ const google = createGoogleGenAI({
 });
 ```
 
-### Provider Options
+### Provider options
 
 ```typescript
 type GoogleGenAIProviderOptions = {
@@ -124,7 +124,7 @@ type GoogleGenAIProviderOptions = {
 };
 ```
 
-### Getting Models
+### Getting models
 
 ```typescript
 const gemini = google.chatModel('gemini-3.1-pro');
@@ -136,7 +136,7 @@ const imagen = google.imageModel('imagen-3.0');
 
 Mistral provides efficient open-source and proprietary models for chat and embeddings.
 
-### Creating a Provider
+### Creating a provider
 
 ```typescript
 import { createMistral } from '@core-ai/mistral';
@@ -147,7 +147,7 @@ const mistral = createMistral({
 });
 ```
 
-### Provider Options
+### Provider options
 
 ```typescript
 type MistralProviderOptions = {
@@ -157,7 +157,7 @@ type MistralProviderOptions = {
 };
 ```
 
-### Getting Models
+### Getting models
 
 ```typescript
 // Chat models
@@ -169,7 +169,7 @@ const mistralSmall = mistral.chatModel('mistral-small');
 const embeddings = mistral.embeddingModel('mistral-embed');
 ```
 
-## Using Custom Clients
+## Using custom clients
 
 All providers support bringing your own client instance, which is useful for advanced configuration:
 
@@ -187,7 +187,7 @@ const customClient = new OpenAI({
 const openai = createOpenAI({ client: customClient });
 ```
 
-## Provider Comparison
+## Provider comparison
 
 | Provider | Chat | Embeddings | Images | Special Features |
 |----------|------|------------|--------|------------------|
@@ -196,7 +196,7 @@ const openai = createOpenAI({ client: customClient });
 | Google GenAI | ✓ | ✓ | ✓ | Gemini models with multimodal support |
 | Mistral | ✓ | ✓ | ✗ | Efficient open-source options |
 
-## Next Steps
+## Next steps
 
 - Learn about [Models](/concepts/models) to understand different model types
 - Explore [Messages](/concepts/messages) to see how to structure conversations
