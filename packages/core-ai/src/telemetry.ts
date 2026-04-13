@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module';
 import type { Span } from '@opentelemetry/api';
 import type { z } from 'zod';
 import { zodSchemaToJsonSchema } from './json-schema.ts';
@@ -15,7 +14,6 @@ import type {
     UserContentPart,
 } from './types.ts';
 
-const require = createRequire(import.meta.url);
 const TRACER_NAME = 'core-ai';
 
 type OTelApi = typeof import('@opentelemetry/api');
@@ -26,21 +24,21 @@ type SpanConfig = {
 };
 
 let cachedOtel: OTelApi | null = null;
-let hasAttemptedOtelLoad = false;
+let otelLoadPromise: Promise<OTelApi | null> | undefined;
+
+async function loadOTel(): Promise<OTelApi | undefined> {
+    if (!otelLoadPromise) {
+        otelLoadPromise = import('@opentelemetry/api')
+            .then((mod) => {
+                cachedOtel = mod as OTelApi;
+                return cachedOtel;
+            })
+            .catch(() => null);
+    }
+    return (await otelLoadPromise) ?? undefined;
+}
 
 function getOTel(): OTelApi | undefined {
-    if (hasAttemptedOtelLoad) {
-        return cachedOtel ?? undefined;
-    }
-
-    hasAttemptedOtelLoad = true;
-
-    try {
-        cachedOtel = require('@opentelemetry/api') as OTelApi;
-    } catch {
-        cachedOtel = null;
-    }
-
     return cachedOtel ?? undefined;
 }
 
@@ -149,7 +147,7 @@ function serializeAssistantContentParts(
     });
 }
 
-export function withSpan<T>(
+export async function withSpan<T>(
     config: SpanConfig,
     fn: (span: Span | undefined) => Promise<T>
 ): Promise<T> {
@@ -157,7 +155,7 @@ export function withSpan<T>(
         return fn(undefined);
     }
 
-    const otel = getOTel();
+    const otel = await loadOTel();
     const tracer = otel?.trace.getTracer(TRACER_NAME);
 
     if (!otel || !tracer) {
@@ -200,12 +198,12 @@ export type ActiveSpan = {
     withContext: <T>(fn: () => T) => T;
 };
 
-export function startSpan(config: SpanConfig): ActiveSpan | undefined {
+export async function startSpan(config: SpanConfig): Promise<ActiveSpan | undefined> {
     if (!config.telemetry?.isEnabled) {
         return undefined;
     }
 
-    const otel = getOTel();
+    const otel = await loadOTel();
     const tracer = otel?.trace.getTracer(TRACER_NAME);
 
     if (!otel || !tracer) {
@@ -332,21 +330,21 @@ export function recordChatOutputContent(
 ): void {
     const parts = serializeAssistantContentParts(result.parts);
 
-    span.setAttribute(
-        'gen_ai.output.messages',
-        JSON.stringify([
-            {
-                role: 'assistant',
-                parts,
-                finish_reason: result.finishReason,
-            },
-        ])
-    );
+    const outputMessages = safeJsonStringify([
+        {
+            role: 'assistant',
+            parts,
+            finish_reason: result.finishReason,
+        },
+    ]);
+    if (outputMessages) {
+        span.setAttribute('gen_ai.output.messages', outputMessages);
+    }
 
     const outputValue =
-        result.content ?? (parts.length > 0 ? JSON.stringify(parts) : null);
+        result.content ?? (parts.length > 0 ? safeJsonStringify(parts) : null);
 
-    if (outputValue !== null) {
+    if (outputValue) {
         span.setAttribute('output.value', outputValue);
     }
 }
@@ -362,21 +360,21 @@ export function recordObjectOutputContent<TSchema extends z.ZodType>(
         return;
     }
 
-    span.setAttribute(
-        'gen_ai.output.messages',
-        JSON.stringify([
-            {
-                role: 'assistant',
-                parts: [
-                    {
-                        type: 'text',
-                        content: objectContent,
-                    },
-                ],
-                finish_reason: result.finishReason,
-            },
-        ])
-    );
+    const outputMessages = safeJsonStringify([
+        {
+            role: 'assistant',
+            parts: [
+                {
+                    type: 'text',
+                    content: objectContent,
+                },
+            ],
+            finish_reason: result.finishReason,
+        },
+    ]);
+    if (outputMessages) {
+        span.setAttribute('gen_ai.output.messages', outputMessages);
+    }
     span.setAttribute('output.value', objectContent);
 }
 

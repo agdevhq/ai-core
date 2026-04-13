@@ -29,7 +29,7 @@ export async function streamObject<TSchema extends z.ZodType>(
 ): Promise<ObjectStream<TSchema>> {
     assertNonEmptyMessages(params.messages);
     const { telemetry, ...rest } = params;
-    const activeSpan = startSpan({
+    const activeSpan = await startSpan({
         name: `chat ${params.model.modelId}`,
         attributes: {
             'gen_ai.provider.name': params.model.provider,

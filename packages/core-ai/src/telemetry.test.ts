@@ -52,7 +52,7 @@ describe('telemetry', () => {
         context.disable();
         trace.disable();
         vi.resetModules();
-        vi.doUnmock('node:module');
+        vi.doUnmock('@opentelemetry/api');
     });
 
     it('returns the callback result when telemetry is disabled', async () => {
@@ -134,8 +134,8 @@ describe('telemetry', () => {
         expect(span.events.some((event) => event.name === 'exception')).toBe(true);
     });
 
-    it('returns undefined from startSpan when telemetry is disabled', () => {
-        const activeSpan = startSpan({
+    it('returns undefined from startSpan when telemetry is disabled', async () => {
+        const activeSpan = await startSpan({
             name: 'gen_ai chat',
             attributes: {},
             telemetry: {
@@ -147,9 +147,9 @@ describe('telemetry', () => {
         expect(exporter.getFinishedSpans()).toHaveLength(0);
     });
 
-    it('creates a span with startSpan without ending it', () => {
+    it('creates a span with startSpan without ending it', async () => {
         const activeSpan = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai chat',
                 attributes: {
                     'gen_ai.provider.name': 'test',
@@ -169,9 +169,9 @@ describe('telemetry', () => {
         expect(finishedSpan.attributes['gen_ai.provider.name']).toBe('test');
     });
 
-    it('activates span context via withContext so child spans are parented', () => {
+    it('activates span context via withContext so child spans are parented', async () => {
         const activeSpan = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'parent',
                 attributes: {},
                 telemetry: { isEnabled: true },
@@ -198,9 +198,9 @@ describe('telemetry', () => {
         );
     });
 
-    it('records structured and generic input attributes for chat content', () => {
+    it('records structured and generic input attributes for chat content', async () => {
         const { span } = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
                 telemetry: {
@@ -296,9 +296,9 @@ describe('telemetry', () => {
         ]);
     });
 
-    it('records structured and generic output attributes for chat content', () => {
+    it('records structured and generic output attributes for chat content', async () => {
         const { span } = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
                 telemetry: {
@@ -346,9 +346,9 @@ describe('telemetry', () => {
         expect(finishedSpan.attributes['output.value']).toBe('Hello there');
     });
 
-    it('records output attributes for object results', () => {
+    it('records output attributes for object results', async () => {
         const { span } = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
                 telemetry: {
@@ -392,9 +392,9 @@ describe('telemetry', () => {
         );
     });
 
-    it('records generic input attributes for embedding and image operations', () => {
+    it('records generic input attributes for embedding and image operations', async () => {
         const { span: embedSpan } = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai embeddings',
                 attributes: {},
                 telemetry: {
@@ -403,7 +403,7 @@ describe('telemetry', () => {
             })
         );
         const { span: imageSpan } = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai image_generation',
                 attributes: {},
                 telemetry: {
@@ -425,9 +425,9 @@ describe('telemetry', () => {
         expect(finishedSpans[1]?.attributes['input.value']).toBe('draw a cat');
     });
 
-    it('does not throw when messages contain non-serializable values', () => {
+    it('does not throw when messages contain non-serializable values', async () => {
         const { span } = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
                 telemetry: { isEnabled: true },
@@ -452,9 +452,9 @@ describe('telemetry', () => {
         expect(finishedSpan.attributes['input.value']).toBeUndefined();
     });
 
-    it('records "undefined" string for undefined object results', () => {
+    it('records "undefined" string for undefined object results', async () => {
         const { span } = expectDefined(
-            startSpan({
+            await startSpan({
                 name: 'gen_ai chat',
                 attributes: {},
                 telemetry: { isEnabled: true },
@@ -485,11 +485,9 @@ describe('telemetry', () => {
     it('falls back to a no-op when the OTel package cannot be loaded', async () => {
         trace.disable();
         vi.resetModules();
-        vi.doMock('node:module', () => ({
-            createRequire: () => () => {
-                throw new Error('module not found');
-            },
-        }));
+        vi.doMock('@opentelemetry/api', () => {
+            throw new Error('module not found');
+        });
 
         // @ts-expect-error Vite query import is used to force a fresh module instance.
         const telemetry = (await import('./telemetry.ts?missing-otel')) as typeof import('./telemetry.ts');
