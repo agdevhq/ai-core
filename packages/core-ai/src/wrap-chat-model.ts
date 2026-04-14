@@ -34,61 +34,60 @@ export function wrapChatModel(config: {
     const middlewares = normalizeMiddleware(config.middleware);
     const { model } = config;
 
+    const generateOps: GenerateOperation[] = middlewares.flatMap((mw) =>
+        mw.generate ? [mw.generate] : []
+    );
+    const streamOps: StreamOperation[] = middlewares.flatMap((mw) =>
+        mw.stream ? [mw.stream] : []
+    );
+
     return {
         provider: model.provider,
         modelId: model.modelId,
         generate(options: GenerateOptions): Promise<GenerateResult> {
-            const operations: GenerateOperation[] = middlewares.flatMap((middleware) =>
-                middleware.generate ? [middleware.generate] : []
-            );
-
             return buildMiddlewareChain({
                 model,
-                operations,
-                finalExecute: (nextOptions) => model.generate(nextOptions),
+                operations: generateOps,
+                finalExecute: (opts) => model.generate(opts),
             })(options);
         },
         stream(options: GenerateOptions): Promise<ChatStream> {
-            const operations: StreamOperation[] = middlewares.flatMap((middleware) =>
-                middleware.stream ? [middleware.stream] : []
-            );
-
             return buildMiddlewareChain({
                 model,
-                operations,
-                finalExecute: (nextOptions) => model.stream(nextOptions),
+                operations: streamOps,
+                finalExecute: (opts) => model.stream(opts),
             })(options);
         },
         generateObject<TSchema extends z.ZodType>(
             options: GenerateObjectOptions<TSchema>
         ): Promise<GenerateObjectResult<TSchema>> {
             const operations: GenerateObjectOperation<TSchema>[] = middlewares.flatMap(
-                (middleware) =>
-                    middleware.generateObject
-                        ? [middleware.generateObject as GenerateObjectOperation<TSchema>]
+                (mw) =>
+                    mw.generateObject
+                        ? [mw.generateObject as GenerateObjectOperation<TSchema>]
                         : []
             );
 
             return buildMiddlewareChain({
                 model,
                 operations,
-                finalExecute: (nextOptions) => model.generateObject(nextOptions),
+                finalExecute: (opts) => model.generateObject(opts),
             })(options);
         },
         streamObject<TSchema extends z.ZodType>(
             options: StreamObjectOptions<TSchema>
         ): Promise<ObjectStream<TSchema>> {
             const operations: StreamObjectOperation<TSchema>[] = middlewares.flatMap(
-                (middleware) =>
-                    middleware.streamObject
-                        ? [middleware.streamObject as StreamObjectOperation<TSchema>]
+                (mw) =>
+                    mw.streamObject
+                        ? [mw.streamObject as StreamObjectOperation<TSchema>]
                         : []
             );
 
             return buildMiddlewareChain({
                 model,
                 operations,
-                finalExecute: (nextOptions) => model.streamObject(nextOptions),
+                finalExecute: (opts) => model.streamObject(opts),
             })(options);
         },
     };

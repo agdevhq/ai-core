@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-model: gpt-5.3-codex-xhigh
+model: inherit
 description: Reviews code changes against a plan or requirements for production readiness. Use when you need a thorough code review, after implementing a feature, or before merging a PR.
 readonly: true
 ---

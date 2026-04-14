@@ -15,18 +15,18 @@ export function wrapEmbeddingModel(config: {
     const middlewares = normalizeMiddleware(config.middleware);
     const { model } = config;
 
+    const embedOps: EmbedOperation[] = middlewares.flatMap((mw) =>
+        mw.embed ? [mw.embed] : []
+    );
+
     return {
         provider: model.provider,
         modelId: model.modelId,
         embed(options: EmbedOptions): Promise<EmbedResult> {
-            const operations: EmbedOperation[] = middlewares.flatMap((middleware) =>
-                middleware.embed ? [middleware.embed] : []
-            );
-
             return buildMiddlewareChain({
                 model,
-                operations,
-                finalExecute: (nextOptions) => model.embed(nextOptions),
+                operations: embedOps,
+                finalExecute: (opts) => model.embed(opts),
             })(options);
         },
     };

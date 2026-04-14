@@ -13,6 +13,7 @@ import {
     generateImage,
     generateObject,
     stream,
+    streamObject,
     wrapChatModel,
     wrapEmbeddingModel,
     wrapImageModel,
@@ -22,8 +23,11 @@ import type {
     ChatOutputTokenDetails,
     ChatStream,
     EmbeddingModel,
+    GenerateObjectResult,
     GenerateResult,
     ImageModel,
+    ObjectStream,
+    ObjectStreamEvent,
 } from '@core-ai/core-ai';
 import {
     createOtelEmbeddingMiddleware,
@@ -31,7 +35,7 @@ import {
     createOtelMiddleware,
 } from './index.ts';
 
-async function* events(): AsyncIterable<{
+async function* finishEvents(): AsyncIterable<{
     type: 'finish';
     finishReason: 'stop';
     usage: {
@@ -114,6 +118,28 @@ function expectDefined<T>(value: T | undefined): T {
     return value;
 }
 
+function createMockChatModel(overrides?: Partial<{
+    generate: ChatModel['generate'];
+    stream: ChatModel['stream'];
+    generateObject: ChatModel['generateObject'];
+    streamObject: ChatModel['streamObject'];
+}>): ChatModel {
+    return {
+        provider: 'test',
+        modelId: 'test-model',
+        generate: overrides?.generate ?? vi.fn(async () => createGenerateResult('Hello')),
+        stream: overrides?.stream ?? vi.fn(async () => {
+            throw new Error('not implemented');
+        }),
+        generateObject: overrides?.generateObject ?? vi.fn(async () => {
+            throw new Error('not implemented');
+        }) as ChatModel['generateObject'],
+        streamObject: overrides?.streamObject ?? vi.fn(async () => {
+            throw new Error('not implemented');
+        }) as ChatModel['streamObject'],
+    };
+}
+
 describe('@core-ai/opentelemetry', () => {
     let exporter: InMemorySpanExporter;
     let provider: BasicTracerProvider;
@@ -139,20 +165,7 @@ describe('@core-ai/opentelemetry', () => {
     });
 
     it('records generate spans with request, usage, content, and metadata attributes', async () => {
-        const model: ChatModel = {
-            provider: 'test',
-            modelId: 'test-model',
-            generate: vi.fn(async () => createGenerateResult('Hello')),
-            stream: vi.fn(async () => {
-                throw new Error('not implemented');
-            }),
-            generateObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['generateObject'],
-            streamObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['streamObject'],
-        };
+        const model = createMockChatModel();
         const wrappedModel = wrapChatModel({
             model,
             middleware: createOtelMiddleware(),
@@ -189,20 +202,7 @@ describe('@core-ai/opentelemetry', () => {
     });
 
     it('omits content attributes when recordContent is false', async () => {
-        const model: ChatModel = {
-            provider: 'test',
-            modelId: 'test-model',
-            generate: vi.fn(async () => createGenerateResult('Hello')),
-            stream: vi.fn(async () => {
-                throw new Error('not implemented');
-            }),
-            generateObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['generateObject'],
-            streamObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['streamObject'],
-        };
+        const model = createMockChatModel();
         const wrappedModel = wrapChatModel({
             model,
             middleware: createOtelMiddleware({
@@ -226,24 +226,13 @@ describe('@core-ai/opentelemetry', () => {
         const schema = z.object({
             answer: z.string(),
         });
-        const model: ChatModel = {
-            provider: 'test',
-            modelId: 'test-model',
-            generate: vi.fn(async () => {
-                throw new Error('not implemented');
-            }),
-            stream: vi.fn(async () => {
-                throw new Error('not implemented');
-            }),
+        const model = createMockChatModel({
             generateObject: vi.fn(async () => ({
                 object: { answer: '42' },
                 finishReason: 'stop',
                 usage: createChatUsage(),
             })) as ChatModel['generateObject'],
-            streamObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['streamObject'],
-        };
+        });
         const wrappedModel = wrapChatModel({
             model,
             middleware: createOtelMiddleware(),
@@ -266,25 +255,14 @@ describe('@core-ai/opentelemetry', () => {
         const deferred = createDeferred<GenerateResult>();
         const expected: ChatStream = {
             [Symbol.asyncIterator]() {
-                return events()[Symbol.asyncIterator]();
+                return finishEvents()[Symbol.asyncIterator]();
             },
             result: deferred.promise,
             events: Promise.resolve([]),
         };
-        const model: ChatModel = {
-            provider: 'test',
-            modelId: 'test-model',
-            generate: vi.fn(async () => {
-                throw new Error('not implemented');
-            }),
+        const model = createMockChatModel({
             stream: vi.fn(async () => expected),
-            generateObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['generateObject'],
-            streamObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['streamObject'],
-        };
+        });
         const wrappedModel = wrapChatModel({
             model,
             middleware: createOtelMiddleware(),
@@ -325,25 +303,14 @@ describe('@core-ai/opentelemetry', () => {
         const deferred = createDeferred<GenerateResult>();
         const expected: ChatStream = {
             [Symbol.asyncIterator]() {
-                return events()[Symbol.asyncIterator]();
+                return finishEvents()[Symbol.asyncIterator]();
             },
             result: deferred.promise,
             events: Promise.resolve([]),
         };
-        const model: ChatModel = {
-            provider: 'test',
-            modelId: 'test-model',
-            generate: vi.fn(async () => {
-                throw new Error('not implemented');
-            }),
+        const model = createMockChatModel({
             stream: vi.fn(async () => expected),
-            generateObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['generateObject'],
-            streamObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['streamObject'],
-        };
+        });
         const wrappedModel = wrapChatModel({
             model,
             middleware: createOtelMiddleware(),
@@ -365,26 +332,69 @@ describe('@core-ai/opentelemetry', () => {
         expect(span.attributes['error.type']).toBe('Error');
     });
 
+    it('keeps streamObject spans open until the result resolves', async () => {
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const deferred = createDeferred<GenerateObjectResult<typeof schema>>();
+        const objectEvents: ObjectStreamEvent<typeof schema>[] = [
+            { type: 'object', object: { city: 'Berlin', temperatureC: 21 } },
+            { type: 'finish', finishReason: 'stop', usage: createChatUsage() },
+        ];
+        const expected: ObjectStream<typeof schema> = {
+            async *[Symbol.asyncIterator]() {
+                yield* objectEvents;
+            },
+            result: deferred.promise,
+            events: Promise.resolve(objectEvents),
+        };
+        const model = createMockChatModel({
+            streamObject: vi.fn(async () => expected) as ChatModel['streamObject'],
+        });
+        const wrappedModel = wrapChatModel({
+            model,
+            middleware: createOtelMiddleware(),
+        });
+
+        const objStream = await streamObject({
+            model: wrappedModel,
+            messages: [{ role: 'user', content: 'weather in Berlin' }],
+            schema,
+        });
+
+        expect(exporter.getFinishedSpans()).toHaveLength(0);
+
+        deferred.resolve({
+            object: { city: 'Berlin', temperatureC: 21 },
+            finishReason: 'stop',
+            usage: createChatUsage(),
+        });
+
+        await expect(objStream.result).resolves.toMatchObject({
+            object: { city: 'Berlin', temperatureC: 21 },
+        });
+        await Promise.resolve();
+
+        const span = expectDefined(exporter.getFinishedSpans()[0]);
+        expect(span.status.code).toBe(SpanStatusCode.OK);
+        expect(span.attributes['gen_ai.output.type']).toBe('json');
+        expect(span.attributes['gen_ai.usage.input_tokens']).toBe(5);
+        expect(span.attributes['gen_ai.usage.output_tokens']).toBe(3);
+        expect(span.attributes['output.value']).toBe(
+            JSON.stringify({ city: 'Berlin', temperatureC: 21 })
+        );
+    });
+
     it('parents child spans created during generate execution', async () => {
-        const model: ChatModel = {
-            provider: 'test',
-            modelId: 'test-model',
+        const model = createMockChatModel({
             generate: vi.fn(async () => {
                 const child = trace.getTracer('test').startSpan('child');
                 child.end();
 
                 return createGenerateResult('Hello');
             }),
-            stream: vi.fn(async () => {
-                throw new Error('not implemented');
-            }),
-            generateObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['generateObject'],
-            streamObject: vi.fn(async () => {
-                throw new Error('not implemented');
-            }) as ChatModel['streamObject'],
-        };
+        });
         const wrappedModel = wrapChatModel({
             model,
             middleware: createOtelMiddleware(),

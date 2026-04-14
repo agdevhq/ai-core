@@ -15,18 +15,18 @@ export function wrapImageModel(config: {
     const middlewares = normalizeMiddleware(config.middleware);
     const { model } = config;
 
+    const generateOps: GenerateOperation[] = middlewares.flatMap((mw) =>
+        mw.generate ? [mw.generate] : []
+    );
+
     return {
         provider: model.provider,
         modelId: model.modelId,
         generate(options: ImageGenerateOptions): Promise<ImageGenerateResult> {
-            const operations: GenerateOperation[] = middlewares.flatMap((middleware) =>
-                middleware.generate ? [middleware.generate] : []
-            );
-
             return buildMiddlewareChain({
                 model,
-                operations,
-                finalExecute: (nextOptions) => model.generate(nextOptions),
+                operations: generateOps,
+                finalExecute: (opts) => model.generate(opts),
             })(options);
         },
     };

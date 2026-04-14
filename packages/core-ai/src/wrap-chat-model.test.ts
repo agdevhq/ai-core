@@ -429,6 +429,58 @@ describe('wrapChatModel', () => {
         expect(errors).toEqual(['boom']);
     });
 
+    it('applies a single middleware with multiple hooks to different operations', async () => {
+        const { model, generateMock, streamMock } = createMockChatModel();
+        const calls: string[] = [];
+        const wrapped = wrapChatModel({
+            model,
+            middleware: {
+                generate: async ({ execute }) => {
+                    calls.push('generate');
+                    return execute();
+                },
+                stream: async ({ execute }) => {
+                    calls.push('stream');
+                    return execute();
+                },
+            },
+        });
+
+        await wrapped.generate({
+            messages: [{ role: 'user', content: 'hello' }],
+        });
+        await wrapped.stream({
+            messages: [{ role: 'user', content: 'hello' }],
+        });
+
+        expect(calls).toEqual(['generate', 'stream']);
+        expect(generateMock).toHaveBeenCalledTimes(1);
+        expect(streamMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes metadata through to both middleware and the underlying model', async () => {
+        const { model, generateMock } = createMockChatModel();
+        const wrapped = wrapChatModel({
+            model,
+            middleware: {
+                generate: async ({ execute, options }) => {
+                    expect(options.metadata).toEqual({ functionId: 'test' });
+                    return execute();
+                },
+            },
+        });
+
+        await wrapped.generate({
+            messages: [{ role: 'user', content: 'hello' }],
+            metadata: { functionId: 'test' },
+        });
+
+        expect(generateMock).toHaveBeenCalledWith({
+            messages: [{ role: 'user', content: 'hello' }],
+            metadata: { functionId: 'test' },
+        });
+    });
+
     it('propagates hook errors to the caller', async () => {
         const { model, generateMock } = createMockChatModel();
         const wrapped = wrapChatModel({
