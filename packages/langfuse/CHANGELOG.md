@@ -1,5 +1,13 @@
 # @core-ai/langfuse
 
+## 0.10.1
+
+### Patch Changes
+
+- f67ed1a: Add Langfuse product and docs links to the package README.
+- 589219e: Fix usageDetails keys to match Langfuse's expected naming convention (input, output, total, etc.) so that cost inference and UI aggregation work correctly.
+    - @core-ai/core-ai@0.10.1
+
 ## 0.10.0
 
 ### Minor Changes
