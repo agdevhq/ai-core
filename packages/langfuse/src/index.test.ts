@@ -236,13 +236,11 @@ describe('@core-ai/langfuse', () => {
         });
         expect(observation.update).toHaveBeenNthCalledWith(2, {
             usageDetails: {
-                inputTokens: 5,
-                outputTokens: 3,
-                totalTokens: 8,
-                promptTokens: 5,
-                completionTokens: 3,
-                cacheReadInputTokens: 0,
-                cacheWriteInputTokens: 0,
+                input: 5,
+                output: 3,
+                total: 8,
+                cache_read_input: 0,
+                cache_creation_input: 0,
             },
             output: {
                 content: 'Hello',
@@ -273,13 +271,11 @@ describe('@core-ai/langfuse', () => {
         });
         expect(observation.update).toHaveBeenNthCalledWith(2, {
             usageDetails: {
-                inputTokens: 5,
-                outputTokens: 3,
-                totalTokens: 8,
-                promptTokens: 5,
-                completionTokens: 3,
-                cacheReadInputTokens: 0,
-                cacheWriteInputTokens: 0,
+                input: 5,
+                output: 3,
+                total: 8,
+                cache_read_input: 0,
+                cache_creation_input: 0,
             },
         });
     });
@@ -316,13 +312,11 @@ describe('@core-ai/langfuse', () => {
         });
         expect(observation.update).toHaveBeenNthCalledWith(2, {
             usageDetails: {
-                inputTokens: 5,
-                outputTokens: 3,
-                totalTokens: 8,
-                promptTokens: 5,
-                completionTokens: 3,
-                cacheReadInputTokens: 0,
-                cacheWriteInputTokens: 0,
+                input: 5,
+                output: 3,
+                total: 8,
+                cache_read_input: 0,
+                cache_creation_input: 0,
             },
             output: { answer: '42' },
         });
@@ -368,13 +362,11 @@ describe('@core-ai/langfuse', () => {
 
         expect(observation.update).toHaveBeenNthCalledWith(2, {
             usageDetails: {
-                inputTokens: 5,
-                outputTokens: 3,
-                totalTokens: 8,
-                promptTokens: 5,
-                completionTokens: 3,
-                cacheReadInputTokens: 0,
-                cacheWriteInputTokens: 0,
+                input: 5,
+                output: 3,
+                total: 8,
+                cache_read_input: 0,
+                cache_creation_input: 0,
             },
             output: {
                 content: 'Hello',
@@ -497,13 +489,11 @@ describe('@core-ai/langfuse', () => {
 
         expect(observation.update).toHaveBeenNthCalledWith(2, {
             usageDetails: {
-                inputTokens: 5,
-                outputTokens: 3,
-                totalTokens: 8,
-                promptTokens: 5,
-                completionTokens: 3,
-                cacheReadInputTokens: 0,
-                cacheWriteInputTokens: 0,
+                input: 5,
+                output: 3,
+                total: 8,
+                cache_read_input: 0,
+                cache_creation_input: 0,
             },
             output: { city: 'Berlin', temperatureC: 21 },
         });
@@ -548,9 +538,8 @@ describe('@core-ai/langfuse', () => {
         });
         expect(observation.update).toHaveBeenNthCalledWith(2, {
             usageDetails: {
-                inputTokens: 3,
-                totalTokens: 3,
-                promptTokens: 3,
+                input: 3,
+                total: 3,
             },
         });
     });
