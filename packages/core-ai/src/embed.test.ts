@@ -20,6 +20,9 @@ describe('embed', () => {
         });
 
         expect(result.embeddings).toEqual([[0.1, 0.2]]);
+        expect(model.embed).toHaveBeenCalledWith({
+            input: 'hello',
+        });
     });
 
     it('should allow embedding results without usage', async () => {

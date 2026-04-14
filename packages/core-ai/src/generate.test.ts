@@ -46,6 +46,9 @@ describe('generate', () => {
         });
 
         expect(result).toEqual(expected);
+        expect(model.generate).toHaveBeenCalledWith({
+            messages: [{ role: 'user', content: 'Hi' }],
+        });
     });
 
     it('should throw ValidationError for empty messages', async () => {

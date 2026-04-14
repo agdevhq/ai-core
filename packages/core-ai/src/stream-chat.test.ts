@@ -87,6 +87,9 @@ describe('stream', () => {
         });
 
         expect(chatStream).toBe(expected);
+        expect(model.stream).toHaveBeenCalledWith({
+            messages: [{ role: 'user', content: 'Hi' }],
+        });
     });
 
     it('should throw ValidationError for empty messages', async () => {

@@ -20,6 +20,7 @@ export async function streamObject<TSchema extends z.ZodType>(
     params: StreamObjectParams<TSchema>
 ): Promise<ObjectStream<TSchema>> {
     assertNonEmptyMessages(params.messages);
+
     return callModelWithOptions(params, (model, options) =>
         model.streamObject(options)
     );

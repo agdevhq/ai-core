@@ -10,7 +10,6 @@ export async function generate(
     params: GenerateParams
 ): Promise<GenerateResult> {
     assertNonEmptyMessages(params.messages);
-    return callModelWithOptions(params, (model, options) =>
-        model.generate(options)
-    );
+
+    return callModelWithOptions(params, (model, options) => model.generate(options));
 }

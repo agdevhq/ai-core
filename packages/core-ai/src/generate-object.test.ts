@@ -47,6 +47,10 @@ describe('generateObject', () => {
 
         expect(result).toEqual(expected);
         expect(generateObjectMock).toHaveBeenCalledTimes(1);
+        expect(generateObjectMock).toHaveBeenCalledWith({
+            messages: [{ role: 'user', content: 'answer with json' }],
+            schema,
+        });
     });
 
     it('should throw ValidationError for empty messages', async () => {

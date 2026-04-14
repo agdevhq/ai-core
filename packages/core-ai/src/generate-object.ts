@@ -16,6 +16,7 @@ export async function generateObject<TSchema extends z.ZodType>(
     params: GenerateObjectParams<TSchema>
 ): Promise<GenerateObjectResult<TSchema>> {
     assertNonEmptyMessages(params.messages);
+
     return callModelWithOptions(params, (model, options) =>
         model.generateObject(options)
     );

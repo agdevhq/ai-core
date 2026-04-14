@@ -14,6 +14,7 @@ export async function generateImage(
     params: GenerateImageParams
 ): Promise<ImageGenerateResult> {
     assertNonEmptyPrompt(params.prompt);
+
     return callModelWithOptions(params, (model, options) =>
         model.generate(options)
     );

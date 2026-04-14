@@ -71,6 +71,10 @@ describe('streamObject', () => {
 
         expect(objectStream).toBe(expected);
         expect(streamObjectMock).toHaveBeenCalledTimes(1);
+        expect(streamObjectMock).toHaveBeenCalledWith({
+            messages: [{ role: 'user', content: 'return weather json' }],
+            schema: weatherSchema,
+        });
     });
 
     it('should throw ValidationError for empty messages', async () => {

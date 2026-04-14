@@ -19,6 +19,9 @@ describe('generateImage', () => {
         });
 
         expect(result.images).toEqual([{ base64: 'abc' }]);
+        expect(model.generate).toHaveBeenCalledWith({
+            prompt: 'a cat',
+        });
     });
 
     it('should throw for empty prompt', async () => {
