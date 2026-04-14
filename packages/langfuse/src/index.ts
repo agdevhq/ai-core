@@ -108,17 +108,13 @@ function createImageModelParameters(
 
 function createChatUsageDetails(usage: ChatUsage): Record<string, number> {
     return {
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        totalTokens: usage.inputTokens + usage.outputTokens,
-        promptTokens: usage.inputTokens,
-        completionTokens: usage.outputTokens,
-        cacheReadInputTokens: usage.inputTokenDetails.cacheReadTokens,
-        cacheWriteInputTokens: usage.inputTokenDetails.cacheWriteTokens,
+        input: usage.inputTokens,
+        output: usage.outputTokens,
+        total: usage.inputTokens + usage.outputTokens,
+        cache_read_input: usage.inputTokenDetails.cacheReadTokens,
+        cache_creation_input: usage.inputTokenDetails.cacheWriteTokens,
         ...(usage.outputTokenDetails.reasoningTokens !== undefined
-            ? {
-                  reasoningOutputTokens: usage.outputTokenDetails.reasoningTokens,
-              }
+            ? { reasoning_output: usage.outputTokenDetails.reasoningTokens }
             : {}),
     };
 }
@@ -131,9 +127,8 @@ function createEmbeddingUsageDetails(
     }
 
     return {
-        inputTokens: usage.inputTokens,
-        totalTokens: usage.inputTokens,
-        promptTokens: usage.inputTokens,
+        input: usage.inputTokens,
+        total: usage.inputTokens,
     };
 }
 
