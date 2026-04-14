@@ -1,0 +1,220 @@
+---
+title: Middleware
+description: Extend model behavior with composable hooks for logging, validation, retries, and more
+---
+
+## Overview
+
+Middleware lets you hook into every model operation to run logic before and after each call. A middleware is an object with optional hooks that wrap operations like `generate`, `stream`, `generateObject`, `streamObject`, or `embed`. Each hook receives the call options, a reference to the model, and an `execute` function that continues the chain.
+
+Use middleware for:
+
+- Logging and telemetry
+- Input preprocessing and sanitization
+- Output validation and transformation
+- Custom error handling and retry logic
+- Caching
+- Access control
+
+core-ai ships first-party [OpenTelemetry](/observability/opentelemetry) and [Langfuse](/observability/langfuse) middleware packages built on this same system. See [Observability](/observability/overview) for details.
+
+## Applying middleware
+
+Wrap a model with `wrapChatModel` to apply middleware. The returned model has the same `ChatModel` interface, so you can use it anywhere the original model was used.
+
+```typescript
+import { wrapChatModel, generate } from '@core-ai/core-ai';
+import type { ChatModelMiddleware } from '@core-ai/core-ai';
+
+const logging: ChatModelMiddleware = {
+  generate: async ({ execute, options, model }) => {
+    console.log(`Calling ${model.provider}/${model.modelId}`);
+    const result = await execute();
+    console.log(`Finished with ${result.usage.outputTokens} output tokens`);
+    return result;
+  },
+};
+
+const wrappedModel = wrapChatModel({ model, middleware: logging });
+
+const result = await generate({
+  model: wrappedModel,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+You can pass a single middleware or an array:
+
+```typescript
+const wrappedModel = wrapChatModel({
+  model,
+  middleware: [logging, validation, retry],
+});
+```
+
+## Writing custom middleware
+
+A `ChatModelMiddleware` is an object with optional hooks. Each hook you define wraps the corresponding model operation. Hooks you omit pass through to the model unchanged.
+
+```typescript
+type ChatModelMiddleware = {
+  generate?: (args: {
+    execute: (options?: GenerateOptions) => Promise<GenerateResult>;
+    options: GenerateOptions;
+    model: ChatModel;
+  }) => Promise<GenerateResult>;
+  stream?: (args: {
+    execute: (options?: GenerateOptions) => Promise<ChatStream>;
+    options: GenerateOptions;
+    model: ChatModel;
+  }) => Promise<ChatStream>;
+  generateObject?: <TSchema extends z.ZodType>(args: {
+    execute: (options?: GenerateObjectOptions<TSchema>) => Promise<GenerateObjectResult<TSchema>>;
+    options: GenerateObjectOptions<TSchema>;
+    model: ChatModel;
+  }) => Promise<GenerateObjectResult<TSchema>>;
+  streamObject?: <TSchema extends z.ZodType>(args: {
+    execute: (options?: StreamObjectOptions<TSchema>) => Promise<ObjectStream<TSchema>>;
+    options: StreamObjectOptions<TSchema>;
+    model: ChatModel;
+  }) => Promise<ObjectStream<TSchema>>;
+};
+```
+
+Each hook receives three arguments:
+
+- **`execute`** -- call this to continue the chain. You can call it with no arguments to pass the original options, or pass modified options to override them.
+- **`options`** -- the options for the current call (messages, temperature, tools, etc.)
+- **`model`** -- the underlying model, useful for reading `provider` and `modelId`
+
+### Example: input guardrail
+
+This middleware checks user messages for blocked terms before calling the model:
+
+```typescript
+import type { ChatModelMiddleware } from '@core-ai/core-ai';
+
+const blockedTerms = ['password', 'secret-key'];
+
+const inputGuardrail: ChatModelMiddleware = {
+  generate: async ({ execute, options }) => {
+    for (const message of options.messages) {
+      if (
+        message.role === 'user' &&
+        typeof message.content === 'string' &&
+        blockedTerms.some((term) => message.content.includes(term))
+      ) {
+        throw new Error('Message contains blocked content');
+      }
+    }
+
+    return execute();
+  },
+};
+```
+
+### Example: automatic retries
+
+This middleware retries failed calls with exponential backoff:
+
+```typescript
+import type { ChatModelMiddleware } from '@core-ai/core-ai';
+
+const retry: ChatModelMiddleware = {
+  generate: async ({ execute }) => {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await execute();
+      } catch (error) {
+        if (attempt === maxAttempts) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+
+    throw new Error('Unreachable');
+  },
+};
+```
+
+## Embedding and image middleware
+
+`EmbeddingModelMiddleware` and `ImageModelMiddleware` follow the same pattern with their respective operations.
+
+### EmbeddingModelMiddleware
+
+```typescript
+import { wrapEmbeddingModel } from '@core-ai/core-ai';
+import type { EmbeddingModelMiddleware } from '@core-ai/core-ai';
+
+const logging: EmbeddingModelMiddleware = {
+  embed: async ({ execute, model }) => {
+    console.log(`Embedding with ${model.modelId}`);
+    return execute();
+  },
+};
+
+const wrappedModel = wrapEmbeddingModel({ model: embeddingModel, middleware: logging });
+```
+
+### ImageModelMiddleware
+
+```typescript
+import { wrapImageModel } from '@core-ai/core-ai';
+import type { ImageModelMiddleware } from '@core-ai/core-ai';
+
+const logging: ImageModelMiddleware = {
+  generate: async ({ execute, model }) => {
+    console.log(`Generating image with ${model.modelId}`);
+    return execute();
+  },
+};
+
+const wrappedModel = wrapImageModel({ model: imageModel, middleware: logging });
+```
+
+## Composing middleware
+
+When you pass an array of middleware, they execute in order from first to last. The first middleware in the array is the outermost layer -- it runs first on the way in and last on the way out.
+
+```typescript
+const wrappedModel = wrapChatModel({
+  model,
+  middleware: [logging, retry, validation],
+});
+
+// Execution order for generate():
+// 1. logging (before) →
+// 2.   retry (before) →
+// 3.     validation (before) →
+// 4.       model.generate()
+// 5.     validation (after) ←
+// 6.   retry (after) ←
+// 7. logging (after) ←
+```
+
+Each middleware can:
+- Modify options before calling `execute()`
+- Inspect or transform the result after `execute()` resolves
+- Short-circuit the chain by returning without calling `execute()`
+- Catch and handle errors from `execute()`
+
+## First-party middleware packages
+
+core-ai provides two observability middleware packages. These are built on the same middleware system documented above, and serve as good reference examples for writing your own middleware.
+
+<CardGroup cols={2}>
+  <Card title="OpenTelemetry" icon="signal" href="/observability/opentelemetry">
+    Automatic tracing with OpenTelemetry spans for all model operations
+  </Card>
+  <Card title="Langfuse" icon="chart-line" href="/observability/langfuse">
+    Langfuse observability with generation tracking and usage reporting
+  </Card>
+</CardGroup>
+
+## Next steps
+
+- Set up tracing with [Observability](/observability/overview)
+- Learn about [Models](/concepts/models) and their interfaces
+- Configure generation options with [Configuration](/concepts/configuration)

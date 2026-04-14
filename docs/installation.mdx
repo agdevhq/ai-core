@@ -115,6 +115,44 @@ You need at least one provider adapter to use core-ai. Install the package for y
   </Tab>
 </Tabs>
 
+## Add observability (optional)
+
+core-ai provides middleware packages for tracing and monitoring model operations. See the [Observability](/observability/overview) docs for full setup guides.
+
+<Tabs>
+  <Tab title="OpenTelemetry">
+    <CodeGroup>
+    ```bash npm
+    npm install @core-ai/opentelemetry @opentelemetry/api
+    ```
+
+    ```bash yarn
+    yarn add @core-ai/opentelemetry @opentelemetry/api
+    ```
+
+    ```bash pnpm
+    pnpm add @core-ai/opentelemetry @opentelemetry/api
+    ```
+    </CodeGroup>
+  </Tab>
+
+  <Tab title="Langfuse">
+    <CodeGroup>
+    ```bash npm
+    npm install @core-ai/langfuse @langfuse/otel @langfuse/tracing
+    ```
+
+    ```bash yarn
+    yarn add @core-ai/langfuse @langfuse/otel @langfuse/tracing
+    ```
+
+    ```bash pnpm
+    pnpm add @core-ai/langfuse @langfuse/otel @langfuse/tracing
+    ```
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
 ## Get API keys
 
 You need an API key from your chosen provider. Set it as an environment variable:

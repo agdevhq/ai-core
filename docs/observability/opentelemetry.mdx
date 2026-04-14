@@ -1,0 +1,129 @@
+---
+title: OpenTelemetry
+description: Trace model operations with OpenTelemetry spans
+---
+
+## Overview
+
+`@core-ai/opentelemetry` provides [middleware](/concepts/middleware) that creates OpenTelemetry spans for every model operation. Spans include model metadata, token usage, finish reasons, and optionally the full message content. Traces export to any OpenTelemetry-compatible backend such as Jaeger, Grafana Tempo, or Datadog.
+
+## Installation
+
+<CodeGroup>
+```bash npm
+npm install @core-ai/opentelemetry @opentelemetry/api
+```
+
+```bash yarn
+yarn add @core-ai/opentelemetry @opentelemetry/api
+```
+
+```bash pnpm
+pnpm add @core-ai/opentelemetry @opentelemetry/api
+```
+</CodeGroup>
+
+<Note>
+  `@opentelemetry/api` is a peer dependency. You also need an OpenTelemetry SDK configured in your application (e.g., `@opentelemetry/sdk-node` or `@opentelemetry/sdk-trace-base`) to collect and export spans.
+</Note>
+
+## Usage
+
+### Chat models
+
+```typescript
+import { wrapChatModel, generate } from '@core-ai/core-ai';
+import { createOtelMiddleware } from '@core-ai/opentelemetry';
+
+const tracedModel = wrapChatModel({
+  model,
+  middleware: createOtelMiddleware(),
+});
+
+const result = await generate({
+  model: tracedModel,
+  messages: [{ role: 'user', content: 'Explain quantum computing.' }],
+});
+```
+
+All four chat operations (`generate`, `stream`, `generateObject`, `streamObject`) are traced. For streaming operations, the span stays open until the stream completes and captures the final usage and finish reason.
+
+### Embedding models
+
+```typescript
+import { wrapEmbeddingModel, embed } from '@core-ai/core-ai';
+import { createOtelEmbeddingMiddleware } from '@core-ai/opentelemetry';
+
+const tracedModel = wrapEmbeddingModel({
+  model: embeddingModel,
+  middleware: createOtelEmbeddingMiddleware(),
+});
+
+const result = await embed({
+  model: tracedModel,
+  input: 'Sample text for embedding',
+});
+```
+
+### Image models
+
+```typescript
+import { wrapImageModel, generateImage } from '@core-ai/core-ai';
+import { createOtelImageMiddleware } from '@core-ai/opentelemetry';
+
+const tracedModel = wrapImageModel({
+  model: imageModel,
+  middleware: createOtelImageMiddleware(),
+});
+
+const result = await generateImage({
+  model: tracedModel,
+  prompt: 'A mountain landscape at sunset',
+});
+```
+
+## Options
+
+All three factory functions accept an optional `OtelMiddlewareOptions` object:
+
+```typescript
+type OtelMiddlewareOptions = {
+  recordContent?: boolean;
+  tracerName?: string;
+};
+```
+
+### recordContent
+
+When `true`, input messages, tool definitions, and output content are recorded as span attributes. Defaults to `false` to avoid sending sensitive data to your tracing backend.
+
+```typescript
+const middleware = createOtelMiddleware({ recordContent: true });
+```
+
+### tracerName
+
+The OpenTelemetry tracer name. Defaults to `'core-ai'`.
+
+```typescript
+const middleware = createOtelMiddleware({ tracerName: 'my-app' });
+```
+
+## Span attributes
+
+Spans follow [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) and include:
+
+| Attribute | Description |
+| --- | --- |
+| `gen_ai.system` | Provider name |
+| `gen_ai.request.model` | Model ID |
+| `gen_ai.request.temperature` | Temperature setting |
+| `gen_ai.request.max_tokens` | Max tokens setting |
+| `gen_ai.request.top_p` | Top-p setting |
+| `gen_ai.response.finish_reason` | Why generation stopped |
+| `gen_ai.usage.input_tokens` | Input token count |
+| `gen_ai.usage.output_tokens` | Output token count |
+
+When `recordContent` is enabled, input messages and output content are recorded as additional attributes.
+
+Errors are recorded with `error.type` and the span status is set to `ERROR`.

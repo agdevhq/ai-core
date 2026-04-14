@@ -34,6 +34,7 @@
                             "concepts/models",
                             "concepts/messages",
                             "concepts/configuration",
+                            "concepts/middleware",
                             "concepts/error-handling"
                         ]
                     },
@@ -47,6 +48,14 @@
                             "guides/embeddings",
                             "guides/image-generation",
                             "guides/multi-modal"
+                        ]
+                    },
+                    {
+                        "group": "Observability",
+                        "pages": [
+                            "observability/overview",
+                            "observability/opentelemetry",
+                            "observability/langfuse"
                         ]
                     },
                     {
