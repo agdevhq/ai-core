@@ -4,6 +4,9 @@
 
 Langfuse middleware for `@core-ai/core-ai`.
 
+- [Langfuse](https://langfuse.com/)
+- [Langfuse docs](https://langfuse.com/docs)
+
 ## Installation
 
 ```bash
