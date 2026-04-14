@@ -61,7 +61,7 @@ function recordError(span: Span, error: unknown): void {
 export function createOtelMiddleware(
     options: OtelMiddlewareOptions = {}
 ): ChatModelMiddleware {
-    const { recordContent = true, tracerName = 'core-ai' } = options;
+    const { recordContent = false, tracerName = 'core-ai' } = options;
 
     return {
         generate: async ({ execute, options: generateOptions, model }) => {
@@ -260,7 +260,7 @@ export function createOtelMiddleware(
 export function createOtelEmbeddingMiddleware(
     options: OtelMiddlewareOptions = {}
 ): EmbeddingModelMiddleware {
-    const { recordContent = true, tracerName = 'core-ai' } = options;
+    const { recordContent = false, tracerName = 'core-ai' } = options;
 
     return {
         embed: async ({ execute, options: embedOptions, model }) => {
@@ -300,7 +300,7 @@ export function createOtelEmbeddingMiddleware(
 export function createOtelImageMiddleware(
     options: OtelMiddlewareOptions = {}
 ): ImageModelMiddleware {
-    const { recordContent = true, tracerName = 'core-ai' } = options;
+    const { recordContent = false, tracerName = 'core-ai' } = options;
 
     return {
         generate: async ({ execute, options: imageOptions, model }) => {

@@ -168,7 +168,7 @@ describe('@core-ai/opentelemetry', () => {
         const model = createMockChatModel();
         const wrappedModel = wrapChatModel({
             model,
-            middleware: createOtelMiddleware(),
+            middleware: createOtelMiddleware({ recordContent: true }),
         });
 
         await generate({
@@ -201,13 +201,11 @@ describe('@core-ai/opentelemetry', () => {
         expect(span.attributes['output.value']).toBe('Hello');
     });
 
-    it('omits content attributes when recordContent is false', async () => {
+    it('omits content attributes by default', async () => {
         const model = createMockChatModel();
         const wrappedModel = wrapChatModel({
             model,
-            middleware: createOtelMiddleware({
-                recordContent: false,
-            }),
+            middleware: createOtelMiddleware(),
         });
 
         await generate({
@@ -235,7 +233,7 @@ describe('@core-ai/opentelemetry', () => {
         });
         const wrappedModel = wrapChatModel({
             model,
-            middleware: createOtelMiddleware(),
+            middleware: createOtelMiddleware({ recordContent: true }),
         });
 
         await generateObject({
@@ -265,7 +263,7 @@ describe('@core-ai/opentelemetry', () => {
         });
         const wrappedModel = wrapChatModel({
             model,
-            middleware: createOtelMiddleware(),
+            middleware: createOtelMiddleware({ recordContent: true }),
         });
 
         const chatStream = await stream({
@@ -354,7 +352,7 @@ describe('@core-ai/opentelemetry', () => {
         });
         const wrappedModel = wrapChatModel({
             model,
-            middleware: createOtelMiddleware(),
+            middleware: createOtelMiddleware({ recordContent: true }),
         });
 
         const objStream = await streamObject({
@@ -384,6 +382,44 @@ describe('@core-ai/opentelemetry', () => {
         expect(span.attributes['output.value']).toBe(
             JSON.stringify({ city: 'Berlin', temperatureC: 21 })
         );
+    });
+
+    it('records streamObject errors on the span', async () => {
+        const schema = z.object({
+            city: z.string(),
+            temperatureC: z.number(),
+        });
+        const deferred = createDeferred<GenerateObjectResult<typeof schema>>();
+        const expected: ObjectStream<typeof schema> = {
+            async *[Symbol.asyncIterator]() {
+                yield { type: 'finish', finishReason: 'stop', usage: createChatUsage() };
+            },
+            result: deferred.promise,
+            events: Promise.resolve([]),
+        };
+        const model = createMockChatModel({
+            streamObject: vi.fn(async () => expected) as ChatModel['streamObject'],
+        });
+        const wrappedModel = wrapChatModel({
+            model,
+            middleware: createOtelMiddleware(),
+        });
+
+        const objStream = await streamObject({
+            model: wrappedModel,
+            messages: [{ role: 'user', content: 'weather' }],
+            schema,
+        });
+
+        deferred.reject(new Error('object stream failed'));
+
+        await expect(objStream.result).rejects.toThrow('object stream failed');
+        await Promise.resolve();
+
+        const span = expectDefined(exporter.getFinishedSpans()[0]);
+        expect(span.status.code).toBe(SpanStatusCode.ERROR);
+        expect(span.status.message).toBe('object stream failed');
+        expect(span.attributes['error.type']).toBe('Error');
     });
 
     it('parents child spans created during generate execution', async () => {
@@ -430,7 +466,7 @@ describe('@core-ai/opentelemetry', () => {
         };
         const wrappedModel = wrapEmbeddingModel({
             model,
-            middleware: createOtelEmbeddingMiddleware(),
+            middleware: createOtelEmbeddingMiddleware({ recordContent: true }),
         });
 
         await embed({
@@ -454,7 +490,7 @@ describe('@core-ai/opentelemetry', () => {
         };
         const wrappedModel = wrapImageModel({
             model,
-            middleware: createOtelImageMiddleware(),
+            middleware: createOtelImageMiddleware({ recordContent: true }),
         });
 
         await generateImage({

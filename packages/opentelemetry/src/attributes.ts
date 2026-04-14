@@ -309,9 +309,10 @@ export function setObjectOutputAttributes<TSchema extends z.ZodType>(
 }
 
 export function setEmbedInputAttributes(span: Span, input: string | string[]): void {
-    span.setAttribute(
+    setSpanAttribute(
+        span,
         'input.value',
-        typeof input === 'string' ? input : JSON.stringify(input)
+        typeof input === 'string' ? input : safeJsonStringify(input)
     );
 }
 

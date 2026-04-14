@@ -31,7 +31,7 @@ async function main(): Promise<void> {
     });
     const redactedModel = wrapChatModel({
         model: baseModel,
-        middleware: [createOtelMiddleware({ recordContent: false })],
+        middleware: [createOtelMiddleware()],
     });
 
     console.log('Running generate() with content recording enabled...\n');
