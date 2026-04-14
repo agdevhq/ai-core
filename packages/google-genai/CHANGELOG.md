@@ -1,5 +1,12 @@
 # @core-ai/google-genai
 
+## 0.9.0
+
+### Patch Changes
+
+- Updated dependencies [657ca1f]
+    - @core-ai/core-ai@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes
