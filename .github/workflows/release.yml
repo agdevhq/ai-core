@@ -24,7 +24,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure npm registry for OIDC trusted publishing
+        run: echo "registry=https://registry.npmjs.org/" > "$HOME/.npmrc"
 
       - name: Install Dependencies
         run: npm ci
