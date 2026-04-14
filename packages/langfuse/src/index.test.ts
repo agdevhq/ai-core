@@ -238,7 +238,6 @@ describe('@core-ai/langfuse', () => {
             usageDetails: {
                 input: 5,
                 output: 3,
-                total: 8,
                 cache_read_input: 0,
                 cache_creation_input: 0,
             },
@@ -273,7 +272,6 @@ describe('@core-ai/langfuse', () => {
             usageDetails: {
                 input: 5,
                 output: 3,
-                total: 8,
                 cache_read_input: 0,
                 cache_creation_input: 0,
             },
@@ -314,7 +312,6 @@ describe('@core-ai/langfuse', () => {
             usageDetails: {
                 input: 5,
                 output: 3,
-                total: 8,
                 cache_read_input: 0,
                 cache_creation_input: 0,
             },
@@ -364,7 +361,6 @@ describe('@core-ai/langfuse', () => {
             usageDetails: {
                 input: 5,
                 output: 3,
-                total: 8,
                 cache_read_input: 0,
                 cache_creation_input: 0,
             },
@@ -491,7 +487,6 @@ describe('@core-ai/langfuse', () => {
             usageDetails: {
                 input: 5,
                 output: 3,
-                total: 8,
                 cache_read_input: 0,
                 cache_creation_input: 0,
             },
@@ -539,7 +534,6 @@ describe('@core-ai/langfuse', () => {
         expect(observation.update).toHaveBeenNthCalledWith(2, {
             usageDetails: {
                 input: 3,
-                total: 3,
             },
         });
     });

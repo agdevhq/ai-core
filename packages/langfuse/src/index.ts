@@ -107,12 +107,14 @@ function createImageModelParameters(
 }
 
 function createChatUsageDetails(usage: ChatUsage): Record<string, number> {
+    const { cacheReadTokens, cacheWriteTokens } = usage.inputTokenDetails;
+    const reasoningTokens = usage.outputTokenDetails.reasoningTokens ?? 0;
+
     return {
-        input: usage.inputTokens,
-        output: usage.outputTokens,
-        total: usage.inputTokens + usage.outputTokens,
-        cache_read_input: usage.inputTokenDetails.cacheReadTokens,
-        cache_creation_input: usage.inputTokenDetails.cacheWriteTokens,
+        input: usage.inputTokens - cacheReadTokens - cacheWriteTokens,
+        output: usage.outputTokens - reasoningTokens,
+        cache_read_input: cacheReadTokens,
+        cache_creation_input: cacheWriteTokens,
         ...(usage.outputTokenDetails.reasoningTokens !== undefined
             ? { reasoning_output: usage.outputTokenDetails.reasoningTokens }
             : {}),
@@ -128,7 +130,6 @@ function createEmbeddingUsageDetails(
 
     return {
         input: usage.inputTokens,
-        total: usage.inputTokens,
     };
 }
 
