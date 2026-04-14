@@ -1,5 +1,11 @@
 # @core-ai/openai
 
+## 0.10.0
+
+### Patch Changes
+
+- @core-ai/core-ai@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes
