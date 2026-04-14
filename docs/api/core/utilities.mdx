@@ -1,12 +1,12 @@
 ---
 title: 'Utilities'
-description: 'Helper functions for schemas, messages, streams, and provider metadata'
+description: 'Helper functions for schemas, messages, streams, middleware wrapping, and provider metadata'
 icon: 'toolbox'
 ---
 
 ## Overview
 
-core-ai exports helpers for schema conversion, assistant message construction, stream creation, and provider-specific metadata access.
+core-ai exports helpers for schema conversion, assistant message construction, stream creation, model middleware wrapping, and provider-specific metadata access.
 
 ## zodSchemaToJsonSchema()
 
@@ -126,6 +126,48 @@ const objectStream = createObjectStream(asyncIterable);
 ```
 
 Like `createChatStream`, this accepts an optional `{ signal: AbortSignal }` options object.
+
+## wrapChatModel()
+
+Wrap a `ChatModel` with [middleware](/concepts/middleware) to add cross-cutting behavior like logging, validation, or tracing.
+
+```typescript
+import { wrapChatModel } from '@core-ai/core-ai';
+import type { ChatModelMiddleware } from '@core-ai/core-ai';
+
+const wrappedModel = wrapChatModel({
+  model,
+  middleware: myMiddleware, // single middleware or array
+});
+```
+
+Returns a new `ChatModel` with the same interface. See the [Middleware](/concepts/middleware) concept page for details on writing and composing middleware.
+
+## wrapEmbeddingModel()
+
+Wrap an `EmbeddingModel` with middleware.
+
+```typescript
+import { wrapEmbeddingModel } from '@core-ai/core-ai';
+
+const wrappedModel = wrapEmbeddingModel({
+  model: embeddingModel,
+  middleware: myMiddleware,
+});
+```
+
+## wrapImageModel()
+
+Wrap an `ImageModel` with middleware.
+
+```typescript
+import { wrapImageModel } from '@core-ai/core-ai';
+
+const wrappedModel = wrapImageModel({
+  model: imageModel,
+  middleware: myMiddleware,
+});
+```
 
 ## stripModelDateSuffix()
 

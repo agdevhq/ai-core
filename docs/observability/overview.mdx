@@ -1,0 +1,52 @@
+---
+title: Observability
+description: Trace and monitor model operations with OpenTelemetry or Langfuse
+---
+
+## Overview
+
+core-ai provides observability support through its [middleware](/concepts/middleware) system. Observability middleware hooks into every model operation to capture traces, usage metrics, and error details without changing your application code.
+
+You wrap your model with an observability middleware, and all calls through that model are automatically traced.
+
+```typescript
+import { wrapChatModel, generate } from '@core-ai/core-ai';
+import { createOtelMiddleware } from '@core-ai/opentelemetry';
+
+const tracedModel = wrapChatModel({
+  model,
+  middleware: createOtelMiddleware(),
+});
+
+const result = await generate({
+  model: tracedModel,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+## Available integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenTelemetry" icon="signal" href="/observability/opentelemetry">
+    Export traces to any OpenTelemetry-compatible backend (Jaeger, Grafana, Datadog, etc.)
+  </Card>
+  <Card title="Langfuse" icon="chart-line" href="/observability/langfuse">
+    Track generations, token usage, and costs in Langfuse
+  </Card>
+</CardGroup>
+
+## How it works
+
+Observability integrations are standard [middleware](/concepts/middleware) applied via `wrapChatModel`, `wrapEmbeddingModel`, or `wrapImageModel`. Each factory function returns a middleware object that hooks into model operations to record spans or observations.
+
+You can combine observability middleware with other middleware. The order in the array controls execution order -- place observability middleware first to capture the full duration of the call including any other middleware processing.
+
+```typescript
+import { wrapChatModel } from '@core-ai/core-ai';
+import { createOtelMiddleware } from '@core-ai/opentelemetry';
+
+const model = wrapChatModel({
+  model: baseModel,
+  middleware: [createOtelMiddleware(), retryMiddleware, validationMiddleware],
+});
+```
