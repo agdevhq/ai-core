@@ -3,6 +3,22 @@ title: Releases
 description: Release history for all core-ai packages.
 ---
 
+<Update label="0.10.0" description="Langfuse middleware" tags={["improvement"]}>
+  ### @core-ai/langfuse
+
+  - Add a first-party Langfuse middleware package for chat, embedding, and image model telemetry.
+</Update>
+
+<Update label="0.9.0" description="Model middleware and OpenTelemetry" tags={["improvement"]}>
+  ### @core-ai/core-ai
+
+  - Add model-level middleware wrappers (`wrapChatModel`, `wrapEmbeddingModel`, `wrapImageModel`) for intercepting and augmenting model calls.
+
+  ### @core-ai/opentelemetry
+
+  - Add first-party OpenTelemetry middleware via `createOtelMiddleware`, `createOtelEmbeddingMiddleware`, and `createOtelImageMiddleware`.
+</Update>
+
 <Update label="0.8.0" description="Standardized error hierarchy" tags={["improvement"]}>
   ### @core-ai/core-ai
 
