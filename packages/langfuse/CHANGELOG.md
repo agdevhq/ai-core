@@ -1,5 +1,12 @@
 # @core-ai/langfuse
 
+## 0.10.2
+
+### Patch Changes
+
+- fb9162a: Fix double-counting of cache and reasoning tokens in Langfuse usage breakdown. The `input` and `output` keys now report only non-overlapping token counts so Langfuse's aggregation sums correctly.
+    - @core-ai/core-ai@0.10.2
+
 ## 0.10.1
 
 ### Patch Changes
