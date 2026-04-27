@@ -70,7 +70,7 @@ const result = await generate({
   Some providers (like Anthropic) require `maxTokens` to be set. The provider wrapper may set a default value if not specified.
 </Note>
 
-**Token Estimation:**
+**Token estimation:**
 - 1 token ≈ 0.75 words (English)
 - 100 tokens ≈ 75 words
 - 1000 tokens ≈ 750 words
@@ -170,7 +170,7 @@ const result = await generate({
 });
 ```
 
-**Difference from Frequency Penalty:**
+**Difference from frequency penalty:**
 - `presencePenalty`: Binary -- penalizes any token that appeared at least once
 - `frequencyPenalty`: Proportional -- penalizes based on how many times token appeared
 
@@ -253,7 +253,7 @@ console.log('Answer:', result.content);
 
 ### For different tasks
 
-**Code Generation:**
+**Code generation:**
 
 ```typescript
 const result = await generate({
@@ -267,7 +267,7 @@ const result = await generate({
 });
 ```
 
-**Creative Writing:**
+**Creative writing:**
 
 ```typescript
 const result = await generate({
@@ -280,7 +280,7 @@ const result = await generate({
 });
 ```
 
-**Question Answering:**
+**Question answering:**
 
 ```typescript
 const result = await generate({
@@ -291,7 +291,7 @@ const result = await generate({
 });
 ```
 
-**Brainstorming/Ideas:**
+**Brainstorming/ideas:**
 
 ```typescript
 const result = await generate({
@@ -304,7 +304,7 @@ const result = await generate({
 });
 ```
 
-### Testing configurations
+### Test configurations
 
 <Tip>
   Start with default settings and adjust one parameter at a time. Temperature is usually the most impactful setting to tune first.
@@ -383,8 +383,8 @@ try {
 }
 ```
 
-## Next Steps
+## Next steps
 
-- Learn about [Error Handling](/concepts/error-handling) for robust applications
+- Learn about [Error handling](/concepts/error-handling) for robust applications
 - Explore [Providers](/concepts/providers) for provider-specific features
 - Understand [Messages](/concepts/messages) for building conversations

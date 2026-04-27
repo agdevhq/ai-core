@@ -5,7 +5,7 @@ description: Generate vector embeddings using embed() for semantic search and si
 
 Embeddings convert text into numerical vectors that capture semantic meaning, enabling similarity search, clustering, and classification.
 
-## Basic Usage
+## Basic usage
 
 Generate embeddings for text:
 
@@ -30,7 +30,7 @@ console.log('First vector preview:', result.embeddings[0]?.slice(0, 8));
 console.log('Usage:', result.usage);
 ```
 
-## Single vs Batch Embedding
+## Single vs batch embedding
 
 Embed single or multiple texts:
 
@@ -66,7 +66,7 @@ Embed single or multiple texts:
   </Tab>
 </Tabs>
 
-## Embedding Response
+## Embedding response
 
 The `embed()` function returns an `EmbedResult`:
 
@@ -81,7 +81,7 @@ type EmbeddingUsage = {
 };
 ```
 
-## Configuring Dimensions
+## Configuring dimensions
 
 Some models support custom dimensions:
 
@@ -99,7 +99,7 @@ console.log('Dimensions:', result.embeddings[0].length); // 256
   Not all embedding models support custom dimensions. Check your provider's documentation.
 </Note>
 
-## Similarity Search
+## Similarity search
 
 Calculate similarity between vectors:
 
@@ -146,7 +146,7 @@ similarities.forEach(({ document, similarity }) => {
 });
 ```
 
-## Semantic Search Example
+## Semantic search example
 
 Build a simple semantic search system:
 
@@ -214,7 +214,7 @@ const results = await search.search('typed JavaScript', 2);
 console.log('Search results:', results);
 ```
 
-## Clustering Documents
+## Clustering documents
 
 Group similar documents together:
 
@@ -303,7 +303,7 @@ clusters.forEach((cluster, i) => {
 });
 ```
 
-## Using Different Providers
+## Using different providers
 
 <Tabs>
   <Tab title="OpenAI">
@@ -335,7 +335,7 @@ clusters.forEach((cluster, i) => {
   </Tab>
 </Tabs>
 
-## Integration with Vector Databases
+## Integration with vector databases
 
 Store embeddings in vector databases:
 
@@ -422,7 +422,7 @@ Store embeddings in vector databases:
   </Tab>
 </Tabs>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Batch embeddings for efficiency">
@@ -510,19 +510,19 @@ Store embeddings in vector databases:
   </Accordion>
 </AccordionGroup>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Chat Completion" icon="message" href="/guides/chat-completion">
+  <Card title="Chat completion" icon="message" href="/guides/chat-completion">
     Generate text responses
   </Card>
-  <Card title="Structured Outputs" icon="brackets-curly" href="/guides/structured-outputs">
+  <Card title="Structured outputs" icon="brackets-curly" href="/guides/structured-outputs">
     Get type-safe JSON responses
   </Card>
-  <Card title="Tool Calling" icon="wrench" href="/guides/tool-calling">
+  <Card title="Tool calling" icon="wrench" href="/guides/tool-calling">
     Use embeddings in tool functions
   </Card>
-  <Card title="Multi-Modal" icon="images" href="/guides/multi-modal">
+  <Card title="Multi-modal" icon="images" href="/guides/multi-modal">
     Work with images and files
   </Card>
 </CardGroup>
