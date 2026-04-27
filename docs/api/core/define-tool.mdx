@@ -229,7 +229,7 @@ const analyzeSentimentTool = defineTool({
 });
 ```
 
-### Multiple Tools in One Call
+### Multiple tools in one call
 
 ```typescript
 const tools = {
@@ -271,7 +271,7 @@ const result = await generate({
 // Model might call get_stock_price then convert_currency
 ```
 
-### Controlling Tool Usage
+### Controlling tool usage
 
 ```typescript
 // Auto: Model decides whether to use tools
@@ -310,7 +310,7 @@ const result4 = await generate({
 });
 ```
 
-## Type Safety
+## Type safety
 
 The tool definition is fully type-safe:
 
@@ -335,7 +335,7 @@ const handler = async (args: ToolParams) => {
 };
 ```
 
-## Best Practices
+## Best practices
 
 <Tip>
   Use descriptive tool names that clearly indicate their purpose. Follow the `snake_case` convention.
@@ -353,9 +353,9 @@ const handler = async (args: ToolParams) => {
   Always validate tool results before passing them back to the model. Handle errors gracefully.
 </Warning>
 
-## Common Patterns
+## Common patterns
 
-### 1. Database Queries
+### 1. Database queries
 
 ```typescript
 const queryTool = defineTool({
@@ -363,12 +363,12 @@ const queryTool = defineTool({
   description: 'Query the database for records',
   parameters: z.object({
     table: z.enum(['users', 'products', 'orders']),
-    filters: z.record(z.unknown()).optional()
+    filters: z.record(z.string(), z.unknown()).optional()
   })
 });
 ```
 
-### 2. API Calls
+### 2. API calls
 
 ```typescript
 const apiTool = defineTool({
@@ -377,12 +377,12 @@ const apiTool = defineTool({
   parameters: z.object({
     endpoint: z.string(),
     method: z.enum(['GET', 'POST', 'PUT', 'DELETE']),
-    body: z.record(z.unknown()).optional()
+    body: z.record(z.string(), z.unknown()).optional()
   })
 });
 ```
 
-### 3. File Operations
+### 3. File operations
 
 ```typescript
 const fileTool = defineTool({
