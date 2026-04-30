@@ -370,6 +370,55 @@ describe('mapGenerateResponse', () => {
         });
     });
 
+    it('should separate multiple reasoning summary parts', () => {
+        const response = asResponse({
+            output: [
+                {
+                    type: 'reasoning',
+                    summary: [
+                        { type: 'summary_text', text: 'first summary' },
+                        { type: 'summary_text', text: 'second summary' },
+                    ],
+                    encrypted_content: 'enc_1',
+                },
+            ],
+            status: 'completed',
+        });
+
+        const result = mapGenerateResponse(response);
+
+        expect(result.reasoning).toBe('first summary\n\nsecond summary');
+        expect(result.parts).toEqual([
+            {
+                type: 'reasoning',
+                text: 'first summary\n\nsecond summary',
+                providerMetadata: {
+                    openai: { encryptedContent: 'enc_1' },
+                },
+            },
+        ]);
+    });
+
+    it('should separate multiple reasoning output items', () => {
+        const response = asResponse({
+            output: [
+                {
+                    type: 'reasoning',
+                    summary: [{ type: 'summary_text', text: 'first item' }],
+                },
+                {
+                    type: 'reasoning',
+                    summary: [{ type: 'summary_text', text: 'second item' }],
+                },
+            ],
+            status: 'completed',
+        });
+
+        expect(mapGenerateResponse(response).reasoning).toBe(
+            'first item\n\nsecond item'
+        );
+    });
+
     it('should return finishReason length when max_output_tokens', () => {
         const response = asResponse({
             output: [
@@ -638,6 +687,7 @@ describe('transformStream', () => {
         expect(events).toEqual([
             { type: 'reasoning-start' },
             { type: 'reasoning-delta', text: 'first' },
+            { type: 'reasoning-delta', text: '\n\n' },
             { type: 'reasoning-delta', text: 'second' },
             {
                 type: 'reasoning-end',
@@ -845,6 +895,7 @@ describe('transformStream', () => {
         expect(events).toEqual([
             { type: 'reasoning-start' },
             { type: 'reasoning-delta', text: 'alpha' },
+            { type: 'reasoning-delta', text: '\n\n' },
             { type: 'reasoning-delta', text: 'beta' },
             {
                 type: 'reasoning-end',
@@ -870,7 +921,7 @@ describe('transformStream', () => {
         const reasoningDeltas = events.filter(
             (event) => event.type === 'reasoning-delta'
         );
-        expect(reasoningDeltas).toHaveLength(2);
+        expect(reasoningDeltas).toHaveLength(3);
     });
 
     it('should backfill reasoning from output_item.done summary when no deltas or .done text were seen', async () => {
@@ -904,7 +955,7 @@ describe('transformStream', () => {
 
         expect(events).toEqual([
             { type: 'reasoning-start' },
-            { type: 'reasoning-delta', text: 'part onepart two' },
+            { type: 'reasoning-delta', text: 'part one\n\npart two' },
             {
                 type: 'reasoning-end',
                 providerMetadata: {
@@ -971,6 +1022,7 @@ describe('transformStream', () => {
         expect(events).toEqual([
             { type: 'reasoning-start' },
             { type: 'reasoning-delta', text: 'one' },
+            { type: 'reasoning-delta', text: '\n\n' },
             { type: 'reasoning-delta', text: 'two' },
             {
                 type: 'reasoning-end',
@@ -996,7 +1048,7 @@ describe('transformStream', () => {
         const reasoningDeltas = events.filter(
             (event) => event.type === 'reasoning-delta'
         );
-        expect(reasoningDeltas).toHaveLength(2);
+        expect(reasoningDeltas).toHaveLength(3);
     });
 
     it('should return finishReason length when stream is incomplete', async () => {

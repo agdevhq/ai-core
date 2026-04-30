@@ -50,6 +50,7 @@ export type OpenAIReasoningMetadata = {
 };
 
 const ENCRYPTED_REASONING_INCLUDE = 'reasoning.encrypted_content';
+const REASONING_SUMMARY_SEPARATOR = '\n\n';
 
 export function convertMessages(messages: Message[]): ResponseInputItem[] {
     return messages.flatMap(convertMessage);
@@ -401,7 +402,7 @@ function mapReasoningPart(
 function getReasoningSummaryText(
     summary: ResponseReasoningItem['summary']
 ): string {
-    return summary.map((item) => item.text).join('');
+    return summary.map((item) => item.text).join(REASONING_SUMMARY_SEPARATOR);
 }
 
 function mapMessageTextParts(
@@ -415,22 +416,27 @@ function mapMessageTextParts(
 }
 
 function getTextContent(parts: AssistantContentPart[]): string | null {
-    return getJoinedPartText(parts, 'text');
+    return getJoinedPartText(parts, 'text', '');
 }
 
 function getReasoningText(parts: AssistantContentPart[]): string | null {
-    return getJoinedPartText(parts, 'reasoning');
+    return getJoinedPartText(
+        parts,
+        'reasoning',
+        REASONING_SUMMARY_SEPARATOR
+    );
 }
 
 function getJoinedPartText(
     parts: AssistantContentPart[],
-    type: 'text' | 'reasoning'
+    type: 'text' | 'reasoning',
+    separator: string
 ): string | null {
     const text = parts
         .flatMap((part) =>
             part.type === type && 'text' in part ? [part.text] : []
         )
-        .join('');
+        .join(separator);
     return text.length > 0 ? text : null;
 }
 
@@ -488,6 +494,24 @@ type BufferedToolCall = {
 type ReasoningStartEvent = Extract<StreamEvent, { type: 'reasoning-start' }>;
 type ReasoningEndEvent = Extract<StreamEvent, { type: 'reasoning-end' }>;
 
+type ReasoningSummaryPart = {
+    itemId: string;
+    summaryIndex: number;
+};
+
+function getReasoningSummaryKey(part: ReasoningSummaryPart): string {
+    return `${part.itemId}:${part.summaryIndex}`;
+}
+
+function isSameReasoningSummaryPart(
+    left: ReasoningSummaryPart,
+    right: ReasoningSummaryPart
+): boolean {
+    return (
+        left.itemId === right.itemId && left.summaryIndex === right.summaryIndex
+    );
+}
+
 function getReasoningStartTransition(reasoningStarted: boolean): {
     nextReasoningStarted: boolean;
     event: ReasoningStartEvent | null;
@@ -539,6 +563,7 @@ export async function* transformStream(
 
     let latestResponse: Response | undefined;
     let reasoningStarted = false;
+    let latestReasoningSummaryPart: ReasoningSummaryPart | undefined;
 
     const upsertBufferedToolCall = (
         outputIndex: number,
@@ -565,17 +590,48 @@ export async function* transformStream(
             providerMetadata
         );
         reasoningStarted = transition.nextReasoningStarted;
+        if (transition.event) {
+            latestReasoningSummaryPart = undefined;
+        }
         return transition.event;
+    };
+
+    const getReasoningSummarySeparatorEvent = (
+        currentPart: ReasoningSummaryPart
+    ): Extract<StreamEvent, { type: 'reasoning-delta' }> | null => {
+        const previousPart = latestReasoningSummaryPart;
+        latestReasoningSummaryPart = currentPart;
+
+        if (
+            previousPart === undefined ||
+            isSameReasoningSummaryPart(previousPart, currentPart)
+        ) {
+            return null;
+        }
+
+        return {
+            type: 'reasoning-delta',
+            text: REASONING_SUMMARY_SEPARATOR,
+        };
     };
 
     for await (const event of stream) {
         if (event.type === 'response.reasoning_summary_text.delta') {
-            seenSummaryDeltas.add(`${event.item_id}:${event.summary_index}`);
+            const summaryPart = {
+                itemId: event.item_id,
+                summaryIndex: event.summary_index,
+            };
+            seenSummaryDeltas.add(getReasoningSummaryKey(summaryPart));
             emittedReasoningItems.add(event.item_id);
 
             const reasoningStartEvent = getNextReasoningStartEvent();
             if (reasoningStartEvent) {
                 yield reasoningStartEvent;
+            }
+
+            const separatorEvent = getReasoningSummarySeparatorEvent(summaryPart);
+            if (separatorEvent) {
+                yield separatorEvent;
             }
 
             yield {
@@ -586,13 +642,23 @@ export async function* transformStream(
         }
 
         if (event.type === 'response.reasoning_summary_text.done') {
-            const key = `${event.item_id}:${event.summary_index}`;
+            const summaryPart = {
+                itemId: event.item_id,
+                summaryIndex: event.summary_index,
+            };
+            const key = getReasoningSummaryKey(summaryPart);
             if (!seenSummaryDeltas.has(key) && event.text.length > 0) {
                 emittedReasoningItems.add(event.item_id);
 
                 const reasoningStartEvent = getNextReasoningStartEvent();
                 if (reasoningStartEvent) {
                     yield reasoningStartEvent;
+                }
+
+                const separatorEvent =
+                    getReasoningSummarySeparatorEvent(summaryPart);
+                if (separatorEvent) {
+                    yield separatorEvent;
                 }
 
                 yield {
