@@ -1,5 +1,12 @@
 # @core-ai/openai
 
+## 0.10.3
+
+### Patch Changes
+
+- 261305a: Preserve spacing between OpenAI reasoning summary parts.
+    - @core-ai/core-ai@0.10.3
+
 ## 0.10.2
 
 ### Patch Changes
