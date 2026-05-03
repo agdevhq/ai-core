@@ -261,6 +261,7 @@ type BaseGenerateOptions = {
     maxTokens?: number;
     topP?: number;
     reasoning?: ReasoningConfig;
+    metadata?: Record<string, unknown>;
     providerOptions?: GenerateProviderOptions;
     signal?: AbortSignal;
 };
@@ -428,6 +429,7 @@ type EmbeddingUsage = {
 type EmbedOptions = {
     input: string | string[];
     dimensions?: number;
+    metadata?: Record<string, unknown>;
     providerOptions?: EmbedProviderOptions;
 };
 ```
@@ -450,6 +452,7 @@ type ImageGenerateOptions = {
     prompt: string;
     n?: number;
     size?: string;
+    metadata?: Record<string, unknown>;
     providerOptions?: ImageProviderOptions;
 };
 ```
