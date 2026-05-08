@@ -11,7 +11,7 @@ core-ai supports three types of models, each designed for specific tasks:
 - **Embedding Models**: Convert text into vector representations for semantic search
 - **Image Models**: Generate images from text prompts
 
-## Chat Models
+## Chat models
 
 Chat models are the most versatile, supporting text generation, conversations, tool calling, and structured output.
 
@@ -32,7 +32,7 @@ type ChatModel = {
 };
 ```
 
-### Basic Text Generation
+### Basic text generation
 
 ```typescript
 import { createOpenAI } from '@core-ai/openai';
@@ -52,7 +52,7 @@ console.log(result.content);
 // "Quantum computing uses quantum bits that can exist in multiple states..."
 ```
 
-### Streaming Responses
+### Streaming responses
 
 ```typescript
 import { stream } from '@core-ai/core-ai';
@@ -71,7 +71,7 @@ for await (const event of response) {
 }
 ```
 
-### Structured Output
+### Structured output
 
 Generate type-safe structured data using Zod schemas:
 
@@ -98,7 +98,7 @@ console.log(result.object);
 // { name: "Alice Smith", age: 28, hobbies: ["reading", "hiking"] }
 ```
 
-### Tool Calling
+### Tool calling
 
 Extend model capabilities with function tools:
 
@@ -141,7 +141,7 @@ if (result.toolCalls.length > 0) {
 
 See the [types reference](/api/core/types) for the full `GenerateResult`, `StreamEvent`, and `FinishReason` type definitions.
 
-## Embedding Models
+## Embedding models
 
 Embedding models convert text into numerical vectors for semantic similarity and search.
 
@@ -155,7 +155,7 @@ type EmbeddingModel = {
 };
 ```
 
-### Basic Usage
+### Basic usage
 
 ```typescript
 import { embed } from '@core-ai/core-ai';
@@ -173,7 +173,7 @@ console.log(result.embeddings[0].length);
 // 1536 (dimensions)
 ```
 
-### Batch Embedding
+### Batch embedding
 
 ```typescript
 const result = await embed({
@@ -189,7 +189,7 @@ console.log(result.embeddings.length);
 // 3
 ```
 
-### Custom Dimensions
+### Custom dimensions
 
 ```typescript
 const result = await embed({
@@ -199,7 +199,7 @@ const result = await embed({
 });
 ```
 
-### Embed Result
+### Embed result
 
 ```typescript
 type EmbedResult = {
@@ -212,7 +212,7 @@ type EmbeddingUsage = {
 };
 ```
 
-## Image Models
+## Image models
 
 Image models generate images from text descriptions.
 
@@ -226,7 +226,7 @@ type ImageModel = {
 };
 ```
 
-### Basic Usage
+### Basic usage
 
 ```typescript
 import { generateImage } from '@core-ai/core-ai';
@@ -244,7 +244,7 @@ console.log(result.images[0]);
 // { base64: "...", revisedPrompt: "..." }
 ```
 
-### Generate Options
+### Generate options
 
 ```typescript
 type ImageGenerateOptions = {
@@ -255,7 +255,7 @@ type ImageGenerateOptions = {
 };
 ```
 
-### Multiple Images
+### Multiple images
 
 ```typescript
 const result = await generateImage({
@@ -269,7 +269,7 @@ console.log(result.images.length);
 // 4
 ```
 
-### Image Result
+### Image result
 
 ```typescript
 type ImageGenerateResult = {
@@ -287,7 +287,7 @@ type GeneratedImage = {
   Different providers may return images as URLs, base64 data, or both. Check the provider documentation for specific behavior.
 </Note>
 
-## Model Properties
+## Model properties
 
 All models expose two readonly properties:
 

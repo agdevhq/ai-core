@@ -5,7 +5,7 @@ description: Generate type-safe JSON with generateObject() and streamObject() us
 
 core-ai provides strongly-typed structured outputs using Zod schemas, ensuring your responses match expected formats with full TypeScript type inference.
 
-## Generate Structured Objects
+## Generate structured objects
 
 Use `generateObject()` to get validated JSON responses:
 
@@ -42,7 +42,7 @@ console.log('Temperature:', result.object.temperatureC);
 console.log('Summary:', result.object.summary);
 ```
 
-## Stream Structured Objects
+## Stream structured objects
 
 Stream JSON as it's being generated:
 
@@ -100,7 +100,7 @@ type ObjectStreamEvent<TSchema extends z.ZodType> =
   The `object` event is emitted once, when the full object payload has been validated. Use `object-delta` events for progressive UI updates while JSON is still streaming.
 </Note>
 
-## Complex Schema Examples
+## Complex schema examples
 
 <Tabs>
   <Tab title="Nested Objects">
@@ -226,7 +226,7 @@ type ObjectStreamEvent<TSchema extends z.ZodType> =
   </Tab>
 </Tabs>
 
-## Schema Descriptions
+## Schema descriptions
 
 Add descriptions to help the model understand your schema:
 
@@ -252,7 +252,7 @@ const result = await generateObject({
 });
 ```
 
-## Type Inference
+## Type inference
 
 TypeScript automatically infers types from Zod schemas:
 
@@ -278,7 +278,7 @@ const result = await generateObject({
 const user: User = result.object;
 ```
 
-## Error Handling
+## Error handling
 
 Handle validation and parsing errors:
 
@@ -310,7 +310,7 @@ try {
 }
 ```
 
-## Streaming with UI Updates
+## Streaming with UI updates
 
 Update your UI as the object is built:
 
@@ -350,7 +350,7 @@ const response = await result.result;
 console.log('Complete recipe:', response.object);
 ```
 
-## Configuration Options
+## Configuration options
 
 Customize structured output generation:
 
@@ -366,7 +366,7 @@ const result = await generateObject({
 });
 ```
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Use descriptive schema names and descriptions">
@@ -433,7 +433,7 @@ const result = await generateObject({
   </Accordion>
 </AccordionGroup>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Chat Completion" icon="message" href="/guides/chat-completion">

@@ -5,7 +5,7 @@ description: Generate text responses using the generate() function
 
 The `generate()` function provides synchronous chat completion, returning a complete response from the language model.
 
-## Basic Usage
+## Basic usage
 
 Generate a simple chat completion:
 
@@ -34,7 +34,7 @@ console.log('Response:', result.content);
 console.log('Usage:', result.usage);
 ```
 
-## Using Different Providers
+## Using different providers
 
 core-ai supports multiple providers with the same API:
 
@@ -139,7 +139,7 @@ const result = await generate({
   `temperature`, `maxTokens`, and `topP` are top-level options. `stopSequences`, `frequencyPenalty`, and `presencePenalty` are provider-specific and passed via `providerOptions`. Options like `stopSequences` and `frequencyPenalty` are available with `createOpenAICompat` (Chat Completions API). The default `createOpenAI` (Responses API) supports a different set of options — see [Configuration](/concepts/configuration) for details.
 </Note>
 
-## Response Structure
+## Response structure
 
 The `generate()` function returns a `GenerateResult` object:
 
@@ -154,7 +154,7 @@ type GenerateResult = {
 };
 ```
 
-### Understanding Token Usage
+### Understanding token usage
 
 ```typescript
 const result = await generate({ model, messages });
@@ -195,7 +195,7 @@ const secondResponse = await generate({ model, messages });
 console.log(secondResponse.content);
 ```
 
-## Error Handling
+## Error handling
 
 Handle errors gracefully:
 
@@ -217,7 +217,7 @@ try {
 }
 ```
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Use system messages for consistent behavior">
@@ -279,7 +279,7 @@ try {
   </Accordion>
 </AccordionGroup>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Streaming" icon="water" href="/guides/streaming">

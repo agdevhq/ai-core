@@ -5,7 +5,7 @@ description: Work with images, files, and multi-part messages in chat conversati
 
 core-ai supports multi-modal inputs, allowing you to include images, files, and text in the same message.
 
-## Images in Messages
+## Images in messages
 
 Include images in user messages:
 
@@ -38,7 +38,7 @@ const result = await generate({
 console.log('Model description:', result.content);
 ```
 
-## Image Sources
+## Image sources
 
 Images can be provided via URL or base64:
 
@@ -96,7 +96,7 @@ Images can be provided via URL or base64:
   </Tab>
 </Tabs>
 
-## Content Part Types
+## Content part types
 
 User messages can contain multiple content parts:
 
@@ -123,7 +123,7 @@ type FilePart = {
 };
 ```
 
-## Multiple Images
+## Multiple images
 
 Include multiple images in one message:
 
@@ -151,7 +151,7 @@ const result = await generate({
 console.log('Comparison:', result.content);
 ```
 
-## Text and Images Together
+## Text and images together
 
 Mix text and images in any order:
 
@@ -174,7 +174,7 @@ const result = await generate({
 });
 ```
 
-## File Attachments
+## File attachments
 
 Include files in messages:
 
@@ -210,7 +210,7 @@ console.log('Summary:', result.content);
   File support varies by provider and model. Check your provider's documentation for supported file types.
 </Note>
 
-## Common Use Cases
+## Common use cases
 
 <Tabs>
   <Tab title="Image Analysis">
@@ -338,7 +338,7 @@ console.log('Summary:', result.content);
   </Tab>
 </Tabs>
 
-## Multi-Modal with Streaming
+## Multi-modal with streaming
 
 Stream responses for multi-modal inputs:
 
@@ -368,7 +368,7 @@ for await (const event of result) {
 }
 ```
 
-## Reading Images from Disk
+## Reading images from disk
 
 Load and encode local images:
 
@@ -415,7 +415,7 @@ const description = await analyzeLocalImage('./photo.jpg');
 console.log(description);
 ```
 
-## Multi-Modal Conversations
+## Multi-modal conversations
 
 Build conversations with images:
 
@@ -451,7 +451,7 @@ const secondResponse = await generate({ model, messages });
 console.log('Second response:', secondResponse.content);
 ```
 
-## Provider Support
+## Provider support
 
 Multi-modal support varies by provider:
 
@@ -508,13 +508,40 @@ Multi-modal support varies by provider:
     });
     ```
   </Tab>
+  <Tab title="Google GenAI">
+    ```typescript
+    import { generate } from '@core-ai/core-ai';
+    import { createGoogleGenAI } from '@core-ai/google-genai';
+
+    const google = createGoogleGenAI({
+      apiKey: process.env.GOOGLE_API_KEY,
+    });
+    const model = google.chatModel('gemini-3.1-pro'); // Supports vision
+
+    const result = await generate({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'What is in this image?' },
+            {
+              type: 'image',
+              source: { type: 'url', url: imageUrl },
+            },
+          ],
+        },
+      ],
+    });
+    ```
+  </Tab>
 </Tabs>
 
 <Note>
   Check your provider's documentation for which models support vision and other multi-modal capabilities.
 </Note>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Use appropriate image formats">
@@ -582,7 +609,7 @@ Multi-modal support varies by provider:
   </Accordion>
 </AccordionGroup>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Image Generation" icon="wand-magic-sparkles" href="/guides/image-generation">
