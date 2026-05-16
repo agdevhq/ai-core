@@ -1,11 +1,11 @@
 ---
-title: Image Generation
+title: Image generation
 description: Generate images using generateImage() with AI image models
 ---
 
 Generate images from text prompts using the `generateImage()` function with support for various AI image models.
 
-## Basic Usage
+## Basic usage
 
 Generate an image from a text prompt:
 
@@ -38,7 +38,7 @@ for (const [index, image] of result.images.entries()) {
 }
 ```
 
-## Configuration Options
+## Configuration options
 
 Customize image generation:
 
@@ -60,7 +60,7 @@ const result = await generateImage({
   - `1024x1792` (portrait)
 </Note>
 
-## Image Response Format
+## Image response format
 
 The `generateImage()` function returns:
 
@@ -76,7 +76,7 @@ type GeneratedImage = {
 };
 ```
 
-## Multiple Images
+## Multiple images
 
 Generate multiple variations:
 
@@ -98,7 +98,7 @@ result.images.forEach((image, index) => {
 });
 ```
 
-## Handling Image Data
+## Handling image data
 
 <Tabs>
   <Tab title="Save to File">
@@ -190,7 +190,7 @@ result.images.forEach((image, index) => {
   </Tab>
 </Tabs>
 
-## Revised Prompts
+## Revised prompts
 
 Some providers modify your prompt for better results:
 
@@ -209,7 +209,7 @@ if (image.revisedPrompt) {
 }
 ```
 
-## Image Sizes
+## Image sizes
 
 Different models support different sizes:
 
@@ -243,7 +243,7 @@ Different models support different sizes:
   </Tab>
 </Tabs>
 
-## Prompt Engineering Tips
+## Prompt engineering tips
 
 Write effective prompts for better results:
 
@@ -303,7 +303,7 @@ Write effective prompts for better results:
   </Accordion>
 </AccordionGroup>
 
-## Error Handling
+## Error handling
 
 Handle image generation errors:
 
@@ -337,7 +337,7 @@ try {
 }
 ```
 
-## Provider-Specific Options
+## Provider-specific options
 
 Use provider-specific features:
 
@@ -360,7 +360,7 @@ const result = await generateImage({
   Provider options are namespaced by provider name and validated by each provider adapter. Check the [provider docs](/api/providers/openai) for available options.
 </Note>
 
-## Practical Examples
+## Practical examples
 
 <Tabs>
   <Tab title="Logo Generator">
@@ -432,7 +432,7 @@ const result = await generateImage({
   </Tab>
 </Tabs>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Handle both URL and base64 responses">
@@ -486,16 +486,16 @@ const result = await generateImage({
   </Accordion>
 </AccordionGroup>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Multi-Modal" icon="images" href="/guides/multi-modal">
+  <Card title="Multi-modal" icon="images" href="/guides/multi-modal">
     Use images in chat conversations
   </Card>
-  <Card title="Chat Completion" icon="message" href="/guides/chat-completion">
+  <Card title="Chat completion" icon="message" href="/guides/chat-completion">
     Generate text responses
   </Card>
-  <Card title="Tool Calling" icon="wrench" href="/guides/tool-calling">
+  <Card title="Tool calling" icon="wrench" href="/guides/tool-calling">
     Combine image generation with tools
   </Card>
   <Card title="Embeddings" icon="vector-square" href="/guides/embeddings">

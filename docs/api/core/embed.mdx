@@ -8,7 +8,7 @@ icon: 'vector-square'
 
 The `embed()` function generates vector embeddings for text input using embedding models. Embeddings are useful for semantic search, clustering, recommendations, and other AI tasks that require numerical representations of text.
 
-## Function Signature
+## Function signature
 
 ```typescript
 export async function embed(
@@ -38,7 +38,7 @@ export type EmbedParams = EmbedOptions & {
   Provider-specific options, namespaced by provider name (e.g. `{ openai: { encodingFormat: 'float' } }`).
 </ParamField>
 
-## Return Value
+## Return value
 
 Returns a `Promise<EmbedResult>` with the following properties:
 
@@ -61,7 +61,7 @@ Returns a `Promise<EmbedResult>` with the following properties:
 
 ## Examples
 
-### Single String Embedding
+### Single string embedding
 
 ```typescript
 import { embed } from '@core-ai/core-ai';
@@ -78,7 +78,7 @@ console.log(result.embeddings[0]); // [0.1, 0.2, -0.3, ...]
 console.log(result.embeddings[0].length); // 1536 (dimension size)
 ```
 
-### Batch Embedding
+### Batch embedding
 
 ```typescript
 const result = await embed({
@@ -96,7 +96,7 @@ console.log(result.embeddings[1]); // Second document's embedding
 console.log(result.embeddings[2]); // Third document's embedding
 ```
 
-### With Custom Dimensions
+### With custom dimensions
 
 ```typescript
 const result = await embed({
@@ -108,7 +108,7 @@ const result = await embed({
 console.log(result.embeddings[0].length); // 256
 ```
 
-### Checking Token Usage
+### Checking token usage
 
 ```typescript
 const result = await embed({
@@ -123,7 +123,7 @@ if (result.usage) {
 }
 ```
 
-### Semantic Search Use Case
+### Semantic search use case
 
 ```typescript
 // Embed documents
@@ -166,7 +166,7 @@ console.log('Most similar document:', documents[mostSimilarIndex]);
 // Output: "Artificial intelligence is transforming technology"
 ```
 
-### Clustering Documents
+### Clustering documents
 
 ```typescript
 const articles = [
@@ -187,7 +187,7 @@ const result = await embed({
 const embeddings = result.embeddings;
 ```
 
-## Error Handling
+## Error handling
 
 Throws `ValidationError` if:
 - Input is an empty string
@@ -224,7 +224,7 @@ try {
 }
 ```
 
-## Provider Support
+## Provider support
 
 Different providers have different embedding models and capabilities:
 
@@ -235,7 +235,7 @@ const smallModel = openai.embeddingModel('text-embedding-3-small');
 const largeModel = openai.embeddingModel('text-embedding-3-large');
 ```
 
-## Performance Tips
+## Performance tips
 
 <Info>
   Batch multiple inputs in a single call instead of making separate calls for each input. This is more efficient and faster.
@@ -258,11 +258,11 @@ const result3 = await embed({ model, input: 'text3' });
   Use smaller dimension sizes when possible to reduce storage and computation costs. The `text-embedding-3-small` and `text-embedding-3-large` models support custom dimensions.
 </Tip>
 
-## Common Use Cases
+## Common use cases
 
-1. **Semantic Search**: Find documents similar to a query
+1. **Semantic search**: Find documents similar to a query
 2. **Clustering**: Group similar documents together
 3. **Recommendations**: Recommend items based on similarity
 4. **Classification**: Use embeddings as features for ML models
-5. **Anomaly Detection**: Identify outliers based on embedding distance
+5. **Anomaly detection**: Identify outliers based on embedding distance
 6. **Deduplication**: Find and remove duplicate or near-duplicate content

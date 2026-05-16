@@ -228,7 +228,7 @@ console.log('Landscape:', landscape.images[0].url);
 console.log('Square:', square.images[0].url);
 ```
 
-## Model Support
+## Model support
 
 Different providers expose image generation models through `imageModel()`:
 
@@ -256,7 +256,7 @@ const result = await generateImage({
 
 ## Provider-specific options
 
-### OpenAI
+### OpenAI options
 
 ```typescript
 const result = await generateImage({
@@ -267,27 +267,29 @@ const result = await generateImage({
       quality: 'hd',
       style: 'vivid',
       responseFormat: 'url',
+      background: 'auto',
+      outputFormat: 'png',
     },
-  }
+  },
 });
 ```
 
 ## Common use cases
 
-1. **Content Creation**: Generate illustrations for articles and blog posts
+1. **Content creation**: Generate illustrations for articles and blog posts
 2. **Marketing**: Create social media graphics and ad visuals
-3. **Product Design**: Visualize product concepts and variations
-4. **Game Development**: Generate concept art and textures
+3. **Product design**: Visualize product concepts and variations
+4. **Game development**: Generate concept art and textures
 5. **Education**: Create visual aids and diagrams
-6. **Personal Projects**: Generate artwork for presentations or creative projects
+6. **Personal projects**: Generate artwork for presentations or creative projects
 
 ## Best practices
 
-1. **Be Specific**: Detailed prompts produce better results
+1. **Be specific**: Detailed prompts produce better results
 2. **Iterate**: Generate multiple variations to find the best result
-3. **Use Style Keywords**: Include art style, medium, and technique terms
-4. **Check Revised Prompts**: Inspect provider prompt rewrites when outputs differ from your original request
-5. **Handle Errors**: Prompts may be rejected for safety reasons
+3. **Use style keywords**: Include art style, medium, and technique terms
+4. **Check revised prompts**: Inspect provider prompt rewrites when outputs differ from your original request
+5. **Handle errors**: Prompts may be rejected for safety reasons
 
 ## Errors
 
