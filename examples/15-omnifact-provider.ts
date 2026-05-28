@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { generate } from '@core-ai/core-ai';
-import { createOmnifact } from '@core-ai/omnifact';
+import { generate, ProviderError } from '@core-ai/core-ai';
+import { createOmnifact, DEFAULT_BASE_URL } from '@core-ai/omnifact';
 
 function getRequiredEnv(name: 'OMNIFACT_API_KEY'): string {
     const value = process.env[name];
@@ -18,9 +18,9 @@ function getModelId(): string {
 async function main(): Promise<void> {
     const omnifact = createOmnifact({
         apiKey: getRequiredEnv('OMNIFACT_API_KEY'),
-        // Default: https://connect.omnifact.ai/v1/gateway
-        // For local dev against the Omnifact public API:
-        // baseURL: 'http://localhost:3001/v1/gateway',
+        // Defaults to production. Set OMNIFACT_BASE_URL for local dev, e.g.
+        // http://localhost:3001/v1/gateway
+        baseURL: process.env.OMNIFACT_BASE_URL ?? DEFAULT_BASE_URL,
     });
     const model = omnifact.chatModel(getModelId());
 
@@ -41,7 +41,9 @@ async function main(): Promise<void> {
 }
 
 void main().catch((error: unknown) => {
-    if (error instanceof Error) {
+    if (error instanceof ProviderError) {
+        console.error(`${error.statusCode} "${error.message}"`);
+    } else if (error instanceof Error) {
         console.error(error.message);
     } else {
         console.error('Unknown error:', error);
