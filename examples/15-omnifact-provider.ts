@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { generate, ProviderError } from '@core-ai/core-ai';
-import { createOmnifact, DEFAULT_BASE_URL } from '@core-ai/omnifact';
+import { createOmnifact } from '@core-ai/omnifact';
 
 function getRequiredEnv(name: 'OMNIFACT_API_KEY'): string {
     const value = process.env[name];
@@ -20,7 +20,7 @@ async function main(): Promise<void> {
         apiKey: getRequiredEnv('OMNIFACT_API_KEY'),
         // Defaults to production. Set OMNIFACT_BASE_URL for local dev, e.g.
         // http://localhost:3001/v1/gateway
-        baseURL: process.env.OMNIFACT_BASE_URL ?? DEFAULT_BASE_URL,
+        baseURL: process.env.OMNIFACT_BASE_URL,
     });
     const model = omnifact.chatModel(getModelId());
 
