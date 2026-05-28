@@ -5,16 +5,21 @@ import type { ProviderE2EAdapter } from './provider-adapter.ts';
 const OMNIFACT_API_KEY_ENV = 'OMNIFACT_API_KEY';
 const OMNIFACT_BASE_URL_ENV = 'OMNIFACT_BASE_URL';
 const OMNIFACT_CHAT_MODEL_ENV = 'OMNIFACT_E2E_CHAT_MODEL';
+const OMNIFACT_REASONING_MODEL_ENV = 'OMNIFACT_E2E_REASONING_MODEL';
 
 export function createOmnifactAdapter(): ProviderE2EAdapter {
     const chatModelId = getEnvOrDefault(
         OMNIFACT_CHAT_MODEL_ENV,
-        'gpt-5-mini'
+        'eu/gpt-5-mini'
     );
-    const baseURL = getEnvOrDefault(
-        OMNIFACT_BASE_URL_ENV,
-        'http://localhost:3001/v1/gateway'
+    const reasoningModelId = getEnvOrDefault(
+        OMNIFACT_REASONING_MODEL_ENV,
+        'eu/gpt-5-mini'
     );
+    // Only set baseURL when explicitly overridden; createOmnifact() defaults to
+    // https://connect.omnifact.ai/v1/gateway so omitting it targets production,
+    // consistent with every other provider adapter in this harness.
+    const baseURL = process.env[OMNIFACT_BASE_URL_ENV];
 
     return {
         id: 'omnifact',
@@ -22,12 +27,13 @@ export function createOmnifactAdapter(): ProviderE2EAdapter {
         apiKeyEnvVar: OMNIFACT_API_KEY_ENV,
         models: {
             chat: chatModelId,
+            reasoning: reasoningModelId,
         },
         capabilities: {
             chat: true,
             stream: true,
             object: false,
-            reasoning: false,
+            reasoning: true,
             embedding: false,
             image: false,
         },
@@ -37,5 +43,10 @@ export function createOmnifactAdapter(): ProviderE2EAdapter {
                 apiKey: getEnvValue(OMNIFACT_API_KEY_ENV),
                 baseURL,
             }).chatModel(chatModelId),
+        createReasoningChatModel: () =>
+            createOmnifact({
+                apiKey: getEnvValue(OMNIFACT_API_KEY_ENV),
+                baseURL,
+            }).chatModel(reasoningModelId),
     };
 }

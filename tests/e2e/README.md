@@ -53,21 +53,34 @@ Provider keys:
 
 Optional model and endpoint overrides:
 
-- `OPENAI_E2E_CHAT_MODEL`
-- `OPENAI_E2E_EMBED_MODEL`
-- `OPENAI_E2E_IMAGE_MODEL`
-- `ANTHROPIC_E2E_CHAT_MODEL`
-- `GOOGLE_E2E_CHAT_MODEL`
-- `GOOGLE_E2E_EMBED_MODEL`
-- `GOOGLE_E2E_IMAGE_MODEL`
-- `MISTRAL_E2E_CHAT_MODEL`
-- `MISTRAL_E2E_EMBED_MODEL`
-- `OMNIFACT_E2E_CHAT_MODEL` (default: `gpt-5-mini`)
-- `OMNIFACT_BASE_URL` (default: `http://localhost:3001/v1/gateway`)
+- `OPENAI_E2E_CHAT_MODEL` (default: `gpt-5-mini`)
+- `OPENAI_E2E_REASONING_MODEL` (default: `gpt-5-mini`)
+- `OPENAI_E2E_EMBED_MODEL` (default: `text-embedding-3-small`)
+- `OPENAI_E2E_IMAGE_MODEL` (default: `gpt-image-1`)
+- `OPENAI_COMPAT_E2E_CHAT_MODEL` (default: `gpt-5-mini`)
+- `OPENAI_COMPAT_E2E_REASONING_MODEL` (default: `gpt-5-mini`)
+- `OPENAI_COMPAT_E2E_EMBED_MODEL` (default: `text-embedding-3-small`)
+- `OPENAI_COMPAT_E2E_IMAGE_MODEL` (default: `gpt-image-1`)
+- `ANTHROPIC_E2E_CHAT_MODEL` (default: `claude-haiku-4-5`)
+- `ANTHROPIC_E2E_REASONING_MODEL` (default: `claude-sonnet-4-6`)
+- `GOOGLE_E2E_CHAT_MODEL` (default: `gemini-2.5-flash`)
+- `GOOGLE_E2E_REASONING_MODEL` (default: `gemini-2.5-pro`)
+- `GOOGLE_E2E_EMBED_MODEL` (default: `gemini-embedding-001`)
+- `GOOGLE_E2E_IMAGE_MODEL` (default: `imagen-4.0-generate-001`)
+- `MISTRAL_E2E_CHAT_MODEL` (default: `mistral-large-latest`)
+- `MISTRAL_E2E_REASONING_MODEL` (default: `magistral-medium-latest`)
+- `MISTRAL_E2E_EMBED_MODEL` (default: `mistral-embed`)
+- `OMNIFACT_E2E_CHAT_MODEL` (default: `eu/gpt-5-mini`)
+- `OMNIFACT_E2E_REASONING_MODEL` (default: `eu/gpt-5-mini`)
+- `OMNIFACT_BASE_URL` — optional; overrides the gateway endpoint (e.g. `http://localhost:3001/v1/gateway` for local dev). When unset, targets production (`https://connect.omnifact.ai/v1/gateway`).
 
-The Omnifact adapter supports chat and streaming only. Point `OMNIFACT_BASE_URL`
-at a running Omnifact public API (local or deployed) and use a model id enabled
-for your organization.
+Reasoning overrides select the model used by reasoning-specific contract cases
+(`createReasoningChatModel`); reasoning behavior itself is still enabled via the
+`reasoning` option at call time. Chat and reasoning defaults may differ when a
+provider uses a lighter chat model and a stronger reasoning model.
+
+For Omnifact, use model ids enabled for your organization; EU-hosted models
+require the `eu/` prefix.
 
 ## Add a New Provider Adapter
 
