@@ -18,6 +18,12 @@ export type OmnifactProvider = {
 export function createOmnifact(
     options: OmnifactProviderOptions = {}
 ): OmnifactProvider {
+    if (!options.client && !options.apiKey) {
+        throw new Error(
+            'createOmnifact: apiKey is required when no client is provided.'
+        );
+    }
+
     return createOpenAICompatChatProvider(
         {
             apiKey: options.apiKey,

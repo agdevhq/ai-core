@@ -4,6 +4,15 @@ import { ProviderError } from '@core-ai/core-ai';
 import { createOmnifact } from './provider.js';
 
 describe('createOmnifact', () => {
+    it('should throw when neither apiKey nor client is provided', () => {
+        expect(() => createOmnifact()).toThrow(
+            'createOmnifact: apiKey is required when no client is provided.'
+        );
+        expect(() => createOmnifact({})).toThrow(
+            'createOmnifact: apiKey is required when no client is provided.'
+        );
+    });
+
     it('should create a chat model with provider omnifact', () => {
         const provider = createOmnifact({
             client: createMockClient(),
