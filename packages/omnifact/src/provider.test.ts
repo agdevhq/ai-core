@@ -1,9 +1,22 @@
 import type OpenAI from 'openai';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_BASE_URL } from './constants.js';
 import { createOmnifact } from './provider.js';
 
+const { OpenAIConstructorMock } = vi.hoisted(() => ({
+    OpenAIConstructorMock: vi.fn(),
+}));
+
+vi.mock('openai', () => ({
+    default: OpenAIConstructorMock,
+}));
+
 describe('createOmnifact', () => {
+    beforeEach(() => {
+        OpenAIConstructorMock.mockReset();
+        OpenAIConstructorMock.mockImplementation(() => createMockClient());
+    });
+
     it('should create a chat model with provider omnifact', () => {
         const provider = createOmnifact({
             client: createMockClient(),
@@ -13,30 +26,32 @@ describe('createOmnifact', () => {
 
         expect(chatModel.provider).toBe('omnifact');
         expect(chatModel.modelId).toBe('gpt-5-mini');
+        expect(OpenAIConstructorMock).not.toHaveBeenCalled();
     });
 
-    it('should default baseURL to the Omnifact gateway when no client is provided', () => {
-        const provider = createOmnifact({
+    it('should construct OpenAI with the default gateway baseURL when no client is provided', () => {
+        createOmnifact({
             apiKey: 'test-key',
         });
 
-        const chatModel = provider.chatModel('gpt-5-mini');
-
-        expect(chatModel.provider).toBe('omnifact');
-        expect(chatModel.modelId).toBe('gpt-5-mini');
-        expect(DEFAULT_BASE_URL).toBe('https://connect.omnifact.ai/v1/gateway');
+        expect(OpenAIConstructorMock).toHaveBeenCalledOnce();
+        expect(OpenAIConstructorMock).toHaveBeenCalledWith({
+            apiKey: 'test-key',
+            baseURL: DEFAULT_BASE_URL,
+        });
     });
 
-    it('should allow overriding baseURL', () => {
-        const provider = createOmnifact({
+    it('should construct OpenAI with a custom baseURL when no client is provided', () => {
+        createOmnifact({
             apiKey: 'test-key',
             baseURL: 'http://localhost:3001/v1/gateway',
         });
 
-        const chatModel = provider.chatModel('gpt-5-mini');
-
-        expect(chatModel.provider).toBe('omnifact');
-        expect(chatModel.modelId).toBe('gpt-5-mini');
+        expect(OpenAIConstructorMock).toHaveBeenCalledOnce();
+        expect(OpenAIConstructorMock).toHaveBeenCalledWith({
+            apiKey: 'test-key',
+            baseURL: 'http://localhost:3001/v1/gateway',
+        });
     });
 
     it('should use a shared client instance when injected', async () => {
@@ -73,6 +88,7 @@ describe('createOmnifact', () => {
             .generate({ messages: [{ role: 'user', content: 'hello' }] });
 
         expect(chatCreate).toHaveBeenCalledTimes(1);
+        expect(OpenAIConstructorMock).not.toHaveBeenCalled();
     });
 });
 
