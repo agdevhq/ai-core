@@ -20,7 +20,8 @@ const omnifact = createOmnifact({
     apiKey: process.env.OMNIFACT_API_KEY,
 });
 
-const model = omnifact.chatModel('gpt-5-mini');
+// Use an id from GET /v1/gateway/models (eu/ prefix for EU-hosted models).
+const model = omnifact.chatModel('eu/gpt-5-mini');
 
 const result = await generate({
     model,
@@ -40,3 +41,7 @@ const omnifact = createOmnifact({
 ```
 
 Use your Omnifact organization API key as the `apiKey`.
+
+## Model IDs
+
+Pass the exact `id` from `GET /v1/gateway/models`. EU-hosted models (Azure, Vertex, Mistral, etc.) use the `eu/` prefix, for example `eu/gpt-5-mini`. Direct non-EU providers use the plain type id, for example `gpt-5-mini`.

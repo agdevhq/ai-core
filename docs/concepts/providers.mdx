@@ -198,10 +198,16 @@ type OmnifactProviderOptions = {
 ### Getting Models
 
 ```typescript
-const model = omnifact.chatModel('gpt-5-mini');
+// List enabled models for your organization (OpenAI SDK example).
+const models = await fetch('https://connect.omnifact.ai/v1/gateway/models', {
+  headers: { Authorization: `Bearer ${process.env.OMNIFACT_API_KEY}` },
+}).then((res) => res.json());
+
+// Pass the returned id verbatim — EU-hosted models use the eu/ prefix.
+const model = omnifact.chatModel('eu/gpt-5-mini');
 ```
 
-Use model IDs enabled for your organization in Omnifact. Pass `providerOptions.openai` for Chat Completions-specific options (same API surface as `@core-ai/openai/compat`).
+Use model IDs enabled for your organization in Omnifact. Pass `providerOptions.openai` for supported Chat Completions options (same API surface as `@core-ai/openai/compat`).
 
 ## Using Custom Clients
 

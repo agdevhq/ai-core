@@ -31,6 +31,7 @@ OMNIFACT_API_KEY=your_omnifact_org_api_key
 `GOOGLE_API_KEY` is only required for the Google GenAI example.
 `MISTRAL_API_KEY` is only required for the Mistral example.
 `OMNIFACT_API_KEY` is only required for the Omnifact example.
+Optional: `OMNIFACT_MODEL` overrides the model id (default in the example: `eu/gpt-5-mini`). Use ids from `GET /v1/gateway/models`.
 
 ## Run an Example
 

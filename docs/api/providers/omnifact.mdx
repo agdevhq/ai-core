@@ -43,14 +43,33 @@ const omnifact = createOmnifact({
 
 `OmnifactProvider` with method `chatModel()`.
 
+## Model IDs
+
+Use the exact `id` values returned by `GET /v1/gateway/models`. The SDK passes the model id through unchanged.
+
+EU-hosted backends (Azure OpenAI, Vertex Google, Vertex Anthropic, Mistral, etc.) always use the `eu/` prefix:
+
+- `eu/gpt-5-mini` — Azure OpenAI
+- `eu/claude-4-6-sonnet` — Vertex Anthropic
+- `eu/mistral-large` — Mistral
+
+Direct non-EU providers use the plain type id:
+
+- `gpt-5-mini` — OpenAI
+- `claude-4-6-sonnet` — Anthropic
+
+When both a direct and an EU backend exist for the same model type, both ids may appear in the model list. Use the one that matches where you want the request routed.
+
 ## Capabilities
+
+Current gateway V1 scope:
 
 | Feature | Support |
 |---------|--------|
 | Chat Completion | Yes |
 | Streaming | Yes |
-| Function Calling | No (V1) |
-| Vision | No (V1) |
+| Function Calling | No |
+| Vision | No |
 | Reasoning | Depends on model |
 | Embeddings | No |
 | Image Generation | No |
@@ -67,7 +86,8 @@ const omnifact = createOmnifact({
   apiKey: process.env.OMNIFACT_API_KEY,
 });
 
-const model = omnifact.chatModel('gpt-5-mini');
+// Use an id from GET /v1/gateway/models (eu/ prefix for EU-hosted models).
+const model = omnifact.chatModel('eu/gpt-5-mini');
 
 const result = await generate({
   model,
@@ -87,7 +107,8 @@ const omnifact = createOmnifact({
   apiKey: process.env.OMNIFACT_API_KEY,
 });
 
-const model = omnifact.chatModel('gpt-5-mini');
+// Use an id from GET /v1/gateway/models (eu/ prefix for EU-hosted models).
+const model = omnifact.chatModel('eu/gpt-5-mini');
 
 const result = await stream({
   model,
@@ -116,11 +137,11 @@ The gateway follows the OpenAI Chat Completions API. Pass options via `providerO
 
 ```typescript
 await generate({
-  model: omnifact.chatModel('gpt-5-mini'),
+  model: omnifact.chatModel('eu/gpt-5-mini'),
   messages: [{ role: 'user', content: 'Hello!' }],
   providerOptions: {
     openai: {
-      parallelToolCalls: false,
+      temperature: 0.7,
     },
   },
 });

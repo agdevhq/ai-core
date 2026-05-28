@@ -10,6 +10,11 @@ function getRequiredEnv(name: 'OMNIFACT_API_KEY'): string {
     return value;
 }
 
+function getModelId(): string {
+    // Use ids from GET /v1/gateway/models. EU-hosted models require the eu/ prefix.
+    return process.env.OMNIFACT_MODEL ?? 'eu/gpt-5-mini';
+}
+
 async function main(): Promise<void> {
     const omnifact = createOmnifact({
         apiKey: getRequiredEnv('OMNIFACT_API_KEY'),
@@ -17,7 +22,7 @@ async function main(): Promise<void> {
         // For local dev against the Omnifact public API:
         // baseURL: 'http://localhost:3001/v1/gateway',
     });
-    const model = omnifact.chatModel('gpt-5-mini');
+    const model = omnifact.chatModel(getModelId());
 
     const result = await generate({
         model,
