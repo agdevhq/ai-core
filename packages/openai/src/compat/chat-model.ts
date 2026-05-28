@@ -32,9 +32,10 @@ type OpenAIChatClient = {
 
 export function createOpenAICompatChatModel(
     client: OpenAIChatClient,
-    modelId: string
+    modelId: string,
+    providerId = 'openai'
 ): ChatModel {
-    const provider = 'openai';
+    const provider = providerId;
 
     async function callOpenAIChatCompletionsApi<TResponse>(
         request: unknown,
@@ -45,7 +46,7 @@ export function createOpenAICompatChatModel(
                 signal,
             })) as TResponse;
         } catch (error) {
-            throw wrapOpenAIError(error);
+            throw wrapOpenAIError(error, provider);
         }
     }
 

@@ -69,6 +69,7 @@ All publishable packages share a single version number:
 - `@core-ai/anthropic`
 - `@core-ai/google-genai`
 - `@core-ai/mistral`
+- `@core-ai/omnifact`
 
 Selecting any one package in a changeset bumps all five to the same version. However, **list every package that has meaningful changes** so each gets its own changelog entry.
 

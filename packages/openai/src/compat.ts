@@ -1,4 +1,5 @@
 export { createOpenAICompat } from './compat/provider.js';
+export { createOpenAICompatChatModel } from './compat/chat-model.js';
 export type {
     OpenAICompatProvider,
     OpenAICompatProviderOptions,
