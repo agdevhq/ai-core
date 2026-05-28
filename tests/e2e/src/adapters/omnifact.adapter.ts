@@ -16,9 +16,7 @@ export function createOmnifactAdapter(): ProviderE2EAdapter {
         OMNIFACT_REASONING_MODEL_ENV,
         'eu/gpt-5-mini'
     );
-    // Only set baseURL when explicitly overridden; createOmnifact() defaults to
-    // https://connect.omnifact.ai/v1/gateway so omitting it targets production,
-    // consistent with every other provider adapter in this harness.
+
     const baseURL = process.env[OMNIFACT_BASE_URL_ENV];
 
     return {
