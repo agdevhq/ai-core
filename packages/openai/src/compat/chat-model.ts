@@ -26,7 +26,7 @@ import {
     transformStructuredOutputStream,
 } from '../shared/structured-output.js';
 
-type OpenAIChatClient = {
+export type OpenAIChatClient = {
     chat: OpenAI['chat'];
 };
 
