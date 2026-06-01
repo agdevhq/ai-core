@@ -24,11 +24,14 @@ OPENAI_API_KEY=your_openai_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
 GOOGLE_API_KEY=your_google_api_key
 MISTRAL_API_KEY=your_mistral_api_key
+OMNIFACT_API_KEY=your_omnifact_org_api_key
 ```
 
 `ANTHROPIC_API_KEY` is only required for the Anthropic example.
 `GOOGLE_API_KEY` is only required for the Google GenAI example.
 `MISTRAL_API_KEY` is only required for the Mistral example.
+`OMNIFACT_API_KEY` is only required for the Omnifact example.
+Optional: `OMNIFACT_MODEL` overrides the model id (default in the example: `eu/gpt-5-mini`). Use ids from `GET /v1/gateway/models`.
 
 ## Run an Example
 
@@ -60,3 +63,4 @@ npx tsx examples/14-telemetry-console-exporter.ts
 - `12-stream-object.ts`: Streaming structured output with `streamObject()`
 - `13-stream-abort.ts`: Cancelling a streaming call with `AbortController`
 - `14-telemetry-console-exporter.ts`: OpenAI-backed telemetry example that exports spans with the OpenTelemetry console exporter
+- `15-omnifact-provider.ts`: Using Omnifact API Gateway with the same `generate()` API
